@@ -39,36 +39,23 @@ class Converter:
             
             if task[:7] == "TIME_SH":
                 current_time += int(task[11:len(task)-1])
+                #print("Current time ", current_time)
 
             if task[:7] == "NOTE_ON":
                 pitch = int(task[8:len(task)-1])
                 notes_queue.append((pitch, current_time, velocity))
+                #print("Note ON : {} at {}ms".format(pitch, current_time))
 
             if task[:7] == "NOTE_OF":
                 pitch = int(task[9:len(task)-1])
                 for note in notes_queue:
-                    print(type(note))
-
                     if note[0] == pitch:
                         sequence.notes.add(pitch = note[0], start_time = note[1], end_time = current_time, velocity = note[2])
-                        
+                        #print("New note : (pitch = {}, start_time = {}, end_time = {}, velocity = {})".format(note[0], note[1], current_time, note[2]))
                         break
         
         return sequence
 
-if __name__ == "__main__":
-    c = Converter()
-    mlseq = ["SET_VELOCITY<30>",
-            "NOTE_ON<50>",
-            "TIME_SHIFT<80>",
-            "NOTE_ON<62>",
-            "TIME-SHIFT<30>",
-            "NOTE_OFF<50>",
-            "SET_VELOCITY<160>",
-            "NOTE_OFF<62>"
-    ]
-    mseq = c.midi_like2midi(mlseq)
-    note_seq.sequence_proto_to_midi_file(mseq, 'midi-like2midi.mid')
 
 
 
@@ -89,22 +76,23 @@ if __name__ == "__main__":
 
 
 
-import pretty_midi
-# Create a PrettyMIDI object
-cello_c_chord = pretty_midi.PrettyMIDI()
-# Create an Instrument instance for a cello instrument
-cello_program = pretty_midi.instrument_name_to_program('Cello')
-cello = pretty_midi.Instrument(program=cello_program)
-# Iterate over note names, which will be converted to note number later
-for note_name in ['C5', 'E5', 'G5']:
-    # Retrieve the MIDI note number for this note name
-    note_number = pretty_midi.note_name_to_number(note_name)
-    # Create a Note instance, starting at 0s and ending at .5s
-    note = pretty_midi.Note(
-        velocity=100, pitch=note_number, start=0, end=.5)
-    # Add it to our cello instrument
-    cello.notes.append(note)
-# Add the cello instrument to the PrettyMIDI object
-cello_c_chord.instruments.append(cello)
-# Write out the MIDI data
-cello_c_chord.write('cello-C-chord.mid')
+
+# import pretty_midi
+# # Create a PrettyMIDI object
+# cello_c_chord = pretty_midi.PrettyMIDI()
+# # Create an Instrument instance for a cello instrument
+# cello_program = pretty_midi.instrument_name_to_program('Cello')
+# cello = pretty_midi.Instrument(program=cello_program)
+# # Iterate over note names, which will be converted to note number later
+# for note_name in ['C5', 'E5', 'G5']:
+#     # Retrieve the MIDI note number for this note name
+#     note_number = pretty_midi.note_name_to_number(note_name)
+#     # Create a Note instance, starting at 0s and ending at .5s
+#     note = pretty_midi.Note(
+#         velocity=100, pitch=note_number, start=0, end=.5)
+#     # Add it to our cello instrument
+#     cello.notes.append(note)
+# # Add the cello instrument to the PrettyMIDI object
+# cello_c_chord.instruments.append(cello)
+# # Write out the MIDI data
+# cello_c_chord.write('cello-C-chord.mid')
