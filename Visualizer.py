@@ -38,8 +38,26 @@ class Visualizer:
         n = len(self.midi_data.instruments)
         for instrument_data in self.midi_data.instruments:
             notes = instrument_data.get_piano_roll(frame_rate)
-            print(notes.shape)
             pitches, loudness = self.extract_f0_loudness(notes)
+            x = np.array([i/frame_rate for i in range(notes.shape[1])])
+
+
+            fig, axs = plt.subplots(2,1, figsize=(15, 10), facecolor='w', edgecolor='k')
+            fig.subplots_adjust(hspace = .5, wspace=.1)
+
+            axs[0].plot(x,pitches)
+            axs[0].set_title("Track : {} | Instrument : {}".format(self.name,instrument_data.name))
+            axs[0].set_ylim((0,128))
+            axs[0].set_xlabel("Time (s)")
+            axs[0].set_ylabel("Pitch")
+
+            axs[1].plot(x,loudness)
+            axs[1].set_title("Track : {} | Instrument : {}".format(self.name,instrument_data.name))
+            axs[1].set_ylim((0,128))
+            axs[1].set_xlabel("Time (s)")
+            axs[1].set_ylabel("Loudness")
+        plt.show()
+
 
     def extract_f0_loudness(self, notes):
         pitches = np.argmax(notes, axis = 0)
