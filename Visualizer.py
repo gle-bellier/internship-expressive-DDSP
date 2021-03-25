@@ -1,6 +1,8 @@
+from numpy.lib.function_base import extract
 import pretty_midi as pm
 import matplotlib.pyplot as plt
 import glob
+import numpy as np 
 
 
 
@@ -31,6 +33,18 @@ class Visualizer:
             plt.xlabel("Time")
             plt.ylabel("Pitch")
             plt.show()
+
+    def show_f0_velocity(self,frame_rate = 250):
+        n = len(self.midi_data.instruments)
+        for instrument_data in self.midi_data.instruments:
+            notes = instrument_data.get_piano_roll(frame_rate)
+            print(notes.shape)
+            pitches, loudness = self.extract_f0_loudness(notes)
+
+    def extract_f0_loudness(self, notes):
+        pitches = np.argmax(notes, axis = 0)
+        loudness = np.max(notes, axis = 0)
+        return pitches, loudness
 
 
 

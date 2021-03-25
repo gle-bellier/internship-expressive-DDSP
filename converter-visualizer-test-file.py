@@ -21,7 +21,8 @@ if __name__ == "__main__":
     note_seq.sequence_proto_to_midi_file(mseq, 'midi-like2midi.mid')
 
       
-    midi_data = pm.PrettyMIDI('midi-like2midi.mid')
-    v = Visualizer(midi_data,'midi-like2midi.mid')
+    midi_data = pm.PrettyMIDI('bassline.mid')
+    v = Visualizer(midi_data)
     v.show_midi_notes()
+    v.show_f0_velocity()
     
