@@ -1,3 +1,4 @@
+from re import DEBUG
 from numpy.lib.function_base import extract
 import pretty_midi as pm
 import matplotlib.pyplot as plt
@@ -11,8 +12,10 @@ class Visualizer:
         self.midi_data = midi_data
         self.name = name
 
-    def show_midi_notes(self):
+    def show_midi_notes(self, DEBUG = False):
         n = len(self.midi_data.instruments)
+        if DEBUG:
+            print("Number of instruments : ", n)
         fig, axs = plt.subplots(n,1, figsize=(15, 10), facecolor='w', edgecolor='k')
         fig.subplots_adjust(hspace = .5, wspace=.1)
         if n>1:
@@ -34,8 +37,10 @@ class Visualizer:
             plt.ylabel("Pitch")
             plt.show()
 
-    def show_f0_velocity(self,frame_rate = 250):
+    def show_f0_velocity(self,frame_rate = 2500, DEBUG = False):
         n = len(self.midi_data.instruments)
+        if DEBUG:
+            print("Number of instruments : ", n)
         for instrument_data in self.midi_data.instruments:
             notes = instrument_data.get_piano_roll(frame_rate)
             pitches, loudness = self.extract_f0_loudness(notes)

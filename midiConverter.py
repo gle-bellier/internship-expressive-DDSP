@@ -1,6 +1,7 @@
 import pretty_midi
 from note_seq.protobuf import music_pb2
 import note_seq
+import numpy as np
 
 
 
@@ -15,8 +16,66 @@ class Converter:
     def note_tuple2midi(self, note_tuples):
         """ Inputs : note_tuple, out_file_name (optionnal)"""
 
-    def midi2midi_like(self, midi_file):
+    def midi2midi_like(self, midi_data, frame_rate=1000): # TODO : find another way to compute frame rate
         """ Inputs : midi file, out_file_name (optionnal)"""
+
+        midi_like_seq = []
+        n = len(midi_data.instruments)
+        for instrument_data in midi_data.instruments:
+            notes = instrument_data.get_piano_roll(frame_rate)
+            print(notes.shape)
+            buffer = np.zeros(notes.shape[0])
+            for i in range(notes.shape[1]-1):
+                col = notes[:,i]
+                time_shift = 0 # keep track of time shifting 
+                for j in range(notes.shape[0]):
+                    if col[j] !=0 and buffer[j] == 0:  # note on 
+                        midi_like_seq.append("NOTE_ON<{}>".format(j))
+                        if time_shift > 0:
+                            midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
+                            time_shift = 0
+
+                    elif col[j] == 0 and buffer[j] != 0: # note off
+                        midi_like_seq.append("NOTE_OFF<{}>".format(j))
+                        time_shift = 0
+                        if time_shift > 0:
+                            midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
+                            time_shift = 0
+
+                    elif col[j] != buffer[j]: # velocity change
+                        midi_like_seq.append("SET_VELOCITY<{}>".format(buffer[j]))
+                        time_shift = 0
+                        if time_shift > 0:
+                            midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
+                            time_shift = 0
+
+                    else:
+                        time_shift += int((1/frame_rate)*1000)
+                buffer = notes[:,i]
+        #need to close last note
+        col = notes[:,-1]
+        for j in range(notes.shape[0]):
+            if col[j] == 0 and buffer[j] != 0:  # note on 
+                midi_like_seq.append("NOTE_OFF<{}>".format(j))
+                if time_shift > 0:
+                    midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
+                    time_shift = 0
+            else:
+                time_shift += int((1/frame_rate)*1000)
+        
+        return midi_like_seq
+                    
+
+        
+
+
+
+
+
+
+
+
+
 
 
     def midi_like2midi(self, midi_like_content):
@@ -26,8 +85,6 @@ class Converter:
         # NOTE_ON<30>
         # TIME_SHIFT<30>
         # NOTE_OFF <50>
-
-
         current_time = 0
         velocity = 0
         notes_queue = [] # notes not yet ended (pitch, starting_time, velocity)
@@ -56,43 +113,3 @@ class Converter:
         
         return sequence
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import pretty_midi
-# # Create a PrettyMIDI object
-# cello_c_chord = pretty_midi.PrettyMIDI()
-# # Create an Instrument instance for a cello instrument
-# cello_program = pretty_midi.instrument_name_to_program('Cello')
-# cello = pretty_midi.Instrument(program=cello_program)
-# # Iterate over note names, which will be converted to note number later
-# for note_name in ['C5', 'E5', 'G5']:
-#     # Retrieve the MIDI note number for this note name
-#     note_number = pretty_midi.note_name_to_number(note_name)
-#     # Create a Note instance, starting at 0s and ending at .5s
-#     note = pretty_midi.Note(
-#         velocity=100, pitch=note_number, start=0, end=.5)
-#     # Add it to our cello instrument
-#     cello.notes.append(note)
-# # Add the cello instrument to the PrettyMIDI object
-# cello_c_chord.instruments.append(cello)
-# # Write out the MIDI data
-# cello_c_chord.write('cello-C-chord.mid')
