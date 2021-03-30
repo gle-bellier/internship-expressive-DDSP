@@ -8,7 +8,7 @@ import numpy as np
 
 
 class Visualizer:
-    def __init__(self, midi_data,name = "midi file"):
+    def __init__(self, midi_data, name = "midi file"):
         self.midi_data = midi_data
         self.name = name
 

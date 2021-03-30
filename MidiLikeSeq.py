@@ -8,7 +8,7 @@ class MidiLikeSeq:
         if pitch in self.notes_on:
             print("Error : note {} is already on".format(pitch))
         else:
-            self.seq.append("NOTE_ON<{}>".format(pitch))
+            self.seq.append("NOTE_ON<{}>".format(int(pitch)))
             self.notes_on.append(pitch)
 
     def note_off(self, pitch):
