@@ -38,35 +38,46 @@ class Visualizer:
             plt.show()
 
     def show_f0_velocity(self,frame_rate = 2500, DEBUG = False):
-        n = len(self.midi_data.instruments)
-        if DEBUG:
-            print("Number of instruments : ", n)
-        for instrument_data in self.midi_data.instruments:
-            notes = instrument_data.get_piano_roll(frame_rate)
-            pitches, loudness = self.extract_f0_loudness(notes)
-            x = np.array([i/frame_rate for i in range(notes.shape[1])])
 
+        list_pitches, list_loudness, time = self.get_time_f0_loudness(frame_rate)
+        for i in range(len(list_pitches)):
+            pitches = list_pitches[i]
+            loudness = list_loudness[i]
 
             fig, axs = plt.subplots(2,1, figsize=(15, 10), facecolor='w', edgecolor='k')
             fig.subplots_adjust(hspace = .5, wspace=.1)
 
-            axs[0].plot(x,pitches)
-            axs[0].set_title("Track : {} | Instrument : {}".format(self.name,instrument_data.name))
+            axs[0].plot(time,pitches)
+            axs[0].set_title("Track : {}".format(self.name))
             axs[0].set_ylim((0,128))
             axs[0].set_xlabel("Time (s)")
             axs[0].set_ylabel("Pitch")
 
-            axs[1].plot(x,loudness)
-            axs[1].set_title("Track : {} | Instrument : {}".format(self.name,instrument_data.name))
+            axs[1].plot(time,loudness)
+            axs[1].set_title("Track : {}".format(self.name))
             axs[1].set_ylim((0,128))
             axs[1].set_xlabel("Time (s)")
             axs[1].set_ylabel("Loudness")
         plt.show()
 
+    def get_time_f0_loudness(self, frame_rate = 2000):
+    
+        n = len(self.midi_data.instruments)
+        list_pitches = []
+        list_loudness = []
+        for instrument_data in self.midi_data.instruments:
+            notes = instrument_data.get_piano_roll(frame_rate)
+            pitches, loudness = self.extract_f0_loudness(notes)
+            list_pitches.append(pitches)
+            list_loudness.append(loudness)
+
+        time = np.array([i/frame_rate for i in range(notes.shape[1])])
+        return list_pitches, list_loudness, time
+
 
     def extract_f0_loudness(self, notes):
         pitches = np.argmax(notes, axis = 0)
-        loudness = np.max(notes, axis = 0)
+        loudness = np.transpose(np.max(notes, axis = 0))
         return pitches, loudness
 
 
