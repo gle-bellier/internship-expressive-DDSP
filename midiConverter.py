@@ -114,7 +114,7 @@ class Converter:
                 velocity = int(float(task[13:len(task)-1]))
             
             if task[:7] == "TIME_SH":
-                current_time += int(float(task[11:len(task)-1]))
+                current_time += float(task[11:len(task)-1])
                 #print("Current time ", current_time)
 
             if task[:7] == "NOTE_ON":
