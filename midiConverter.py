@@ -2,6 +2,8 @@ import pretty_midi
 from note_seq.protobuf import music_pb2
 import note_seq
 import numpy as np
+import pandas as pd
+from MidiLikeSeq import MidiLikeSeq
 
 
 
@@ -9,82 +11,74 @@ class Converter:
     def __init__(self) -> None:
         pass
     
-    def midi2note_tuple(self, midi_data):
-        """ Inputs : midi data, out_file_name (optionnal)"""
+    def midi2df(self,midi_file):
+        mlseq = note_seq.midi_file_to_note_sequence('bassline.mid')
+        pitches = []
+        velocities = []
+        start_times = []
+        end_times = []
 
 
-    def note_tuple2midi(self, note_tuples):
-        """ Inputs : note_tuple, out_file_name (optionnal)"""
+        for note in mlseq.notes:
+            print(note)
+            pitches.append(note.pitch)
+            velocities.append(note.velocity)
+            start_times.append(note.start_time)
+            end_times.append(note.end_time)
 
-    def midi2midi_like(self, midi_data, frame_rate=1000): # TODO : find another way to compute frame rate
-        """ Inputs : midi file, out_file_name (optionnal)"""
 
-        midi_like_seq = []
-        n = len(midi_data.instruments)
-        for instrument_data in midi_data.instruments:
-            notes = instrument_data.get_piano_roll(frame_rate)
-            print(notes.shape)
-            buffer = np.zeros(notes.shape[0])
-            for i in range(notes.shape[1]-1):
-                col = notes[:,i]
-                time_shift = 0 # keep track of time shifting 
-                for j in range(notes.shape[0]):
-                    if col[j] !=0 and buffer[j] == 0:  # note on 
-                        midi_like_seq.append("NOTE_ON<{}>".format(j))
-                        if time_shift > 0:
-                            midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
-                            time_shift = 0
+        pd_pitches = pd.Series(pitches)
+        pd_velocities = pd.Series(velocities)
+        pd_start_times = pd.Series(start_times)
+        pd_end_times = pd.Series(end_times)
 
-                    elif col[j] == 0 and buffer[j] != 0: # note off
-                        midi_like_seq.append("NOTE_OFF<{}>".format(j))
-                        time_shift = 0
-                        if time_shift > 0:
-                            midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
-                            time_shift = 0
 
-                    elif col[j] != buffer[j]: # velocity change
-                        midi_like_seq.append("SET_VELOCITY<{}>".format(buffer[j]))
-                        time_shift = 0
-                        if time_shift > 0:
-                            midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
-                            time_shift = 0
+        df = pd.DataFrame({"Pitch": pd_pitches, "Velocity": pd_velocities, "Start time": pd_start_times, "End time": pd_end_times})
+        df.sort_values(by=["Start time","Pitch"])
+        return df
 
-                    else:
-                        time_shift += int((1/frame_rate)*1000)
-                buffer = notes[:,i]
-        #need to close last note
-        col = notes[:,-1]
-        for j in range(notes.shape[0]):
-            if col[j] == 0 and buffer[j] != 0:  # note on 
-                midi_like_seq.append("NOTE_OFF<{}>".format(j))
-                if time_shift > 0:
-                    midi_like_seq.append("TIME_SHIFT<{}>".format(time_shift))
-                    time_shift = 0
-            else:
-                time_shift += int((1/frame_rate)*1000)
-        
+
+    def df2midi_like(self,df):
+
+        def select_next_move(note,list_events,current_time,velocity,seq):
+            if list_events == [] or note[2]<list_events[0][0]:
+                seq.time_shift(note[2]-current_time)
+                current_time = note[2]
+                list_events.append((note[3],note[0]))
+                
+                if note[1] != velocity:
+                    seq.set_velocity(note[1])    
+                seq.note_on(note[0])
+            
+            else: # a note needs to end before 
+                note_to_end = list_events.pop(0) # get and remove note to end
+                end_time = note_to_end[0]
+                seq.time_shift(end_time-current_time)
+                current_time = end_time
+                seq.note_off(note_to_end[1])
+                # checking next note : 
+                select_next_move(note, list_events, current_time, velocity,seq)
+
+        current_time = 0
+        velocity = 0
+        list_current_notes = [] # notes on (end_time,pitch)
+        midi_like_seq = MidiLikeSeq()
+        for i in range(df.shape[0]):
+            print(df.iloc[i])
+            note = (df.iloc[i]["Pitch"], df.iloc[i]["Velocity"], df.iloc[i]["Start time"], df.iloc[i]["End time"])
+            select_next_move(note, list_current_notes, current_time, velocity, midi_like_seq)
+        print(midi_like_seq)
         return midi_like_seq
-                    
-
-        
 
 
-
-
-
-
-
-
-
+    def midi2midi_like(self, midi_file):
+        df = self.midi2df(midi_file)
+        return self.df2midi_like(df)
 
 
     def midi_like2midi(self, midi_like_content):
         """ Inputs : note_tuple file, out_file_name (optionnal)"""
 
-        # SET_VELOCITY<70>
-        # NOTE_ON<30>
-        # TIME_SHIFT<30>
-        # NOTE_OFF <50>
         current_time = 0
         velocity = 0
         notes_queue = [] # notes not yet ended (pitch, starting_time, velocity)
@@ -112,4 +106,13 @@ class Converter:
                         break
         
         return sequence
+
+
+
+    def midi2note_tuple(self, midi_data):
+        """ Inputs : midi data, out_file_name (optionnal)"""
+
+
+    def note_tuple2midi(self, note_tuples):
+        """ Inputs : note_tuple, out_file_name (optionnal)"""
 
