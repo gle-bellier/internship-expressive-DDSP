@@ -40,14 +40,9 @@ class Converter:
     def df2midi_like(self,df):
 
         def select_next_move(note,list_events,current_time,velocity,seq):
-
-            print("\n--CURRENT TIME {}--\n".format(current_time))
-
             if list_events == [] or note[2]<list_events[0][0]:
                 if note[2]-current_time > 0:
                     seq.time_shift(note[2]-current_time)
-                print("START TIME ", note[2])
-                print("Time Shift", note[2]-current_time)
                 current_time = note[2]
                 list_events.append((note[3],note[0]))
                 
@@ -55,8 +50,6 @@ class Converter:
                     seq.set_velocity(note[1])
                     velocity = note[1]   
                 seq.note_on(note[0])
-                print("Note On ",note[0])
-                print("current time : ", current_time)
             
 
             
@@ -65,13 +58,8 @@ class Converter:
                 end_time = note_to_end[0]
                 if end_time-current_time > 0:
                     seq.time_shift(end_time-current_time)
-                    print("END TIME ", end_time)
-                    print("Time ift ", end_time-current_time)
                 current_time = end_time
                 seq.note_off(note_to_end[1])
-                print("Note Off ",note_to_end[1])
-                # checking next note : 
-                print("current time : ", current_time)
                 select_next_move(note, list_events, current_time, velocity,seq)
 
             return current_time, list_events, velocity
@@ -88,11 +76,9 @@ class Converter:
         end_time = note_to_end[0]
         if end_time-current_time > 0:
             midi_like_seq.time_shift(end_time-current_time)
-            print("END TIME ", end_time)
-            print("Time ift ", end_time-current_time)
         current_time = end_time
         midi_like_seq.note_off(note_to_end[1])
-        print("Note Off ",note_to_end[1])
+
         return midi_like_seq
 
 
@@ -112,24 +98,19 @@ class Converter:
         for task in midi_like_content.seq:
             if task[:7] == "SET_VEL":
                 velocity = int(float(task[13:len(task)-1]))
-                print("Velocity ", velocity)
-            
+
             if task[:7] == "TIME_SH":
                 current_time += float(task[11:len(task)-1])
-                print("Current time ", current_time)
 
             if task[:7] == "NOTE_ON":
                 pitch = int(float(task[8:len(task)-1]))
                 notes_queue.append((pitch, current_time, velocity))
-                print("Note ON : {} at {}ms".format(pitch, current_time))
 
             if task[:7] == "NOTE_OF":
                 pitch = int(float(task[9:len(task)-1]))
                 for note in notes_queue:
                     if note[0] == pitch:
-                        sequence.notes.add(pitch = note[0], start_time = note[1], end_time = current_time, velocity = note[2])
-                        
-                        print("New note : (pitch = {}, start_time = {}, end_time = {}, velocity = {})".format(note[0], note[1], current_time, note[2]))
+                        sequence.notes.add(pitch = note[0], start_time = note[1], end_time = current_time, velocity = note[2])                        
                         break
                 notes_queue.remove(note)
         
