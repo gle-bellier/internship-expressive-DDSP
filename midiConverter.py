@@ -118,8 +118,50 @@ class Converter:
 
 
 
-    def midi2note_tuple(self, midi_data):
+    def df2note_tuple(self, midi_data):
         """ Inputs : midi data, out_file_name (optionnal)"""
+
+        def select_next_move(note,list_events,current_time,velocity,seq):
+            if list_events == [] or note[2]<list_events[0][0]:
+                if note[2]-current_time > 0:
+                    seq.time_shift(note[2]-current_time)
+                current_time = note[2]
+                list_events.append((note[3],note[0]))
+                
+                if note[1] != velocity:
+                    seq.set_velocity(note[1])
+                    velocity = note[1]   
+                seq.note_on(note[0])
+            
+
+            
+            else: # a note needs to end before 
+                note_to_end = list_events.pop(0) # get and remove note to end
+                end_time = note_to_end[0]
+                if end_time-current_time > 0:
+                    seq.time_shift(end_time-current_time)
+                current_time = end_time
+                seq.note_off(note_to_end[1])
+                select_next_move(note, list_events, current_time, velocity,seq)
+
+            return current_time, list_events, velocity
+
+        current_time = 0
+        velocity = 0
+        list_current_notes = [] # notes on (end_time,pitch)
+        midi_like_seq = MidiLikeSeq()
+        for i in range(df.shape[0]):
+            note = (df.iloc[i]["Pitch"], df.iloc[i]["Velocity"], df.iloc[i]["Start time"], df.iloc[i]["End time"])
+            current_time, list_current_notes, velocity = select_next_move(note, list_current_notes, current_time, velocity, midi_like_seq)
+        # turn off last note:
+        note_to_end = list_current_notes.pop(0) # get and remove note to end
+        end_time = note_to_end[0]
+        if end_time-current_time > 0:
+            midi_like_seq.time_shift(end_time-current_time)
+        current_time = end_time
+        midi_like_seq.note_off(note_to_end[1])
+
+        return midi_like_seq
 
 
     def note_tuple2midi(self, note_tuples):
