@@ -14,7 +14,7 @@ class Converter:
         pass
     
     def midi2df(self,midi_file):
-        mlseq = note_seq.midi_file_to_note_sequence('bassline.mid')
+        mlseq = note_seq.midi_file_to_note_sequence(midi_file)
         pitches = []
         velocities = []
         start_times = []
