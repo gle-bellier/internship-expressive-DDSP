@@ -166,6 +166,30 @@ class Converter:
 
 
 
-    def note_tuple2midi(self, note_tuples):
-        """ Inputs : note_tuple, out_file_name (optionnal)"""
+    def note_tuple2seq(self, note_tuple_seq):
+        """ Input : note_tuple
+            Output : Seq"""
+
+        sequence =  music_pb2.NoteSequence()
+
+        def time_shift_ticks2time(ts_M, ts_m):
+            return (10/13) * ts_M + (10/(13*77)) * ts_m
+            
+        
+        def duration_ticks2time(d_M, d_m):
+            return (10/25) * d_M + (10/(25*40)) * d_m
+
+        last_note_starting_time = 0
+        for t in note_tuple_seq.seq:
+            p = t[2]
+            v = t[3]
+            ts_M, ts_m = t[0], t[1]
+            d_M, d_m = t[4], t[5]
+
+            start_t = last_note_starting_time + time_shift_ticks2time(ts_M, ts_m)
+            end_t = start_t + duration_ticks2time(d_M, d_m)
+            sequence.notes.add(pitch = p, start_time = start_t, end_time = end_t, velocity = v)  
+            last_note_starting_time = start_t                      
+
+        return sequence
 
