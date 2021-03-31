@@ -48,12 +48,16 @@ class Converter:
             list_events.insert(i, note)
              
 
-        def select_next_move(note,list_events,current_time,velocity,seq):
-            if list_events == [] or note[2]<list_events[0][0]: # if there is not not on or if note as to start before the others end 
+        def select_next_move(note,list_events, current_time, velocity, seq):
+
+            #print("DEBUG : note = {} current time = {}, list_events = {} ".format(note, current_time, list_events))
+
+
+            if list_events == [] or note[2] < list_events[0][0]: # if there is not not on or if note as to start before the others end 
                 if note[2]-current_time > 0: # need time shift
                     seq.time_shift(note[2]-current_time)
                 current_time = note[2]
-
+                print("note on {} - --current time {}".format(note[0],current_time))
                 insert_in_list_events(list_events, (note[3],note[0]))
 
                 if note[1] != velocity:
@@ -67,6 +71,7 @@ class Converter:
                 if end_time-current_time > 0:
                     seq.time_shift(end_time-current_time)
                 current_time = end_time
+                print("note off {} - --current time {}".format(note_to_end[1],current_time))
                 seq.note_off(note_to_end[1])
                 select_next_move(note, list_events, current_time, velocity,seq)
 
