@@ -72,7 +72,7 @@ class Visualizer:
             list_loudness.append(loudness)
 
         time = np.array([i/frame_rate for i in range(notes.shape[1])])
-        return list_pitches, list_loudness, time
+        return time, list_pitches, list_loudness
 
 
     def extract_f0_loudness(self, notes):
