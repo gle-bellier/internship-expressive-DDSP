@@ -40,14 +40,22 @@ class Converter:
 
 
     def df2midi_like(self,df):
+        
+        def insert_in_list_events(list_events, note):
+            i = 0 
+            while i<len(list_events) and list_events[i][0]< note[0]: # while previous notes end before
+                i+=1
+            list_events.insert(i, note)
+             
 
         def select_next_move(note,list_events,current_time,velocity,seq):
-            if list_events == [] or note[2]<list_events[0][0]:
-                if note[2]-current_time > 0:
+            if list_events == [] or note[2]<list_events[0][0]: # if there is not not on or if note as to start before the others end 
+                if note[2]-current_time > 0: # need time shift
                     seq.time_shift(note[2]-current_time)
                 current_time = note[2]
-                list_events.append((note[3],note[0]))
-                
+
+                insert_in_list_events(list_events, (note[3],note[0]))
+
                 if note[1] != velocity:
                     seq.set_velocity(note[1])
                     velocity = note[1]   
@@ -63,8 +71,6 @@ class Converter:
                 select_next_move(note, list_events, current_time, velocity,seq)
 
             return current_time, list_events, velocity
-
-
 
         current_time = 0
         velocity = 0
