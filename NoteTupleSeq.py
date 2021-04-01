@@ -36,7 +36,7 @@ class NoteTupleSeq:
         file = open(filename, "w")
         for task in self.seq:
             t = [str(elt) for elt in task]
-            s = "("+','.join(t)+")"+"\n"
+            s = "("+','.join(t)+")"
             file.write(s+"\n")
         file.close()
 
