@@ -31,3 +31,20 @@ class NoteTupleSeq:
                 if self.seq[i]!=o.seq[i]:
                     return False
         return True
+
+    def save(self, filename):
+        file = open(filename, "w")
+        for task in self.seq:
+            t = [str(elt) for elt in task]
+            s = "("+','.join(t)+")"+"\n"
+            file.write(s+"\n")
+        file.close()
+
+    def load(self, filename):
+        file = open(filename, "r")
+        line = file.readline()
+        while line != "":
+            line = *(int(elt) for elt in line[1:-1].split(",")),
+            self.seq.append(line)
+            line = file.readline()
+        file.close()
