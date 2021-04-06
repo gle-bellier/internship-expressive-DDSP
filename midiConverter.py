@@ -185,7 +185,8 @@ class Converter:
 
         previous_note_start_time = 0  # keep track of the beginning of the previous note (initialized at 0)
         note_tuple_seq = NoteTupleSeq()
-        
+
+
         for i in range(df.shape[0]):
             pitch = df.iloc[i]["Pitch"]
             velocity = df.iloc[i]["Velocity"]
