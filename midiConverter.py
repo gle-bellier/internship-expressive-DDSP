@@ -39,7 +39,7 @@ class Converter:
         return df
 
 
-    def df2midi_like(self,df):
+    def df2midi_likePOLY(self,df):
         
         def insert_in_list_events(list_events, note):
             i = 0 
@@ -53,11 +53,11 @@ class Converter:
             #print("DEBUG : note = {} current time = {}, list_events = {} ".format(note, current_time, list_events))
 
 
-            if list_events == [] or note[2] < list_events[0][0]: # if there is not not on or if note as to start before the others end 
+            if list_events == [] or note[2] < list_events[0][0]: # if there is not note on or if note as to start before the others end 
                 if note[2]-current_time > 0: # need time shift
                     seq.time_shift(note[2]-current_time)
                 current_time = note[2]
-                print("note on {} - --current time {}".format(note[0],current_time))
+                #print("note on {} - --current time {}".format(note[0],current_time))
                 insert_in_list_events(list_events, (note[3],note[0]))
 
                 if note[1] != velocity:
@@ -71,7 +71,7 @@ class Converter:
                 if end_time-current_time > 0:
                     seq.time_shift(end_time-current_time)
                 current_time = end_time
-                print("note off {} - --current time {}".format(note_to_end[1],current_time))
+                    #print("note off {} - --current time {}".format(note_to_end[1],current_time))
                 seq.note_off(note_to_end[1])
                 select_next_move(note, list_events, current_time, velocity,seq)
 
@@ -95,9 +95,39 @@ class Converter:
         return midi_like_seq
 
 
+    def df2midi_likeMONO(self, df):
+        """Monophonic version"""
+
+        current_time = 0
+        velocity = 0
+        midi_like_seq = MidiLikeSeq()
+        for i in range(df.shape[0]):
+            note = (df.iloc[i]["Pitch"], df.iloc[i]["Velocity"], df.iloc[i]["Start time"], df.iloc[i]["End time"])
+            time_shift = note[2] - current_time
+            if time_shift>0:
+                midi_like_seq.time_shift(time_shift)
+                current_time = note[2]
+
+            if note[1] != velocity:
+                midi_like_seq.set_velocity(note[1])
+                velocity = note[1]
+            
+            midi_like_seq.note_on(note[0])
+            
+            duration = note[3] - note[2]
+            midi_like_seq.time_shift(duration)
+
+            midi_like_seq.note_off(note[0])
+
+            current_time = note[3]
+        
+        return midi_like_seq
+
+
+
     def midi2midi_like(self, midi_file):
         df = self.midi2df(midi_file)
-        return self.df2midi_like(df)
+        return self.df2midi_likeMONO(df)
 
 
     def midi_like2seq(self, midi_like_content):
