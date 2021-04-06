@@ -143,7 +143,7 @@ class Converter:
                 velocity = int(float(task[13:len(task)-1]))
 
             if task[:7] == "TIME_SH":
-                current_time += float(task[11:len(task)-1])
+                current_time += float(task[11:len(task)-1])/1000
 
             if task[:7] == "NOTE_ON":
                 pitch = int(float(task[8:len(task)-1]))

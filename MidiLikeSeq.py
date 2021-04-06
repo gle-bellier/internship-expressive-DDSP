@@ -3,6 +3,8 @@ import numpy as np
 
 class MidiLikeSeq:
     def __init__(self):
+        """ Class for Midi-Like sequences. """
+
         self.seq = []
         self.notes_on = [] # list of pitches of notes played a this given time
         self.duration = 0
@@ -11,24 +13,39 @@ class MidiLikeSeq:
 
 
     def note_on(self, pitch):
+        """ Input : pitch [0,127] midi norm, Output : None 
+        Append note on task in the sequence """
+
         if pitch in self.notes_on:
             print("Error : note {} is already on".format(pitch))
         else:
             self.seq.append("NOTE_ON<{}>".format(int(pitch)))
             self.notes_on.append(pitch)
 
+
     def note_off(self, pitch):
+        """ Input : pitch [0,127] midi norm, Output : None 
+        Append note off task in the sequence """
+
         if pitch not in self.notes_on:
             print("Error : can not turn off unexisting note (pitch {}).".format(pitch))
         else:
             self.notes_on.remove(pitch)
             self.seq.append("NOTE_OFF<{}>".format(pitch))
     
+
     def set_velocity(self, v):
+        """ Input : velocity [0,127] midi norm, Output : None 
+        Append set velocity task in the sequence """
+
         self.seq.append("SET_VELOCITY<{}>".format(v))
 
+
     def time_shift(self, delay):
-        self.seq.append("TIME_SHIFT<{}>".format(delay))
+        """ Input : time shift (s), Output : None 
+        Append note time shift (ms) in the sequence """
+
+        self.seq.append("TIME_SHIFT<{}>".format(delay*1000))
         self.duration += delay
 
     def show(self, indexes = None):
@@ -99,7 +116,7 @@ class MidiLikeSeq:
                 current_loudness = int(float(task[13:len(task)-1]))
 
             if task[:7] == "TIME_SH":
-                time_shift = float(task[11:len(task)-1])
+                time_shift = float(task[11:len(task)-1])/1000
                 i_previous_event_time = i_current_time
                 i_current_time += int(time_shift // (1/frame_rate))
 
