@@ -49,7 +49,7 @@ class NoteTupleSeq:
         file = open(filename, "r")
         line = file.readline()
         while line != "":
-            line = *(int(elt) for elt in line[1:-1].split(",")),
+            line = *(int(elt) for elt in line[1:-2].split(",")),
             self.seq.append(line)
             line = file.readline()
         file.close()

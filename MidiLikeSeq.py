@@ -87,6 +87,17 @@ class MidiLikeSeq:
             self.seq.append(line[:-1])
             line = file.readline()
         file.close()
+        self.compute_duration()
+
+    def compute_duration(self):
+        d = 0 
+        for task in self.seq:
+            if task[:7] == "TIME_SH":
+                time_shift = float(task[11:len(task)-1])/1000
+                d += time_shift
+        print(d)
+        self.duration = d
+
 
     def get_f0_loudness_time(self, frame_rate):
         """ extract f0 and loudness for monophonic tracks"""
