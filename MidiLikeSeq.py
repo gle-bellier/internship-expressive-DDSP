@@ -49,6 +49,8 @@ class MidiLikeSeq:
         self.duration += delay
 
     def show(self, indexes = None):
+        """ Input : indexes tuples (a, b) (optional), Output : None 
+        Print elt of sequences between [a; b[ """
         if indexes == None:
             a, b = 0, len(self.seq)
         else:
@@ -56,7 +58,9 @@ class MidiLikeSeq:
         for i in range(a,b):
             print(self.seq[i])
 
-    def __repr__(self) -> str:
+    def __repr__(self):
+        """ Input : None, Output : string 
+        Returns string of all element of the sequence"""
         s = ""
         for task in self.seq:
             s+=task
@@ -99,8 +103,10 @@ class MidiLikeSeq:
         self.duration = d
 
 
-    def get_f0_loudness_time(self, frame_rate):
-        """ extract f0 and loudness for monophonic tracks"""
+    def get_f0_loudness_time(self, frame_rate, pitch_unit = "MIDI"):
+        """ Input : frame rate (Hz), pitch unit (MIDI or HERTZ) 
+        Output : Pitch (float array), Loudness (float array), Loudness (float array) 
+        Extract f0 and loudness from monophonic tracks"""
 
 
         def write_events(current_pitch, current_loudness, note_ON, i_current_time, i_previous_event_time):
@@ -144,6 +150,10 @@ class MidiLikeSeq:
             
             t = np.arange(self.pitch.shape[0])/frame_rate
         
+        # convert midi pitch to hz
+        if pitch_unit == "HERTZ":
+            self.pitch = np.power(2, self.pitch/12)*440
+
         return self.pitch, self.loudness, t
 
 

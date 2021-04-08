@@ -54,7 +54,12 @@ class NoteTupleSeq:
             line = file.readline()
         file.close()
 
-    def get_f0_loudness_time(self, frame_rate):
+    def get_f0_loudness_time(self, frame_rate, pitch_unit = "MIDI"):
+        """ Input : frame rate (Hz), pitch unit (MIDI or HERTZ) 
+        Output : Pitch (float array), Loudness (float array), Loudness (float array) 
+        Extract f0 and loudness from monophonic tracks"""
+
+
         def time_shift_ticks2time(ts_M, ts_m):
                 return (10/13) * ts_M + (10/(13*77)) * ts_m
                     
@@ -96,7 +101,10 @@ class NoteTupleSeq:
             i_current_time += int(duration // (1/frame_rate))
             write_events(note[2], note[3], True, i_current_time, i_previous_event_time)
 
-            
+        # convert midi pitch to hz
+        if pitch_unit == "HERTZ":
+            self.pitch = np.power(2, self.pitch/12)*440    
+
 
         return self.pitch, self.loudness, t
         
