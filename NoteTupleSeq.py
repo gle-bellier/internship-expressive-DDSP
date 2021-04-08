@@ -83,7 +83,6 @@ class NoteTupleSeq:
 
         self.pitch = np.zeros(int(self.duration * frame_rate))
         self.loudness = np.zeros(int(self.duration * frame_rate))
-        t = np.arange(self.pitch.shape[0])/frame_rate
 
 
         i_current_time = 0
@@ -101,10 +100,23 @@ class NoteTupleSeq:
             i_current_time += int(duration // (1/frame_rate))
             write_events(note[2], note[3], True, i_current_time, i_previous_event_time)
 
+        
+        # remove tail : 
+        i = 1
+        while self.pitch[-i]==0:
+            i+=1
+
+        print("Tail length : ", i)
+        self.pitch = self.pitch[:-i]
+        self.loudness = self.loudness[:-i]
+
         # convert midi pitch to hz
         if pitch_unit == "HERTZ":
             self.pitch = np.power(2, self.pitch/12)*440    
 
+
+
+        t = np.arange(self.pitch.shape[0])/frame_rate
 
         return self.pitch, self.loudness, t
         

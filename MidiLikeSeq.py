@@ -99,7 +99,7 @@ class MidiLikeSeq:
             if task[:7] == "TIME_SH":
                 time_shift = float(task[11:len(task)-1])/1000
                 d += time_shift
-        print(d)
+        print("Total Duration : ", d)
         self.duration = d
 
 
@@ -148,12 +148,24 @@ class MidiLikeSeq:
                 note_ON = False
                 i_previous_event_time = i_current_time
             
-            t = np.arange(self.pitch.shape[0])/frame_rate
+            
         
+        # remove tail : 
+        i = 1
+        while self.pitch[-i]==0:
+            i+=1
+
+        print("Tail length : ", i)
+        self.pitch = self.pitch[:-i]
+        self.loudness = self.loudness[:-i]
+
         # convert midi pitch to hz
         if pitch_unit == "HERTZ":
             self.pitch = np.power(2, self.pitch/12)*440
 
+
+
+        t = np.arange(self.pitch.shape[0])/frame_rate
         return self.pitch, self.loudness, t
 
 
