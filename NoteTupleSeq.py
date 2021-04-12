@@ -112,7 +112,7 @@ class NoteTupleSeq:
 
         # convert midi pitch to hz
         if pitch_unit == "HERTZ":
-            self.pitch = np.power(2, self.pitch/12)*440    
+            self.pitch = np.power(2, (self.pitch-69)/12)*440    
 
 
 
