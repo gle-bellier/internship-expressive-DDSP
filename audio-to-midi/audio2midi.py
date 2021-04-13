@@ -4,12 +4,146 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 import matplotlib.pyplot as plt
+import librosa as li
 
+import note_seq
+from note_seq.protobuf import music_pb2
 
 
 
 class Audio2MidiConverter:
-    def __init__(self, filename, sampling_rate, min_note_length):
+    def __init__(self, filename):
         self.filename = filename
+        self.sampling_rate = None
+        self.min_note_length = None
+
+
+
+    def hertz2midi(self, frequency):
+        return np.ceil(12 * np.log2(frequency/440)) + 69
+
+
+    def compute_dv(self, confidence):
+        conf_delay = np.concatenate((np.zeros((1)), confidence))
+        confidence_pad = np.concatenate((confidence, np.zeros((1))))
+        dv = confidence_pad - conf_delay
+        return dv[:-1]
+
+
+    def get_confidence_changes(self, confidence, threshold):
+        dv = self.compute_dv(confidence)
+        positiv = dv > threshold
+        negativ = dv < -threshold
+        return negativ, positiv
+
+
+    def get_midi_pitch_changes(self, freq):
+        pitch = self.hertz2midi(freq)
+        pitch_delay = np.concatenate((np.zeros((1)), pitch))
+        pitch_pad = np.concatenate((pitch, np.zeros((1))))
+        dp = np.abs(pitch_pad - pitch_delay) > 0
+        return dp[:-1]
+
+    def extract_loudness(self, signal, sampling_rate, block_size, n_fft=2048):
+        S = li.stft(signal, n_fft=n_fft, hop_length=block_size, win_length=n_fft, center=True,        )
+        S = np.log(abs(S) + 1e-7)
+        f = li.fft_frequencies(sampling_rate, n_fft)
+        a_weight = li.A_weighting(f)
+        S = S + a_weight.reshape(-1, 1)
+        S = np.mean(S, 0)[..., :-1]
+        return S
+
+    def extract_time_frequency_confidence_act(self, signal, sampling_rate, block_size):
+        f0 = crepe.predict(
+        signal,
+        sampling_rate,
+        step_size=int(1000 * block_size / sampling_rate),
+        verbose=0,
+        center=True,
+        viterbi=True)
+        return f0
+
+    def get_note_with_pitch(self, note, frequency, loudness):
+        note_w_pitch = {"on": None, "off": None, "pitch": None, "loudness": None}
+        note_w_pitch["on"] = note["on"]
+        note_w_pitch["off"] = note["off"]
+        note_w_pitch["pitch"] = int(self.hertz2midi(np.mean(frequency[note["on"]: note["off"]])))
+        note_w_pitch["loudness"] = int(np.mean(loudness[note["on"]: note["off"]])) # TODO : Change for normalisation of loudness
+        return note_w_pitch
+
+
+
+    
+
+
+    def process(self, sampling_rate, block_size = 1024, threshold = 0.15, min_note_length = 0.01):
         self.sampling_rate = sampling_rate
         self.min_note_length = min_note_length
+
+        audio, fs = sf.read(filename, dtype='float32')
+        time, frequency, confidence, activation = crepe.predict(audio, fs, viterbi=True, center = True)
+        # loudness = self.extract_loudness(audio, fs, block_size)
+        loudness = np.ones_like(frequency)
+
+
+        pos_conf_changes, neg_conf_changes = self.get_confidence_changes(confidence, threshold)
+        midi_pitch_changes = self.get_midi_pitch_changes(frequency)
+
+        all_onsets = np.logical_or(pos_conf_changes, neg_conf_changes) # May be change to AND
+        all_onsets = np.logical_and(all_onsets, midi_pitch_changes) # May be change to OR 
+
+
+        notes = []
+        current_note = {"on": None, "off": None}
+        t_length = all_onsets.shape[0]
+
+        for t in range(t_length):
+            if all_onsets[t]:
+                if current_note["on"] is not None:
+                    current_note["off"] = t
+                    notes.append(current_note)
+                    current_note = {"on": None, "off": None}
+                current_note["on"] = t
+
+            elif neg_conf_changes[t]:
+                if current_note["on"] is not None:
+                    current_note["off"] = t
+                    notes.append(current_note)
+                    current_note = {"on": None, "off": None}
+
+        # remove short notes
+
+        notes = [note for note in notes if note["off"] - note["on"] >= min_note_length]
+
+        notes_with_pitch = [self.get_note_with_pitch(note, frequency, loudness) for note in notes]
+
+
+        print(notes_with_pitch)
+        sequence =  music_pb2.NoteSequence()
+
+        for note in notes_with_pitch:
+            sequence.notes.add(pitch = note["pitch"], start_time = time[note["on"]], end_time = time[note["off"]], velocity = note["loudness"])                        
+            
+        return sequence
+
+        
+        
+        
+
+
+
+
+
+
+
+
+    
+
+
+
+if __name__ == "__main__":
+    filename = "violin.wav"
+    a2m = Audio2MidiConverter(filename)
+    seq = a2m.process(1600)
+    note_seq.plot_sequence(seq)
+    
