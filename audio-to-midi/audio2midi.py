@@ -84,7 +84,7 @@ class Audio2MidiConverter:
         midi_pitch_changes = self.get_midi_pitch_changes(frequency)
 
         all_onsets = np.logical_or(pos_conf_changes, neg_conf_changes) # May be change to AND
-        all_onsets = np.logical_and(all_onsets, midi_pitch_changes) # May be change to OR 
+        all_onsets = np.logical_or(all_onsets, midi_pitch_changes) # May be change to OR 
 
 
         notes = []
@@ -139,7 +139,11 @@ class Audio2MidiConverter:
 
 if __name__ == "__main__":
     filename = "violin.wav"
+
+    threshold = 0.10
     a2m = Audio2MidiConverter(filename)
-    seq = a2m.process()
-    note_seq.plot_sequence(seq)
+    seq_midi = a2m.process(sampling_rate = 48000, block_size = 480, threshold = threshold)
+
+
+    note_seq.sequence_proto_to_midi_file(seq_midi, filename[:-4] + "(from-audio)-th{}.mid".format(threshold))
     
