@@ -1,6 +1,7 @@
 import os 
 import os.path
 from os import path
+import matplotlib.pyplot as plt
 import csv
 import sounddevice as sd
 import soundfile as sf
@@ -10,7 +11,7 @@ import crepe
 
 
 class Extractor:
-    def __init__(self, path = "/f0-confidence-loudness-files/"):
+    def __init__(self, path = "f0-confidence-loudness-files/"):
         self.path = path
 
 
@@ -32,14 +33,15 @@ class Extractor:
 
     
     def write_file(self, file_path, time, f0, confidence, loudness):
-
+        print("Writing : \n")
+        print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
         with open(file_path, 'w') as csvfile:
             fieldnames = ["time", "f0", "confidence", "loudness"]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
             for t in range(time.shape[0]):
-               writer.writerow({"time": time[t], "f0": f0[t], "confidence" : confidence[t], "loudness" : loudness[t]})
+               writer.writerow({"time": str(time[t]), "f0": str(f0[t]), "confidence" : str(confidence[t]), "loudness" : str(loudness[t])})
 
     
 
@@ -101,6 +103,19 @@ class Extractor:
 
         else: # we need to extract f0 confidence loudness
             time, f0, confidence, loudness = self.extract_f0_confidence_loudness(filename, sampling_rate, block_size)
+
+
+            # Check dimensions : 
+            if not time.shape[0] == f0.shape[0] == confidence.shape[0] == loudness.shape[0]:
+                print("!!Warning!! Shapes do not match \n")
+                print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
+                size = min(time.shape[0], f0.shape[0], confidence.shape[0], loudness.shape[0])
+                print("New size : ", size)
+                time, f0, confidence, loudness = time[:size], f0[:size], confidence[:size], loudness[:size] 
+
+
+
+
             if write: # we need to write the file
                 self.write_file(file_path, time, f0, confidence, loudness)
             
@@ -116,9 +131,15 @@ class Extractor:
 if __name__ == "__main__":
     filename = "violin.wav"
     sampling_rate = 48000
-    block_size = 480 
+    block_size = 480
 
     ext = Extractor()
-    time, f0, confidence, loudness = ext.get_time_f0_confidence_loudness(filename, sampling_rate, block_size, write=False)
+    time, f0, confidence, loudness = ext.get_time_f0_confidence_loudness(filename, sampling_rate, block_size, write=True)
 
     print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
+
+    plt.plot(time, f0/np.max(np.abs(f0)), label = "f0")
+    plt.plot(time, loudness/np.max(np.abs(loudness)), label = "Loudness")
+    plt.plot(time, confidence/np.max(np.abs(confidence)), label = "Confidence")
+    plt.legend()
+    plt.show()
