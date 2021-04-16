@@ -235,3 +235,24 @@ class Converter:
 
         return sequence
 
+
+    def midi2f0_loudness_time(self, frame_rate = 2000):
+        
+        n = len(self.midi_data.instruments)
+        list_pitches = []
+        list_loudness = []
+        list_times = []
+        for instrument_data in self.midi_data.instruments:
+            notes = instrument_data.get_piano_roll(frame_rate)
+            pitches, loudness = self.extract_f0_loudness(notes)
+            #list_pitches.append(pitches)            Turns it monophonic
+            #list_loudness.append(loudness)
+            times = np.array([i/frame_rate for i in range(notes.shape[1])])
+        #return list_times, list_pitches, list_loudness
+        return times, pitches, loudness
+
+    def extract_f0_loudness(self, notes):
+        pitches = np.argmax(notes, axis = 0)
+        loudness = np.transpose(np.max(notes, axis = 0))
+        return pitches, loudness
+

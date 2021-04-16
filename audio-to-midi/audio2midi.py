@@ -74,6 +74,30 @@ class Audio2MidiConverter:
     
 
 
+    def get_window(self, comp, index,  h_window_length):
+        a = index - h_window_length
+        b = index + h_window_length
+        if a<0: a = 0 
+        if b>=comp.shape[0]: b =comp.shape[0]-1
+        a, b = int(a), int(b)
+        return comp[a:b]
+
+        
+
+    def local_AND(self, support, comp, h_window_length):
+        onsets = np.zeros(support.shape[0])
+
+
+        for i in range(support.shape[0]):
+            if support[i]: # need to check comp
+                window = self.get_window(comp, i, h_window_length)
+                onsets[i] = np.sum(window) > 0 # There is at least one other offset detected in the window
+        return onsets
+
+
+
+
+
     def process(self, sampling_rate = 48000, block_size = 480, threshold_confidence = 0.15, threshold_loudness = 0.20, min_note_length = 0.01,  verbose = False):
         self.sampling_rate = sampling_rate
         self.min_note_length = min_note_length
@@ -95,9 +119,24 @@ class Audio2MidiConverter:
         pitch_onsets = midi_pitch_changes
 
 
-        all_onsets = np.logical_or(pos_conf_changes, neg_conf_changes) # May be change to AND
-        all_onsets = np.logical_or(all_onsets, midi_pitch_changes) # May be change to OR 
-        all_onsets = np.logical_or(all_onsets, loud_onsets)   
+
+        # all_onsets = np.logical_or(pos_conf_changes, neg_conf_changes) # May be change to AND
+        # all_onsets = np.logical_or(all_onsets, midi_pitch_changes) # May be change to OR 
+        # all_onsets = np.logical_or(all_onsets, loud_onsets)   
+
+        t_h_window_length = 0.005 # in s
+        h_window_length = np.ceil(t_h_window_length * self.sampling_rate) # in samples
+
+        neg_changes = self.local_AND(neg_conf_changes, neg_loud_changes, h_window_length)
+        pos_changes = self.local_AND(pos_conf_changes, pos_loud_changes, h_window_length)
+
+        all_onsets = self.local_AND(pos_changes, neg_changes, h_window_length)
+
+
+
+
+        # Notes creation
+
 
         notes = []
         current_note = {"on": None, "off": None}
@@ -111,12 +150,11 @@ class Audio2MidiConverter:
                     current_note = {"on": None, "off": None}
                 current_note["on"] = t
 
-            elif neg_conf_changes[t]:
+            elif neg_changes[t]:
                 if current_note["on"] is not None:
                     current_note["off"] = t
                     notes.append(current_note)
                     current_note = {"on": None, "off": None}
-
 
 
 
@@ -132,23 +170,25 @@ class Audio2MidiConverter:
             ax1.set_title("Conf Onsets")
 
 
-            ax2 = plt.subplot(222)       
+            ax2 = plt.subplot(222)
             ax2.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax2.plot(time[a:b], pitch_onsets[a:b], label = "Onsets")
+            ax2.plot(time[a:b], loud_onsets[a:b], label = "Onsets")
             ax2.legend()
-            ax2.set_title('Pitch Onsets')
-            
-            ax3 = plt.subplot(223)
+            ax2.set_title('Loudness Onsets')
+
+            ax3 = plt.subplot(223)       
             ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax3.plot(time[a:b], loud_onsets[a:b], label = "Onsets")
+            ax3.plot(time[a:b], neg_changes[a:b], label = "Onsets")
             ax3.legend()
-            ax3.set_title('Loudness Onsets')
+            ax3.set_title('Neg Onsets')
+            
+
 
             ax3 = plt.subplot(224)
             ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax3.plot(time[a:b], np.logical_and(loud_onsets[a:b], conf_onsets[a:b]), label = "Onsets")
+            ax3.plot(time[a:b], pos_changes[a:b], label = "Onsets")
             ax3.legend()
-            ax3.set_title('Loudness AND Conf Onsets')
+            ax3.set_title('Pos Onsets')
 
             plt.legend()
             plt.show()
@@ -228,12 +268,12 @@ class Audio2MidiConverter:
 
 if __name__ == "__main__":
     filename = "violin.wav"
-
-    threshold_confidence = 0.05
-    threshold_loudness = 0.15   
+    save_path = "midi-generated-files/"
+    threshold_confidence = 0.08
+    threshold_loudness = 0.2   
     a2m = Audio2MidiConverter(filename)
     seq_midi = a2m.process(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = True)
 
 
-    note_seq.sequence_proto_to_midi_file(seq_midi, filename[:-4] + "(from-audio)-thC{}-thL{}.mid".format(threshold_confidence, threshold_loudness))
+    note_seq.sequence_proto_to_midi_file(seq_midi, save_path + filename[:-4] + "(from-audio)-thC{}-thL{}.mid".format(threshold_confidence, threshold_loudness))
     
