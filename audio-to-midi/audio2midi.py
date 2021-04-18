@@ -105,7 +105,7 @@ class Audio2MidiConverter:
 
 
         ext = Extractor()
-        time, frequency, confidence, loudness = ext.get_time_f0_confidence_loudness(filename, sampling_rate, block_size, write=True)
+        time, frequency, confidence, loudness = ext.get_time_f0_confidence_loudness(self.filename, sampling_rate, block_size, write=True)
         loudness = self.dB2midi(loudness)
 
         neg_conf_changes, pos_conf_changes = self.get_confidence_changes(confidence, threshold_confidence)
@@ -243,7 +243,6 @@ class Audio2MidiConverter:
 
 
         # writing note in sequence
-        print(notes_with_pitch)
         sequence =  music_pb2.NoteSequence()
 
         for note in notes_with_pitch:
@@ -273,7 +272,5 @@ if __name__ == "__main__":
     threshold_loudness = 0.2   
     a2m = Audio2MidiConverter(filename)
     seq_midi = a2m.process(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = True)
-
-
     note_seq.sequence_proto_to_midi_file(seq_midi, save_path + filename[:-4] + "(from-audio)-thC{}-thL{}.mid".format(threshold_confidence, threshold_loudness))
     
