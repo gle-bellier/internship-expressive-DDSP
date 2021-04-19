@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0,'..')
 from midiConverter import Converter
 
-
+from tqdm import tqdm
 import os
 import numpy as np
 import sounddevice as sd
@@ -53,48 +53,53 @@ class GridSearch:
 
 
         results = np.zeros((confidence_length, loudness_length))
+        
+        with tqdm(total=confidence_length*loudness_length) as pbar:
 
-        for i in range(confidence_length):
-            for j in range(loudness_length):
+            for i in range(confidence_length):
+                for j in range(loudness_length):
 
-                threshold_confidence, threshold_loudness = confidence_thresholds[i], loudness_thresholds[j]
+                    threshold_confidence, threshold_loudness = confidence_thresholds[i], loudness_thresholds[j]
 
-                a2m = Audio2MidiConverter(self.filename)
-                seq_midi = a2m.process(sampling_rate = self.sampling_rate, block_size = self.block_size, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = False)
-                save_file = save_path + filename[:-4] + "(from-audio)-thC{}-thL{}.mid".format(threshold_confidence, threshold_loudness)
-                note_seq.sequence_proto_to_midi_file(seq_midi, save_file)
+                    a2m = Audio2MidiConverter(self.filename)
+                    seq_midi = a2m.process(sampling_rate = self.sampling_rate, block_size = self.block_size, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = False)
+                    save_file = save_path + filename[:-4] + "(from-audio)-thC{}-thL{}.mid".format(threshold_confidence, threshold_loudness)
+                    note_seq.sequence_proto_to_midi_file(seq_midi, save_file)
 
 
-                if verbose:
-                    print("Start converting : ", save_file)
+                    if verbose:
+                        print("Start converting : ", save_file)
 
-                c = Converter()
-                midi_data = pm.PrettyMIDI(save_file)
+                    c = Converter()
+                    midi_data = pm.PrettyMIDI(save_file)
 
-                if verbose:
-                    print("->   File loaded.")
+                    if verbose:
+                        print("->   File loaded.")
 
-                time_gen, frequency_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size)
-                frequencyMidi = self.hertz2midi(frequency_or)
+                    time_gen, frequency_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size)
+                    frequencyMidi = self.hertz2midi(frequency_or)
 
-                # 0 padding:
-                new_freq_gen = np.concatenate((frequency_gen, np.zeros(time_or.shape[0]-time_gen.shape[0])))
+                    # 0 padding:
+                    new_freq_gen = np.concatenate((frequency_gen, np.zeros(time_or.shape[0]-time_gen.shape[0])))
 
-                # compute difference and score:
+                    # compute difference and score:
 
-                diff = np.abs(frequencyMidi-new_freq_gen)
-                score = np.mean(diff)
+                    diff = np.abs(frequencyMidi-new_freq_gen)
+                    score = np.mean(diff)
 
-                if verbose:
-                    plt.plot(time_or, frequencyMidi)
-                    plt.plot(time_or, new_freq_gen)
-                    plt.show()
+                    if verbose:
+                        plt.plot(time_or, frequencyMidi)
+                        plt.plot(time_or, new_freq_gen)
+                        plt.show()
 
-                    plt.plot(time_or, diff)
-                    plt.show()
-                    print("Loss : ", score)
-                
-                results[i, j] = score
+                        plt.plot(time_or, diff)
+                        plt.show()
+                        print("Loss : ", score)
+                    
+                    results[i, j] = score
+                    
+                    # update progress bar
+                    pbar.update(1)
 
         self.results = results
 
@@ -153,19 +158,27 @@ gs = GridSearch(filename, sampling_rate, block_size)
 gs.set_save_path(save_path)
 
 # define thresholds ranges : 
-number_thresholds = 10
-loudness_thresholds = np.linspace(0.05, 0.3, number_thresholds)
-confidence_thresholds = np.linspace(0.05, 0.3, number_thresholds)
+number_thresholds = 50
+loudness_thresholds = np.linspace(0.02, 0.3, number_thresholds)
+confidence_thresholds = np.linspace(0.02, 0.3, number_thresholds)
 
 # get results :
 rslt = gs.get_result(confidence_thresholds, loudness_thresholds, verbose=False, keep_best_file=True)
 
 # print results : 
 
+rslt = np.log(rslt)
+rslt = rslt/np.max(rslt)
+
+
 sns.heatmap(rslt)
 
-plt.yticks(plt.yticks()[0], labels=confidence_thresholds, rotation=0)
-plt.xticks(plt.xticks()[0], labels=loudness_thresholds)
+plt.xticks(plt.xticks()[0], labels=np.round(confidence_thresholds, 3))
+plt.yticks(plt.yticks()[0], labels=np.round(loudness_thresholds, 3))
+plt.xlabel("Confidence threshold")
+plt.ylabel("Loudness threshold")
+plt.title("Grid Search for Audio2Midi")
+plt.legend()
 plt.show()
 
 
