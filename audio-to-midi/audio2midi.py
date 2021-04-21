@@ -6,6 +6,9 @@ import soundfile as sf
 import matplotlib.pyplot as plt
 import librosa as li
 
+
+from madmom.features import onsets
+
 import note_seq
 from note_seq.protobuf import music_pb2
 
@@ -133,6 +136,33 @@ class Audio2MidiConverter:
         all_onsets = self.local_AND(pos_changes, neg_changes, h_window_length)
 
 
+        ONSET_DETECTION_MADMOM = True
+
+        if ONSET_DETECTION_MADMOM:
+            proc = onsets.OnsetPeakPickingProcessor(threshold = 0.35, fps=100)
+            act = onsets.RNNOnsetProcessor()(self.filename)
+
+
+
+            #frame_rate = len(audio)/len(onset_strength)
+            #onset_times = onset_frames*frame_rate
+
+            onset_times = proc(act)
+            print(onset_times)
+            # create vector:
+            onset_vector = np.zeros_like(time)
+            i_onset = 0
+            for i in range(time.shape[0]-1):
+                onset = onset_times[i_onset]
+                if time[i]<= onset and onset<time[i+1]: # onset in segment
+                    onset_vector[i] = 1 # add onset
+                    if i_onset+1 < len(onset_times):
+                        i_onset += 1 # we need to set next onset (if there is one)
+                
+        
+
+
+
 
 
         # Notes creation
@@ -186,9 +216,9 @@ class Audio2MidiConverter:
 
             ax3 = plt.subplot(224)
             ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax3.plot(time[a:b], pos_changes[a:b], label = "Onsets")
+            ax3.plot(time[a:b], onset_vector[a:b], label = "Onsets")
             ax3.legend()
-            ax3.set_title('Pos Onsets')
+            ax3.set_title('Madmom')
 
             plt.legend()
             plt.show()
@@ -252,7 +282,114 @@ class Audio2MidiConverter:
 
         
         
-        
+    def process_madmom(self, sampling_rate = 48000, block_size = 480, threshold_confidence = 0.15, threshold_madmom = 0.20, min_note_length = 0.01,  verbose = False):
+        self.sampling_rate = sampling_rate
+        self.min_note_length = min_note_length
+
+
+
+        ext = Extractor()
+        time, frequency, confidence, loudness = ext.get_time_f0_confidence_loudness(self.filename, sampling_rate, block_size, write=True)
+        neg_changes, _ = self.get_confidence_changes(confidence, threshold_confidence)
+        loudness = self.dB2midi(loudness)
+
+
+        proc = onsets.OnsetPeakPickingProcessor(threshold = threshold_madmom, fps=100)
+        act = onsets.RNNOnsetProcessor()(self.filename)
+
+        onset_times = proc(act)
+        # create vector:
+        all_onsets = np.zeros_like(time)
+        i_onset = 0 
+        for i in range(time.shape[0]-1):
+            onset = onset_times[i_onset]
+            if time[i]<= onset and onset<time[i+1]: # onset in segment
+                all_onsets[i] = 1 # add onset
+                if i_onset+1 < len(onset_times):
+                    i_onset += 1 # we need to set next onset (if there is one)
+            
+    
+        # Notes creation
+
+
+        notes = []
+        current_note = {"on": None, "off": None}
+        t_length = all_onsets.shape[0]
+
+        for t in range(t_length):
+            if all_onsets[t]:
+                if current_note["on"] is not None:
+                    current_note["off"] = t
+                    notes.append(current_note)
+                    current_note = {"on": None, "off": None}
+                current_note["on"] = t
+
+            elif neg_changes[t]:
+                if current_note["on"] is not None:
+                    current_note["off"] = t
+                    notes.append(current_note)
+                    current_note = {"on": None, "off": None}
+
+
+
+        if verbose:
+            span = time.shape[0]//8
+            middle = time.shape[0]//2
+            a, b = middle - span, middle + span
+   
+
+            ax3 = plt.subplot(224)
+            ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
+            ax3.plot(time[a:b], all_onsets[a:b], label = "Onsets")
+            ax3.legend()
+            ax3.set_title('Madmom')
+
+            plt.legend()
+            plt.show()
+
+
+
+
+
+        if verbose:
+            span = time.shape[0]//8
+            middle = time.shape[0]//2
+            a, b = middle - span, middle + span
+
+            ax1 = plt.subplot(212)        
+            ax1.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
+            ax1.plot(time[a:b], np.ones((b-a))*threshold_confidence)
+
+            ax1.plot(time[a:b], np.abs(self.compute_dv(confidence[a:b])), label = "Dv Confidence")
+            ax1.set_title("f0 confidence")
+
+            ax2 = plt.subplot(221)
+       
+            ax2.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
+            ax2.plot(time[a:b], all_onsets[a:b], label = "Onsets")
+            ax2.set_title('Onsets')
+            plt.legend()
+            plt.show()
+
+
+
+
+
+        # remove short notes
+
+        notes = [note for note in notes if note["off"] - note["on"] >= min_note_length]
+
+        # add pitch information
+        notes_with_pitch = [self.get_note_with_pitch_loudness(note, frequency, loudness) for note in notes]
+
+
+        # writing note in sequence
+        sequence =  music_pb2.NoteSequence()
+
+        for note in notes_with_pitch:
+            sequence.notes.add(pitch = note["pitch"], start_time = time[note["on"]], end_time = time[note["off"]], velocity = note["loudness"])                        
+            
+        return sequence 
 
 
 
@@ -271,6 +408,8 @@ if __name__ == "__main__":
     threshold_confidence = 0.08
     threshold_loudness = 0.2   
     a2m = Audio2MidiConverter(filename)
-    seq_midi = a2m.process(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = True)
+
+    #seq_midi = a2m.process(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = True)
+    seq_midi = a2m.process_madmom(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_madmom = threshold_loudness, verbose = True)
     note_seq.sequence_proto_to_midi_file(seq_midi, save_path + filename[:-4] + "(from-audio)-thC{}-thL{}.mid".format(threshold_confidence, threshold_loudness))
     
