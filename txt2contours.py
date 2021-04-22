@@ -20,7 +20,7 @@ class Txt2Contours:
         return list_events
 
 
-    def process(self, filename, sample_rate=16000):
+    def process(self, filename, sampling_rate=16000):
         list_events = self.get_list_events(filename)
 
         # Compute track duration : 
@@ -29,7 +29,7 @@ class Txt2Contours:
 
         # create time vector : 
 
-        time = np.arange(0, duration, 1/sample_rate)
+        time = np.arange(0, duration, 1/sampling_rate)
         f0 = np.zeros_like(time)
         loudness = np.zeros_like(time)
         i_note = 0
@@ -52,9 +52,6 @@ class Txt2Contours:
                 f0[i] = 0
 
         return time, f0, loudness
-
-
-
 
 
 
