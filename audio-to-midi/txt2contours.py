@@ -57,7 +57,7 @@ class Txt2Contours:
 
 
 if __name__ == '__main__':
-    filename = "test.txt"
+    filename = "violin.txt"
     t2c = Txt2Contours()
     time, f0, loudness = t2c.process(filename)
     
