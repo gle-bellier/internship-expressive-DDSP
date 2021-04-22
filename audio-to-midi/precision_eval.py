@@ -50,20 +50,20 @@ class Eval:
 
         # compute difference and score:
 
-        diff = np.abs(frequency_text-new_freq_gen)
-        score = np.mean(diff)
+        #diff = np.abs(frequency_text-new_freq_gen)
+        score = 0 # np.mean(diff)
 
 
         if verbose:
             ax1 = plt.subplot(212)        
-            ax1.plot(time_gen, frequency_text, label = "text")
-            ax1.plot(time_gen, frequency_gen, label = "midi" )
+            ax1.plot(time_text, frequency_text, label = "text")
+            ax1.plot(time_gen, new_freq_gen, label = "midi" )
             ax1.set_title("f0 comparison")
 
-            ax2 = plt.subplot(221)
+            #ax2 = plt.subplot(221)
        
-            ax2.plot(time_gen, diff, label="Diff")
-            ax2.set_title('Difference')
+            # ax2.plot(time_gen, diff, label="Diff")
+            # ax2.set_title('Difference')
             plt.legend()
             plt.show()
 

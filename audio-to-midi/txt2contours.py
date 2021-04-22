@@ -45,7 +45,7 @@ class Txt2Contours:
                 offset = note[0]+note[2]
                 pitch = note[1]
 
-            if time[i]<= onset and offset>time[i]:
+            if time[i]>= onset and offset>time[i]:
                 f0[i] = pitch
                 loudness[i] = 1
             else:
@@ -61,6 +61,6 @@ if __name__ == '__main__':
     t2c = Txt2Contours()
     time, f0, loudness = t2c.process(filename)
     
-    plt.plot(time[10000:400000], f0[10000:400000]/np.max(f0), label = "Frequency")
-    plt.plot(time[10000:400000], loudness[10000:400000], label = "Loudness")
+    plt.plot(time[0:400000], f0[0:400000], label = "Frequency")
+    #plt.plot(time[10000:400000], loudness[10000:400000], label = "Loudness")
     plt.show()
