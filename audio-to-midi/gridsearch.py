@@ -109,7 +109,7 @@ class GridSearch:
         self.results = results
 
         # clean files
-        self.clean(keep_best_file, save_path + filename[:-4], results, thresholds1, thresholds2)
+        self.clean(keep_best_file, save_path + filename[:-4], results, thresholds1, thresholds2, madmom)
 
         return results
 
@@ -153,7 +153,8 @@ class GridSearch:
 
 
 
-filename = "violin.wav"
+#filename = "violin.wav"
+filename = "flute.wav"
 save_path = "midi-generated-files/"
 sampling_rate = 48000
 block_size = 480 
@@ -170,7 +171,7 @@ thresholds2 = np.linspace(0.01, 0.4, number_thresholds)
 thresholds1 = np.linspace(0.01, 0.4, number_thresholds)
 
 # get results :
-rslt = gs.get_result(thresholds1, thresholds2, madmom=True, verbose=False, keep_best_file=True)
+rslt = gs.get_result(thresholds1, thresholds2, madmom=False, verbose=False, keep_best_file=True)
 
 # print results : 
 

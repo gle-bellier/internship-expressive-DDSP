@@ -136,34 +136,6 @@ class Audio2MidiConverter:
         all_onsets = self.local_AND(pos_changes, neg_changes, h_window_length)
 
 
-        ONSET_DETECTION_MADMOM = True
-
-        if ONSET_DETECTION_MADMOM:
-            proc = onsets.OnsetPeakPickingProcessor(threshold = 0.35, fps=100)
-            act = onsets.RNNOnsetProcessor()(self.filename)
-
-
-
-            #frame_rate = len(audio)/len(onset_strength)
-            #onset_times = onset_frames*frame_rate
-
-            onset_times = proc(act)
-            print(onset_times)
-            # create vector:
-            onset_vector = np.zeros_like(time)
-            i_onset = 0
-            for i in range(time.shape[0]-1):
-                onset = onset_times[i_onset]
-                if time[i]<= onset and onset<time[i+1]: # onset in segment
-                    onset_vector[i] = 1 # add onset
-                    if i_onset+1 < len(onset_times):
-                        i_onset += 1 # we need to set next onset (if there is one)
-                
-        
-
-
-
-
 
         # Notes creation
 
@@ -216,9 +188,9 @@ class Audio2MidiConverter:
 
             ax3 = plt.subplot(224)
             ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax3.plot(time[a:b], onset_vector[a:b], label = "Onsets")
+            ax3.plot(time[a:b], pos_changes[a:b], label = "Onsets")
             ax3.legend()
-            ax3.set_title('Madmom')
+            ax3.set_title('Pos Onsets')
 
             plt.legend()
             plt.show()
@@ -403,13 +375,15 @@ class Audio2MidiConverter:
 
 
 if __name__ == "__main__":
-    filename = "violin.wav"
+    #filename = "violin.wav"
+    filename = "flute.wav"
     save_path = "midi-generated-files/"
-    threshold_confidence = 0.08
-    threshold_loudness = 0.2   
+    threshold_confidence = 0.2
+    threshold_loudness = 0.3
+    threshold_madmom = 0.3   
     a2m = Audio2MidiConverter(filename)
 
-    #seq_midi = a2m.process(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = True)
-    seq_midi = a2m.process_madmom(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_madmom = threshold_loudness, verbose = True)
+    seq_midi = a2m.process(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_loudness = threshold_loudness, verbose = True)
+    #seq_midi = a2m.process_madmom(sampling_rate = 48000, block_size = 480, threshold_confidence = threshold_confidence, threshold_madmom = threshold_madmom, verbose = True)
     note_seq.sequence_proto_to_midi_file(seq_midi, save_path + filename[:-4] + "(from-audio)-thC{}-thL{}.mid".format(threshold_confidence, threshold_loudness))
     
