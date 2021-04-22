@@ -305,7 +305,7 @@ class Audio2MidiConverter:
 
         # writing note in sequence
         sequence =  music_pb2.NoteSequence()
-
+        
         for note in notes:
             sequence.notes.add(pitch = note["pitch"], start_time = time[note["on"]], end_time = time[note["off"]], velocity = note["loudness"])                        
             
