@@ -132,29 +132,9 @@ class GridSearch:
 
 
 
-            
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#filename = "violin.wav"
-filename = "flute.wav"
+filename = "violin.wav"
+#filename = "flute.wav"
 save_path = "midi-generated-files/"
 sampling_rate = 48000
 block_size = 480 

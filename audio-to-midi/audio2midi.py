@@ -98,6 +98,23 @@ class Audio2MidiConverter:
         return onsets
 
 
+    def join_notes(self, notes, time, min_duration = 0.1):
+
+        joined_notes = []
+
+        for i in range(len(notes)-1):
+            note, next_note = notes[i], notes[i+1]
+            if note["pitch"]==next_note["pitch"] and time[next_note["on"]]-time[note["off"]]<=min_duration: # notes of the same pitch and really close 
+                new_note = {"on": None, "off": None, "pitch": None, "loudness": None}
+                new_note["on"] = note["on"]
+                new_note["off"] = next_note["off"] # notes are joined
+                new_note["pitch"] = note["pitch"]
+                new_note["loudness"] = (note["loudness"] + next_note["loudness"])//2
+                joined_notes.append(new_note)
+            else:
+                joined_notes.append(note)
+
+        return joined_notes
 
 
 
@@ -160,75 +177,6 @@ class Audio2MidiConverter:
 
 
 
-        if verbose:
-            span = time.shape[0]//8
-            middle = time.shape[0]//2
-            a, b = middle - span, middle + span
-
-            ax1 = plt.subplot(221)        
-            ax1.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax1.plot(time[a:b], conf_onsets[a:b], label = "Onsets")
-            ax1.legend()
-            ax1.set_title("Conf Onsets")
-
-
-            ax2 = plt.subplot(222)
-            ax2.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax2.plot(time[a:b], loud_onsets[a:b], label = "Onsets")
-            ax2.legend()
-            ax2.set_title('Loudness Onsets')
-
-            ax3 = plt.subplot(223)       
-            ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax3.plot(time[a:b], neg_changes[a:b], label = "Onsets")
-            ax3.legend()
-            ax3.set_title('Neg Onsets')
-            
-
-
-            ax3 = plt.subplot(224)
-            ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax3.plot(time[a:b], pos_changes[a:b], label = "Onsets")
-            ax3.legend()
-            ax3.set_title('Pos Onsets')
-
-            plt.legend()
-            plt.show()
-
-
-
-
-
-        if verbose:
-            span = time.shape[0]//8
-            middle = time.shape[0]//2
-            a, b = middle - span, middle + span
-
-            ax1 = plt.subplot(212)        
-            ax1.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax1.plot(time[a:b], np.ones((b-a))*threshold_confidence)
-
-            ax1.plot(time[a:b], np.abs(self.compute_dv(confidence[a:b])), label = "Dv Confidence")
-            ax1.set_title("f0 confidence")
-
-            ax2 = plt.subplot(221)
-       
-            ax2.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax2.plot(time[a:b], all_onsets[a:b], label = "Onsets")
-            ax2.set_title('Onsets')
-
-
-            loudness_dv = self.compute_dv(loudness)
-            ax3 = plt.subplot(222)
-            ax3.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
-            ax3.plot(time[a:b], np.abs(loudness_dv[a:b])/np.max(loudness_dv), label = "Loudness")
-            ax3.plot(time[a:b], np.ones((b-a))*threshold_loudness)
-            ax3.set_title('Loudness')
-
-
-            plt.legend()
-            plt.show()
-
 
 
 
@@ -238,16 +186,16 @@ class Audio2MidiConverter:
         notes = [note for note in notes if note["off"] - note["on"] >= min_note_length]
 
         # add pitch information
-        notes_with_pitch = [self.get_note_with_pitch_loudness(note, frequency, loudness) for note in notes]
+        notes_with_pitch_loudness = [self.get_note_with_pitch_loudness(note, frequency, loudness) for note in notes]
 
-
-
+        #join successive notes of same pitch (carefully) 
+        notes = self.join_notes(notes_with_pitch_loudness, time)
 
 
         # writing note in sequence
         sequence =  music_pb2.NoteSequence()
 
-        for note in notes_with_pitch:
+        for note in notes:
             sequence.notes.add(pitch = note["pitch"], start_time = time[note["on"]], end_time = time[note["off"]], velocity = note["loudness"])                        
             
         return sequence
@@ -352,13 +300,13 @@ class Audio2MidiConverter:
         notes = [note for note in notes if note["off"] - note["on"] >= min_note_length]
 
         # add pitch information
-        notes_with_pitch = [self.get_note_with_pitch_loudness(note, frequency, loudness) for note in notes]
-
+        notes_with_pitch_loudness = [self.get_note_with_pitch_loudness(note, frequency, loudness) for note in notes]
+        notes = self.join_notes(notes_with_pitch_loudness, time)
 
         # writing note in sequence
         sequence =  music_pb2.NoteSequence()
 
-        for note in notes_with_pitch:
+        for note in notes:
             sequence.notes.add(pitch = note["pitch"], start_time = time[note["on"]], end_time = time[note["off"]], velocity = note["loudness"])                        
             
         return sequence 
