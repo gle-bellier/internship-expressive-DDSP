@@ -23,10 +23,6 @@ class Audio2MidiConverter:
 
 
 
-    def hertz2midi(self, frequency):
-        return np.ceil(12 * np.log2(frequency/440)) + 69
-
-
     def dB2midi(self, loudness, global_peak = None, global_min = None):
         if global_peak == None:
             global_peak = np.max(loudness)
@@ -58,7 +54,7 @@ class Audio2MidiConverter:
 
 
     def get_midi_pitch_changes(self, freq):
-        pitch = self.hertz2midi(freq)
+        pitch = li.core.hz_to_midi(freq)
         pitch_delay = np.concatenate((np.zeros((1)), pitch))
         pitch_pad = np.concatenate((pitch, np.zeros((1))))
         dp = np.abs(pitch_pad - pitch_delay) > 0
@@ -70,7 +66,7 @@ class Audio2MidiConverter:
         note_w_pitch = {"on": None, "off": None, "pitch": None, "loudness": None}
         note_w_pitch["on"] = note["on"]
         note_w_pitch["off"] = note["off"]
-        note_w_pitch["pitch"] = int(self.hertz2midi(np.mean(frequency[note["on"]: note["off"]])))
+        note_w_pitch["pitch"] = int(li.core.(np.mean(frequency[note["on"]: note["off"]])))
         note_w_pitch["loudness"] = int(np.mean(loudness[note["on"]: note["off"]])) # TODO : Change for normalisation of loudness
         return note_w_pitch
 

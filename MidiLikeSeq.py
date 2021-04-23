@@ -1,5 +1,5 @@
 import numpy as np
-
+import librosa as li
 
 class MidiLikeSeq:
     def __init__(self):
@@ -161,7 +161,7 @@ class MidiLikeSeq:
 
         # convert midi pitch to hz
         if pitch_unit == "HERTZ":
-            self.pitch = np.power(2, (self.pitch-69)/12)*440
+            self.pitch = li.core.midi_to_hz(self.pitch)
 
 
 

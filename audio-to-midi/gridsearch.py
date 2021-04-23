@@ -34,9 +34,6 @@ class GridSearch:
     def set_save_path(self, path):
         self.save_path 
 
-    def hertz2midi(self, frequency):
-        return 12 * np.log2(frequency/440) + 69
-
 
     def get_result(self, thresholds1, thresholds2, madmom = True, verbose = False, keep_best_file = False):
 
@@ -82,7 +79,7 @@ class GridSearch:
                         print("->   File loaded.")
 
                     time_gen, frequency_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size)
-                    frequencyMidi = self.hertz2midi(frequency_or)
+                    frequencyMidi = li.core.hz_to_midi(frequency_or)
 
                     # 0 padding:
                     new_freq_gen = np.concatenate((frequency_gen, np.zeros(time_or.shape[0]-time_gen.shape[0])))
