@@ -66,7 +66,7 @@ class Audio2MidiConverter:
         note_w_pitch = {"on": None, "off": None, "pitch": None, "loudness": None}
         note_w_pitch["on"] = note["on"]
         note_w_pitch["off"] = note["off"]
-        note_w_pitch["pitch"] = int(li.core.(np.mean(frequency[note["on"]: note["off"]])))
+        note_w_pitch["pitch"] = int(li.core.hz_to_midi(np.mean(frequency[note["on"]: note["off"]])))
         note_w_pitch["loudness"] = int(np.mean(loudness[note["on"]: note["off"]])) # TODO : Change for normalisation of loudness
         return note_w_pitch
 
