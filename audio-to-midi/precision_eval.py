@@ -44,26 +44,52 @@ class Eval:
         c = Converter()
         midi_data = pm.PrettyMIDI(midi_file)
         time_gen, frequency_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size)
-        frequencyHertz = li.core.midi_to_hz(frequency_gen)
-        # 0 padding:
-        new_freq_gen = frequencyHertz# np.concatenate((frequencyHertz, np.zeros(np.abs(time_text.shape[0]-time_gen.shape[0]))))
+        
+        frequency_gen = li.core.midi_to_hz(frequency_gen)
+        loudness_gen = loudness_gen / np.max(loudness_gen)
+        # want to erase really quiet notes
+        loudness_threshold = 0.20
+        frequency_gen = frequency_gen * (loudness_gen>loudness_threshold)
+
+
+        # 0 padding (text file are shorter since they do not consider last silence)
+        frequency_text = np.concatenate((frequency_text, np.zeros(time_gen.shape[0]-time_text.shape[0])))
+        loudness_text = np.concatenate((loudness_text, np.zeros(time_gen.shape[0]-time_text.shape[0])))
+
+
+        diff_f0 = np.abs(frequency_gen - frequency_text)
+        diff_loudness = np.abs(loudness_text - loudness_gen)
+
+        # np.concatenate((frequencyHertz, np.zeros(np.abs(time_text.shape[0]-time_gen.shape[0]))))
 
         # compute difference and score:
 
         #diff = np.abs(frequency_text-new_freq_gen)
-        score = 0 # np.mean(diff)
+        
+        score = np.mean(diff_f0) + np.mean(diff_loudness)
 
 
         if verbose:
-            ax1 = plt.subplot(212)        
-            ax1.plot(time_text, frequency_text, label = "text")
-            ax1.plot(time_gen, new_freq_gen, label = "midi" )
+            ax1 = plt.subplot(221)        
+            ax1.plot(time_gen, frequency_text, label = "text")
+            ax1.plot(time_gen, frequency_gen, label = "midi" )
             ax1.set_title("f0 comparison")
 
-            #ax2 = plt.subplot(221)
-       
-            # ax2.plot(time_gen, diff, label="Diff")
-            # ax2.set_title('Difference')
+            ax2 = plt.subplot(222)
+            ax2.plot(time_gen, loudness_text, label = "text")
+            ax2.plot(time_gen, loudness_gen/np.max(loudness_gen), label = "midi" )
+            ax2.set_title('Loudness comparison')
+
+            ax3 = plt.subplot(223)
+            ax3.plot(time_gen, diff_f0, label = "text")
+            ax3.set_title('f0 differences')
+
+            ax4 = plt.subplot(224)
+            ax4.plot(time_gen, diff_loudness, label = "text")
+            ax4.set_title('Loudness differences')
+
+
+
             plt.legend()
             plt.show()
 
