@@ -52,7 +52,11 @@ class Eval:
         frequency_gen = frequency_gen * (loudness_gen>loudness_threshold)
 
 
+
+        print("Time shape : {}\n Time Gen shape : {}\n".format(time_text.shape, time_gen.shape))
+
         # 0 padding (text file are shorter since they do not consider last silence)
+        
         frequency_text = np.concatenate((frequency_text, np.zeros(time_gen.shape[0]-time_text.shape[0])))
         loudness_text = np.concatenate((loudness_text, np.zeros(time_gen.shape[0]-time_text.shape[0])))
 
@@ -99,9 +103,8 @@ class Eval:
 
 if __name__ == '__main__':
 
-    save_path = "midi-generated-files/"
-    midi_file = save_path + "violin(from-audio)-thC0.4-thM0.01.mid"
-    txt_file = "violin.txt"
+    midi_file = "vn_01_Jupiter.mid"
+    txt_file = "vn_01_Jupiter.txt"
     e = Eval()
     score = e.evaluate(midi_file, txt_file, verbose=True)
     print("Total score ", score)
