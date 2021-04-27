@@ -32,17 +32,17 @@ class Eval:
     def __init__(self):
         pass
 
-    def evaluate(self, midi_file, text_file, sampling_rate=48000, block_size=480, verbose=False):
+    def evaluate(self, midi_file, text_file, sampling_rate=1000, verbose=False):
 
         # From text file
         t2c = Txt2Contours()
-        time_text, frequency_text, loudness_text = t2c.process(text_file, sampling_rate/block_size)
+        time_text, frequency_text, loudness_text = t2c.process(text_file, sampling_rate)
 
         # From midi file : 
 
         c = Converter()
         midi_data = pm.PrettyMIDI(midi_file)
-        time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size, time_text)
+        time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate, time_text)
 
         frequency_gen = li.core.midi_to_hz(pitch_gen)
         loudness_gen = loudness_gen / np.max(loudness_gen)
