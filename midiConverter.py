@@ -238,16 +238,16 @@ class Converter:
 
     def midi2time_f0_loudness(self, midi_data, frame_rate = 16000, times_needed = None):
         
-        for instrument_data in midi_data.instruments:
-            if times_needed is None:
-                notes = instrument_data.get_piano_roll(frame_rate)
-                times = np.array([i/frame_rate for i in range(notes.shape[1])])
-            else:
-                notes = instrument_data.get_piano_roll(frame_rate, times_needed)
-                times = times_needed
-            
-            pitches, loudness = self.extract_f0_loudness(notes)
-            
+        instrument_data = midi_data.instruments[0]
+        if times_needed is None:
+            notes = instrument_data.get_piano_roll(frame_rate)
+            times = np.array([i/frame_rate for i in range(notes.shape[1])])
+        else:
+            notes = instrument_data.get_piano_roll(frame_rate, times_needed)
+            times = times_needed
+        
+        pitches, loudness = self.extract_f0_loudness(notes)
+        
 
         return times, pitches, loudness
 
