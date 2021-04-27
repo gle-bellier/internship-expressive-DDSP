@@ -38,7 +38,6 @@ class Eval:
         t2c = Txt2Contours()
         time_text, frequency_text, loudness_text = t2c.process(text_file, sampling_rate/block_size)
 
-
         # From midi file : 
 
         c = Converter()
@@ -51,32 +50,16 @@ class Eval:
         loudness_threshold = 0.20
         frequency_gen = frequency_gen * (loudness_gen>loudness_threshold)
 
-        print("Time Text shape : {}\n F0 Text shape : {}\n".format(time_text.shape, frequency_text.shape))
 
+        diff_f0 = np.abs(frequency_gen - frequency_text)
+        diff_loudness = np.abs(loudness_text - loudness_gen)
 
-
-        print("Time shape : {}\n Time Gen shape : {}\n".format(time_text.shape, time_gen.shape))
-
-        # 0 padding (text file are shorter since they do not consider last silence)
-        if time_gen.shape[0]-time_text.shape[0]>0:
-            pad_length = time_gen.shape[0]-time_text.shape[0]
-
-            frequency_text = np.concatenate((frequency_text, np.zeros(pad_length)))
-            loudness_text = np.concatenate((loudness_text, np.zeros(pad_length)))
-            time_add = time_text[-1] + np.array(range(1, pad_length+1))*(block_size/sampling_rate)
-            time_text = np.concatenate((time_text, time_add))
-
-
-        #diff_f0 = np.abs(frequency_gen - frequency_text)
-        #diff_loudness = np.abs(loudness_text - loudness_gen)
-
-        # np.concatenate((frequencyHertz, np.zeros(np.abs(time_text.shape[0]-time_gen.shape[0]))))
 
         # compute difference and score:
 
-        #diff = np.abs(frequency_text-new_freq_gen)
+        diff = np.abs(frequency_text- frequency_gen)
         
-        #score = np.mean(diff_f0) + np.mean(diff_loudness)
+        score = np.mean(diff_f0) + np.mean(diff_loudness)
 
 
         if verbose:
@@ -90,13 +73,13 @@ class Eval:
             ax2.plot(time_gen, loudness_gen/np.max(loudness_gen), label = "midi" )
             ax2.set_title('Loudness comparison')
 
-            # ax3 = plt.subplot(223)
-            # ax3.plot(time_gen, diff_f0, label = "text")
-            # ax3.set_title('f0 differences')
+            ax3 = plt.subplot(223)
+            ax3.plot(time_gen, diff_f0, label = "text")
+            ax3.set_title('f0 differences')
 
-            # ax4 = plt.subplot(224)
-            # ax4.plot(time_gen, diff_loudness, label = "text")
-            # ax4.set_title('Loudness differences')
+            ax4 = plt.subplot(224)
+            ax4.plot(time_gen, diff_loudness, label = "text")
+            ax4.set_title('Loudness differences')
 
 
 
@@ -109,8 +92,8 @@ class Eval:
 
 if __name__ == '__main__':
 
-    midi_file = "fl_03_Dance.mid"
-    txt_file = "fl_03_Dance.txt"
+    midi_file = "vn_01_Jupiter.mid"
+    txt_file = "vn_01_Jupiter.txt"
     e = Eval()
     score = e.evaluate(midi_file, txt_file, verbose=True)
     print("Total score ", score)
