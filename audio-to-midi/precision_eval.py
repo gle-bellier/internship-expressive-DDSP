@@ -92,8 +92,8 @@ class Eval:
 
 if __name__ == '__main__':
 
-    midi_file = "vn_01_Jupiter.mid"
-    txt_file = "vn_01_Jupiter.txt"
+    midi_file = "vn_20_Pavane.mid"
+    txt_file = "vn_20_Pavane.txt"
     e = Eval()
     score = e.evaluate(midi_file, txt_file, verbose=True)
     print("Total score ", score)
