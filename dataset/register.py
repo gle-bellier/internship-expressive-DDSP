@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
 import csv
-
+import os.path
+from os import path
 
 
 
@@ -15,10 +17,16 @@ class Register:
         self.number_of_file = 0
         self.register_name = register_name
         # create register :
-        with open(register_name, 'w') as csvfile:
-            fieldnames = ["file_name", "instrument"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
+
+        if os.path.exists(register_name + ".csv"):
+            self.number_of_file = len(pd.read_csv(register_name + ".csv")) 
+            print("Register {} loaded : {} files registered".format(register_name, self.number_of_file))
+        
+        else:
+            with open(register_name + ".csv", 'w') as csvfile:
+                fieldnames = ["file_name", "instrument"]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
 
         
     
@@ -27,6 +35,13 @@ class Register:
         """ Inputs : unexpressive frequency and loudness, expressive frequency and loudness contours
             Output : None
             Create new CSV file for contours"""
+
+        if os.path.exists(self.folder + filename):
+            rep = input("File with the same name is the database. Do you want to overwrite it ? y/n ").lower()
+            if rep != "y":
+                return False
+
+
 
         if not (u_frequency.shape == u_loudness.shape == e_frequency.shape == e_loudness.shape):
             if verbose:
@@ -50,7 +65,7 @@ class Register:
             Output : None
             Add new filename to the register"""
 
-        with open(self.register_name, 'w') as csvfile:
+        with open(self.register_name + ".csv", 'a') as csvfile:
             fieldnames = ["file_name", "instrument"]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writerow({"file_name": filename, "instrument": instrument})
@@ -69,5 +84,6 @@ class Register:
 
 
 if __name__ == '__main__':
-    r = Register("hihi", "contours-files")
-    r.add_to_db("hoho.csv", "violin", np.ones(11),np.ones(11), np.ones(11), np.ones(11), verbose=True)
+    r = Register("Register2", "contours-files")
+    r.add_to_db("hohi.csv", "violin", np.ones(11),np.ones(11), np.ones(11), np.ones(11), verbose=True)
+    r.add_to_db("hhi.csv", "violin", np.ones(11),np.ones(11), np.ones(11), np.ones(11), verbose=True)
