@@ -5,9 +5,6 @@ import os.path
 from os import path
 
 
-
-
-
 # In all this code : e_* = expressive contour, u_* = unexpressive contour
 
 class Register:
