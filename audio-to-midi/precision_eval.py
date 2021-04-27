@@ -43,7 +43,7 @@ class Eval:
 
         c = Converter()
         midi_data = pm.PrettyMIDI(midi_file)
-        time_gen, frequency_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size)
+        time_gen, frequency_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size, time_text)
         
         frequency_gen = li.core.midi_to_hz(frequency_gen)
         loudness_gen = loudness_gen / np.max(loudness_gen)
