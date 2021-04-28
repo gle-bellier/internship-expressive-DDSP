@@ -135,7 +135,7 @@ if __name__ == "__main__":
     ext = Extractor()
     time, f0, confidence, loudness = ext.get_time_f0_confidence_loudness(filename, sampling_rate, block_size, write=True)
 
-    print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
+    #print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
 
     plt.plot(time, f0/np.max(np.abs(f0)), label = "f0")
     plt.plot(time, loudness/np.max(np.abs(loudness)), label = "Loudness")
