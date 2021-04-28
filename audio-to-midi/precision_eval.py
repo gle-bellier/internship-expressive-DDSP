@@ -32,7 +32,7 @@ class Eval:
     def __init__(self):
         pass
 
-    def evaluate(self, midi_file, text_file, sampling_rate=1000, verbose=False):
+    def evaluate(self, midi_file, text_file, sampling_rate=16000, verbose=False):
 
         # From text file
         t2c = Txt2Contours()
@@ -92,8 +92,8 @@ class Eval:
 
 if __name__ == '__main__':
 
-    midi_file = "vn_20_Pavane.mid"
-    txt_file = "vn_20_Pavane.txt"
+    midi_file = "vn_01_Jupiter.mid"
+    txt_file = "vn_01_Jupiter.txt"
     e = Eval()
     score = e.evaluate(midi_file, txt_file, verbose=True)
     print("Total score ", score)

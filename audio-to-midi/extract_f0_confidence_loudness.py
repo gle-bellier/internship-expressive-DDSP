@@ -8,7 +8,7 @@ import soundfile as sf
 import numpy as np 
 import librosa as li
 import crepe
-
+import resampy
 
 class Extractor:
     def __init__(self, path = "f0-confidence-loudness-files/"):
@@ -82,9 +82,8 @@ class Extractor:
 
 
     def extract_f0_confidence_loudness(self, filename, sampling_rate, block_size):
-        audio, fs = sf.read(filename, dtype='float32')   
-        print("Sampling rate : ", fs)
-        sampling_rate = fs
+        audio, fs = li.load(filename, sr=None)
+        audio = resampy.resample(audio, fs, sampling_rate)
         loudness = self.extract_loudness(audio, sampling_rate, block_size)
         time, f0, confidence = self.extract_time_pitch_confidence(audio, sampling_rate, block_size)
         return time, f0, confidence, loudness 
@@ -130,8 +129,8 @@ class Extractor:
 
 if __name__ == "__main__":
     filename = "violin.wav"
-    sampling_rate = 48000
-    block_size = 480
+    sampling_rate = 16000
+    block_size = 160
 
     ext = Extractor()
     time, f0, confidence, loudness = ext.get_time_f0_confidence_loudness(filename, sampling_rate, block_size, write=True)

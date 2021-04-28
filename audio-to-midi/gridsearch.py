@@ -130,11 +130,11 @@ class GridSearch:
 
 
 
-filename = "violin.wav"
+filename = "vn_01_Jupiter.wav"
 #filename = "flute.wav"
 save_path = "midi-generated-files/"
-sampling_rate = 48000
-block_size = 480 
+sampling_rate = 16000
+block_size = 160
 
 
 ### FIRST EXPERIMENT ###
