@@ -39,12 +39,9 @@ class Eval:
         ext = Extractor()
         time_wav, frequency_wav, _, loudness_wav = ext.get_time_f0_confidence_loudness(wav_file, sampling_rate, block_size, write=True)
         # From midi file : 
-
-
-        print(time_wav)
         c = Converter()
         midi_data = pm.PrettyMIDI(midi_file)
-        time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size, time_wav)
+        time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size, None)# time_wav)
 
         frequency_gen = li.core.midi_to_hz(pitch_gen)
         loudness_gen = loudness_gen / np.max(loudness_gen)
@@ -53,13 +50,13 @@ class Eval:
         frequency_gen = frequency_gen * (loudness_gen>loudness_threshold)
 
 
-        # diff_f0 = np.abs(frequency_gen - frequency_text)
-        # diff_loudness = np.abs(loudness_text - loudness_gen)
+        # diff_f0 = np.abs(frequency_gen - frequency_wav)
+        # diff_loudness = np.abs(loudness_wav - loudness_gen)
 
 
-        # compute difference and score:
+        # # compute difference and score:
 
-        # diff = np.abs(frequency_text- frequency_gen)
+        # diff = np.abs(frequency_wav- frequency_gen)
         
         # score = np.mean(diff_f0) + np.mean(diff_loudness)
 
@@ -69,19 +66,13 @@ class Eval:
             ax1.plot(time_wav, frequency_wav, label = "wav")
             ax1.plot(time_gen, frequency_gen, label = "midi" )
             ax1.set_title("f0 comparison")
+            ax1.legend()
 
             ax2 = plt.subplot(222)
             ax2.plot(time_wav, loudness_wav, label = "wav")
             ax2.plot(time_gen, loudness_gen/np.max(loudness_gen), label = "midi" )
             ax2.set_title('Loudness comparison')
-
-            # ax3 = plt.subplot(223)
-            # ax3.plot(time_gen, diff_f0, label = "text")
-            # ax3.set_title('f0 differences')
-
-            # ax4 = plt.subplot(224)
-            # ax4.plot(time_gen, diff_loudness, label = "text")
-            # ax4.set_title('Loudness differences')
+            ax2.legend()
 
 
 
