@@ -3,8 +3,7 @@ from extract_f0_confidence_loudness import Extractor
 from txt2contours import Txt2Contours
 
 
-
-from os import walk
+import glob
 import sys
 sys.path.insert(0,'..')
 from midiConverter import Converter
@@ -73,7 +72,7 @@ class Eval:
             ax2.legend()
 
 
-
+            plt.title("{} and {}".format(midi_file, wav_file))
             plt.legend()
             plt.show()
 
@@ -84,10 +83,16 @@ class Eval:
 if __name__ == '__main__':
 
     dataset_path = "dataset-midi-wav/"
-    _, _, filenames = next(walk(dataset_path))
-    print(filenames)
-    midi_file = "vn_09_Jesus.mid"
-    wav_file = "vn_09_Jesus.wav"
-    e = Eval()
-    score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=True)
-    print("Total score ", score)
+    filenames =[file[len(dataset_path):-4] for file in glob.glob(dataset_path + "*.mid")]
+
+    with tqdm(total=len(filenames)) as pbar:
+        for filename in filenames:
+            print("Filename : ", filename)
+            midi_file = filename + ".mid"
+            wav_file = filename + ".wav"
+            e = Eval()
+            score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=True)
+            print("Total score : ", score)
+            pbar.update(1)
+        
+
