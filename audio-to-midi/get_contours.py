@@ -4,6 +4,7 @@ from txt2contours import Txt2Contours
 
 
 
+from os import walk
 import sys
 sys.path.insert(0,'..')
 from midiConverter import Converter
@@ -32,16 +33,16 @@ class Eval:
     def __init__(self):
         pass
 
-    def evaluate(self, midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=False):
+    def evaluate(self, dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=False):
 
         # From text file
         
         ext = Extractor()
-        time_wav, frequency_wav, _, loudness_wav = ext.get_time_f0_confidence_loudness(wav_file, sampling_rate, block_size, write=True)
+        time_wav, frequency_wav, _, loudness_wav = ext.get_time_f0_confidence_loudness(dataset_path, wav_file, sampling_rate, block_size, write=True)
         # From midi file : 
         c = Converter()
-        midi_data = pm.PrettyMIDI(midi_file)
-        time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, sampling_rate/block_size, None)# time_wav)
+        midi_data = pm.PrettyMIDI(dataset_path + midi_file)
+        time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)# sampling_rate/block_size, None)# time_wav)
 
         frequency_gen = li.core.midi_to_hz(pitch_gen)
         loudness_gen = loudness_gen / np.max(loudness_gen)
@@ -50,15 +51,12 @@ class Eval:
         frequency_gen = frequency_gen * (loudness_gen>loudness_threshold)
 
 
-        # diff_f0 = np.abs(frequency_gen - frequency_wav)
-        # diff_loudness = np.abs(loudness_wav - loudness_gen)
-
+        diff_f0 = np.abs(frequency_gen - frequency_wav)
+        diff_loudness = np.abs(loudness_wav - loudness_gen)
 
         # # compute difference and score:
 
-        # diff = np.abs(frequency_wav- frequency_gen)
-        
-        # score = np.mean(diff_f0) + np.mean(diff_loudness)
+        score = np.mean(diff_f0) + np.mean(diff_loudness)
 
 
         if verbose:
@@ -85,8 +83,11 @@ class Eval:
 
 if __name__ == '__main__':
 
-    midi_file = "vn_01_Jupiter.mid"
-    wav_file = "vn_01_Jupiter.wav"
+    dataset_path = "dataset-midi-wav/"
+    _, _, filenames = next(walk(dataset_path))
+    print(filenames)
+    midi_file = "vn_09_Jesus.mid"
+    wav_file = "vn_09_Jesus.wav"
     e = Eval()
-    score = e.evaluate(midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=True)
+    score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=True)
     print("Total score ", score)

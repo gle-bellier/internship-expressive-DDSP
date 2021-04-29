@@ -92,7 +92,7 @@ class Extractor:
 
 
 
-    def get_time_f0_confidence_loudness(self, filename, sampling_rate, block_size, write = True):
+    def get_time_f0_confidence_loudness(self, dataset_path, filename, sampling_rate, block_size, write = True):
         
         name = filename[:-4] # remove .wav
         file_path = self.path + name + "_{}_{}.csv".format(sampling_rate, block_size)
@@ -101,7 +101,7 @@ class Extractor:
             return self.read_file(file_path)
 
         else: # we need to extract f0 confidence loudness
-            time, f0, confidence, loudness = self.extract_f0_confidence_loudness(filename, sampling_rate, block_size)
+            time, f0, confidence, loudness = self.extract_f0_confidence_loudness(dataset_path + filename, sampling_rate, block_size)
 
 
             # Check dimensions : 
@@ -120,25 +120,3 @@ class Extractor:
             
             return time, f0, confidence, loudness
 
-    
-
-
-
-
-
-
-if __name__ == "__main__":
-    filename = "violin.wav"
-    sampling_rate = 16000
-    block_size = 160
-
-    ext = Extractor()
-    time, f0, confidence, loudness = ext.get_time_f0_confidence_loudness(filename, sampling_rate, block_size, write=True)
-
-    #print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
-
-    plt.plot(time, f0/np.max(np.abs(f0)), label = "f0")
-    plt.plot(time, loudness/np.max(np.abs(loudness)), label = "Loudness")
-    plt.plot(time, confidence/np.max(np.abs(confidence)), label = "Confidence")
-    plt.legend()
-    plt.show()
