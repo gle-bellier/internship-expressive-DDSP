@@ -43,14 +43,6 @@ class Eval:
         
         
         
-        
-        
-        
-        
-        
-        
-        
-        
         # From midi file : 
         c = Converter()
         midi_data = pm.PrettyMIDI(dataset_path + midi_file)
@@ -66,10 +58,6 @@ class Eval:
 
         # loudness mapping : 
         
-
-
-
-
 
         diff_f0 = np.abs(frequency_gen - frequency_wav)
         diff_loudness = np.abs(loudness_wav - loudness_gen)
@@ -133,5 +121,4 @@ if __name__ == '__main__':
             score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=True)
             print("Total score : ", score)
             pbar.update(1)
-            break
-
+            
