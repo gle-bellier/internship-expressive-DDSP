@@ -38,22 +38,49 @@ class Eval:
         
         ext = Extractor()
         time_wav, frequency_wav, _, loudness_wav = ext.get_time_f0_confidence_loudness(dataset_path, wav_file, sampling_rate, block_size, write=True)
+        # loudness mapping : 
+        loudness_wav = self.dB2midi(loudness_wav)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         # From midi file : 
         c = Converter()
         midi_data = pm.PrettyMIDI(dataset_path + midi_file)
         time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)# sampling_rate/block_size, None)# time_wav)
 
         frequency_gen = li.core.midi_to_hz(pitch_gen)
-        loudness_gen = loudness_gen / np.max(loudness_gen)
+        loudness_gen = loudness_gen  # midi loudness normalized
         # want to erase really quiet notes
         loudness_threshold = 0.20
-        frequency_gen = frequency_gen * (loudness_gen>loudness_threshold)
+        frequency_gen = frequency_gen * (loudness_gen / np.max(loudness_gen)>loudness_threshold)
+
+
+
+        # loudness mapping : 
+        
+
+
+
 
 
         diff_f0 = np.abs(frequency_gen - frequency_wav)
         diff_loudness = np.abs(loudness_wav - loudness_gen)
 
         # # compute difference and score:
+
+
+
+
+
+
 
         score = np.mean(diff_f0) + np.mean(diff_loudness)
 
@@ -67,7 +94,7 @@ class Eval:
 
             ax2 = plt.subplot(222)
             ax2.plot(time_wav, loudness_wav, label = "wav")
-            ax2.plot(time_gen, loudness_gen/np.max(loudness_gen), label = "midi" )
+            ax2.plot(time_gen, loudness_gen, label = "midi" )
             ax2.set_title('Loudness comparison')
             ax2.legend()
 
@@ -77,6 +104,18 @@ class Eval:
             plt.show()
 
         return score
+    
+
+    def dB2midi(self, loudness, global_peak = None, global_min = None):
+        loudness = li.core.db_to_amplitude(loudness)
+        if global_peak == None:
+            global_peak = np.max(loudness)
+        if global_min == None:
+            global_min = np.min(loudness)
+        
+        l = loudness-global_min
+        L =  127*np.abs(l)/np.abs(global_peak-global_min)
+        return L 
 
 
 
@@ -94,5 +133,5 @@ if __name__ == '__main__':
             score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, verbose=True)
             print("Total score : ", score)
             pbar.update(1)
-        
+            break
 
