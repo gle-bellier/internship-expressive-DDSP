@@ -55,7 +55,21 @@ class Eval:
                 silence = {"on" : None, "off": None}
         return l
 
-                
+        
+    def get_not_silence(self, indexes, times):
+        l = []
+        loud = [0, None]
+        for idx in indexes:
+            loud[1]=idx["on"]
+            l.append(loud)
+            loud = [idx["off"], None]
+        loud[1]=len(times)
+        l.append(loud)
+        if l[0]==[0,0]:
+            l = l[1:]
+        return l
+
+
 
 
     def evaluate(self, dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration = 1, verbose=False):
@@ -93,6 +107,10 @@ class Eval:
         for idx in indexes:
             onsets[idx["on"]]=1.0
             onsets[idx["off"]]=-1.0
+
+
+        parts_index = self.get_not_silence(indexes, time_wav)
+        print(parts_index)
 
 
 
