@@ -64,24 +64,18 @@ class Eval:
 
         # # compute difference and score:
 
-
-
-
-
-
-
         score = np.mean(diff_f0) + np.mean(diff_loudness)
 
 
         if verbose:
             ax1 = plt.subplot(221)        
             ax1.plot(time_wav, frequency_wav, label = "wav")
-            ax1.plot(time_gen, frequency_gen, label = "midi" )
+            #   ax1.plot(time_gen, frequency_gen, label = "midi" )
             ax1.set_title("f0 comparison")
             ax1.legend()
 
             ax2 = plt.subplot(222)
-            ax2.plot(time_wav, loudness_wav, label = "wav")
+            #ax2.plot(time_wav, loudness_wav, label = "wav")
             ax2.plot(time_gen, loudness_gen, label = "midi" )
             ax2.set_title('Loudness comparison')
             ax2.legend()
