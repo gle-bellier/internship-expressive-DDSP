@@ -110,7 +110,7 @@ class Eval:
 
 
         parts_index = self.get_not_silence(indexes, time_wav)
-        print(parts_index)
+        #print(parts_index)
 
 
 
@@ -123,28 +123,63 @@ class Eval:
 
         # # compute difference and score:
 
-        score = np.mean(diff_f0) + np.mean(diff_loudness)
+        #score = np.mean(diff_f0) + np.mean(diff_loudness)
+        time_list = []
+        frequency_gen_list = []
+        loudness_gen_list = []
+        frequency_wav_list = []
+        loudness_wav_list = []
+
+        n = len(parts_index)
+        for elt in parts_index:
+            start, end = elt
+            time_list.append(time_wav[start:end])
+
+            frequency_wav_list.append(frequency_wav[start:end])
+            loudness_wav_list.append(loudness_wav[start:end])
+
+            frequency_gen_list.append(frequency_gen[start:end])
+            loudness_gen_list.append(loudness_gen[start:end])
 
 
         if verbose:
-
-            ax1 = plt.subplot(221)
+            ax1 = plt.subplot((n+2)*100+10 + 1)
             ax1.plot(time_wav, loudness_wav, label = "wav")
-            ax1.plot(time_wav, m, label = "m" )
-            ax1.set_title('Loudness comparison')
-            ax1.legend()
+            ax1.plot(time_wav, loudness_gen, label = "midi" )
+            ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-            ax2 = plt.subplot(222)
-            ax2.plot(time_wav, loudness_wav/np.max(loudness_wav), label = "wav")
-            ax2.plot(time_wav, onsets, label = "m" )
-            ax2.set_title('Loudness comparison')
-            ax2.legend()
+            plt.title("Loudness comparison {}".format(wav_file))
 
-            plt.title("{} and {}".format(midi_file, wav_file))
-            plt.legend()
+            for i in range(n):
+                ax1 = plt.subplot((n+2)*100+10 + i+2)
+                ax1.plot(time_list[i], loudness_wav_list[i], label = "wav")
+                ax1.plot(time_list[i], loudness_gen_list[i], label = "midi" )
+                ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+
+            plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.show()
 
-        return score
+
+            ax1 = plt.subplot((n+2)*100+10 + 1)
+            ax1.plot(time_wav, frequency_wav, label = "wav")
+            ax1.plot(time_wav, frequency_gen, label = "midi" )
+            ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.title("Frequency comparison {}".format(wav_file))
+
+            for i in range(n):
+                ax1 = plt.subplot((n+2)*100+10 + i+2)
+                ax1.plot(time_list[i], frequency_wav_list[i], label = "wav")
+                ax1.plot(time_list[i], frequency_gen_list[i], label = "midi" )
+                ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+
+            plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.show()
+
+        return frequency_wav_list, loudness_wav_list, frequency_gen_list, loudness_gen_list
     
 
     def dB2midi(self, loudness, global_peak = None, global_min = None):
@@ -172,5 +207,6 @@ if __name__ == '__main__':
             e = Eval()
             score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
             pbar.update(1)
+            break
             
             
