@@ -121,7 +121,7 @@ class Audio2MidiConverter:
 
 
         ext = Extractor()
-        time, frequency, confidence, loudness = ext.get_time_f0_confidence_loudness(self.filename, sampling_rate, block_size, write=True)
+        time, frequency, confidence, loudness = ext.get_time_f0_confidence_loudness("", self.filename, sampling_rate, block_size, write=True)
         loudness = self.dB2midi(loudness)
 
         neg_conf_changes, pos_conf_changes = self.get_confidence_changes(confidence, threshold_confidence)
@@ -178,6 +178,32 @@ class Audio2MidiConverter:
 
 
         # remove short notes
+
+
+
+
+        if verbose:
+            span = time.shape[0]//8
+            middle = time.shape[0]//2
+            a, b = middle - span, middle + span
+
+            ax1 = plt.subplot(212)        
+            ax1.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
+            ax1.plot(time[a:b], np.ones((b-a))*threshold_confidence)
+
+            ax1.plot(time[a:b], np.abs(self.compute_dv(confidence[a:b])), label = "Dv Confidence")
+            ax1.set_title("f0 confidence")
+            ax1.legend()
+
+
+            ax2 = plt.subplot(221)
+       
+            ax2.plot(time[a:b], frequency[a:b]/np.max(frequency), label = "Normalized f0")
+            ax2.plot(time[a:b], all_onsets[a:b], label = "Onsets")
+            ax2.set_title('Onsets')
+            ax2.legend()
+            plt.legend()
+            plt.show()
 
         notes = [note for note in notes if note["off"] - note["on"] >= min_note_length]
 
@@ -319,8 +345,7 @@ class Audio2MidiConverter:
 
 
 if __name__ == "__main__":
-    #filename = "violin.wav"
-    filename = "flute.wav"
+    filename = "vn_01_Jupiter.wav"
     save_path = "midi-generated-files/"
     threshold_confidence = 0.2
     threshold_loudness = 0.3

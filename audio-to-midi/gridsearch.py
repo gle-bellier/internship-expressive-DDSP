@@ -39,7 +39,7 @@ class GridSearch:
 
         # get original f0 and loudness contours
         ext = Extractor()
-        time_or, frequency_or, _, loudness_or = ext.get_time_f0_confidence_loudness(filename, sampling_rate, block_size, write=True)
+        time_or, frequency_or, _, loudness_or = ext.get_time_f0_confidence_loudness("",filename, sampling_rate, block_size, write=True)
         if verbose:
             print("Track Duration : ", time_or[-1])
             print("Vectors length : ", time_or.shape[0])
@@ -143,7 +143,7 @@ gs = GridSearch(filename, sampling_rate, block_size)
 gs.set_save_path(save_path)
 
 # define thresholds ranges : 
-number_thresholds = 5
+number_thresholds = 10
 thresholds2 = np.linspace(0.01, 0.4, number_thresholds)
 thresholds1 = np.linspace(0.01, 0.4, number_thresholds)
 

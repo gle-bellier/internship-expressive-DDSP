@@ -207,6 +207,6 @@ if __name__ == '__main__':
             e = Eval()
             score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
             pbar.update(1)
-            break
+
             
             
