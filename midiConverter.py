@@ -160,7 +160,6 @@ class Converter:
         return sequence
 
 
-
     def df2note_tuple(self, df):
         """ Inputs : sorted data frame of notes"""
 
@@ -255,4 +254,15 @@ class Converter:
         pitches = np.argmax(notes, axis = 0)
         loudness = np.transpose(np.max(notes, axis = 0))
         return pitches, loudness
+
+
+    def df2onsets(self, df, frame_rate):
+        l = []
+        for i in range(df.shape[0]):
+            idx_start = df.iloc[i]["Start time"]//frame_rate
+            idx_end = df.iloc[i]["End time"]//frame_rate
+            l.append(idx_start)
+            l.append(idx_end)
+        return l
+
 

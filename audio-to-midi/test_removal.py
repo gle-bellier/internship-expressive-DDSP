@@ -69,7 +69,25 @@ class Eval:
             l = l[1:]
         return l
 
+    def get_notes_loudness(self, loudness, onsets):
+        notes_loudness = np.zeros_like(loudness)
+        for i in range(len(onsets)-1):
+            a, b = onsets[i], onsets[i+1]
+            if a!=b:
+                notes_loudness[a:b] = np.mean(loudness[a:b])
+            else:
+                notes_loudness[a] = loudness[a]
+        return notes_loudness 
+    
 
+    def get_onsets(self, midi_file, frame_rate):
+        seq = note_seq.midi_file_to_note_sequence(midi_file)
+        onsets = []
+        for note in seq.notes:
+            onsets.append(int(note.start_time*frame_rate))
+            onsets.append(int(note.end_time*frame_rate))
+
+        return onsets
 
 
     def evaluate(self, dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration = 1, verbose=False):
@@ -87,6 +105,10 @@ class Eval:
         c = Converter()
         midi_data = pm.PrettyMIDI(dataset_path + midi_file)
         time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)# sampling_rate/block_size, None)# time_wav)
+        
+        midi_onsets = self.get_onsets(dataset_path + midi_file, sampling_rate//block_size)
+        loudness_wav = self.get_notes_loudness(loudness_wav, midi_onsets)
+
 
         frequency_gen = li.core.midi_to_hz(pitch_gen)
         # want to erase really quiet notes
@@ -110,10 +132,6 @@ class Eval:
 
 
         parts_index = self.get_not_silence(indexes, time_wav)
-        #print(parts_index)
-
-
-
         # loudness mapping : 
         
 
@@ -207,6 +225,6 @@ if __name__ == '__main__':
             e = Eval()
             score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
             pbar.update(1)
-
+            break
             
             
