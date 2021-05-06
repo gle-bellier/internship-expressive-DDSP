@@ -19,17 +19,34 @@ class ContoursDataset(Dataset):
         self.transform = transform
         self.files_folder = files_folder + "/"
 
+
+        # load all contours : 
+
+        self.lists_u_f0, self.lists_u_loudness, self.lists_e_f0, self.lists_e_loudness = self.load_data() 
+
     def __len__(self):
         return len(self.register)
+
+
+    def load_data(self):
+
+        lists_u_f0 = []
+        lists_u_loudness = []
+        lists_e_f0 = []
+        lists_e_loudness = []
+        
+        for i in range(len(self.register)):
+            row = self.register.iloc[i]
+            filename = row["file_name"]
+            instrument = row["instrument"]
+            print("Filename : {}\n Instrument : {}".format(filename, instrument))
+
+
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        
-        row = self.register.iloc[idx]
-        filename = row["file_name"]
-        instrument = row["instrument"] # Maybe it will be usefull later
-        return self.get_contours_from_csv(filename)
+        pass
 
 
     def get_contours_from_csv(self, filename):
