@@ -2,56 +2,49 @@ from __future__ import print_function, division
 import os
 import torch
 import pandas as pd
+from tqdm import tqdm
+
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
-
+import glob
+from get_contours import ContoursGetter
 
 
 class ContoursDataset(Dataset):
     """ Unexpressive and expressive contours Dataset"""
 
 
-    def __init__(self, files_folder, transform = None):
+    def __init__(self, dataset_path, transform = None):
 
         self.transform = transform
-        self.files_folder = files_folder + "/"
 
+        self.dataset_path = dataset_path
+        filenames =[file[len(dataset_path):-4] for file in glob.glob(self.dataset_path + "*.mid")]
 
-            
-        dataset_path = "dataset-midi-wav/"
-        filenames =[file[len(dataset_path):-4] for file in glob.glob(dataset_path + "*.mid")]
+        self.u_f0 = np.empty(0)
+        self.u_loudness = np.empty(0)
+        self.e_f0 = np.empty(0)
+        self.e_loudness = np.empty(0)
+        
+
 
         with tqdm(total=len(filenames)) as pbar:
             for filename in filenames:
                 midi_file = filename + ".mid"
                 wav_file = filename + ".wav"
-                c = Cleaner()
-                print("{} file is monophonic : {}".format(midi_file, c.check(dataset_path + midi_file)))
+                g = ContoursGetter()
+                u_f0, u_loudness, e_f0, e_loudness = g.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=False)
                 pbar.update(1)
+
 
 
         # load all contours : 
 
-        self.lists_u_f0, self.lists_u_loudness, self.lists_e_f0, self.lists_e_loudness = self.load_data() 
 
     def __len__(self):
         return len(self.register)
-
-
-    def load_data(self):
-
-        lists_u_f0 = []
-        lists_u_loudness = []
-        lists_e_f0 = []
-        lists_e_loudness = []
-        
-        for i in range(len(self.register)):
-            row = self.register.iloc[i]
-            filename = row["file_name"]
-            instrument = row["instrument"]
-            print("Filename : {}\n Instrument : {}".format(filename, instrument))
 
 
 
@@ -61,20 +54,9 @@ class ContoursDataset(Dataset):
         pass
 
 
-    def get_contours_from_csv(self, filename):
-        u_f0 = []
-        u_loudness = []
-        e_f0 = []
-        e_loudness = []
 
-        with open(self.files_folder + filename) as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                u_f0.append(float(row["u_f0"]))
-                u_loudness.append(float(row["u_loudness"]))
-                e_f0.append(float(row["e_f0"]))
-                e_loudness.append(float(row["e_loudness"]))
-                
-        return np.array(u_f0), np.array(u_loudness), np.array(e_f0), np.array(e_loudness)
+if __name__ == "__main__":
 
 
+    dataset_path = "dataset-midi-wav/"
+    g = ContoursDataset(dataset_path)

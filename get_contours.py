@@ -1,11 +1,7 @@
-from audio2midi import Audio2MidiConverter
 from extract_f0_confidence_loudness import Extractor
-from txt2contours import Txt2Contours
-
 
 import glob
 import sys
-sys.path.insert(0,'..')
 from midiConverter import Converter
 
 from tqdm import tqdm
@@ -28,7 +24,7 @@ import matplotlib.pyplot as plt
 
 
 
-class Eval:
+class ContoursGetter:
     def __init__(self):
         pass
     
@@ -103,7 +99,7 @@ class Eval:
 
 
 
-    def evaluate(self, dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration = 3, verbose=False):
+    def get_contours(self, dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration = 3, verbose=False):
 
         # From text file
         
@@ -125,7 +121,7 @@ class Eval:
 
         frequency_gen = li.core.midi_to_hz(pitch_gen)
         # want to erase really quiet notes
-        loudness_threshold = 0.20
+        #loudness_threshold = 0.20
         #frequency_gen = frequency_gen * (loudness_gen / np.max(loudness_gen)>loudness_threshold)
 
         threshold = 20
@@ -134,7 +130,7 @@ class Eval:
         
 
         
-        max_silence_length =  max_silence_duration * (sampling_rate/block_size)
+        max_silence_length =  max_silence_duration * (sampling_rate//block_size)
 
         indexes = self.onset_offset(tm, max_silence_length)
         #print(indexes)
@@ -155,62 +151,51 @@ class Eval:
         # # compute difference and score:
 
         #score = np.mean(diff_f0) + np.mean(diff_loudness)
-        time_list = []
-        frequency_gen_list = []
-        loudness_gen_list = []
-        frequency_wav_list = []
-        loudness_wav_list = []
+        time_array = np.empty(0)
+        frequency_gen_array = np.empty(0)
+        loudness_gen_array = np.empty(0)
+        frequency_wav_array = np.empty(0)
+        loudness_wav_array = np.empty(0)
+
+
+        silence_duration = 0.5 # duration of silence we keep at each cut.
+        silence_length = silence_duration * (sampling_rate//block_size)
 
         n = len(parts_index)
         for elt in parts_index:
             start, end = elt
-            time_list.append(time_wav[start:end])
 
-            frequency_wav_list.append(frequency_wav[start:end])
-            loudness_wav_list.append(loudness_wav[start:end])
+            # need to check if begining or end
 
-            frequency_gen_list.append(frequency_gen[start:end])
-            loudness_gen_list.append(loudness_gen[start:end])
+            if start-silence_length<0:
+                start = 0
+            if end+silence_length>len(time_wav)-1:
+                end = len(time_wav)-1
+
+
+            frequency_wav_array = np.concatenate((frequency_wav_array,frequency_wav[start:end]))
+            loudness_wav_array = np.concatenate((loudness_wav_array,loudness_wav[start:end]))
+
+            frequency_gen_array = np.concatenate((frequency_gen_array,frequency_gen[start:end]))
+            loudness_gen_array = np.concatenate((loudness_gen_array,loudness_gen[start:end]))
+
 
 
         if verbose:
-            ax1 = plt.subplot((n+2)*100+10 + 1)
-            ax1.plot(time_wav, loudness_wav, label = "wav")
-            ax1.plot(time_wav, loudness_gen, label = "midi" )
-            ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
+            plt.plot(loudness_wav_array, label = "wav")
+            plt.plot(loudness_gen_array, label = "midi" )
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title("Loudness comparison {}".format(wav_file))
-
-            for i in range(n):
-                ax1 = plt.subplot((n+2)*100+10 + i+2)
-                ax1.plot(time_list[i], loudness_wav_list[i], label = "wav")
-                ax1.plot(time_list[i], loudness_gen_list[i], label = "midi" )
-                ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-
-            plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
-            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.show()
 
 
-            ax1 = plt.subplot((n+2)*100+10 + 1)
-            ax1.plot(time_wav, frequency_wav, label = "wav")
-            ax1.plot(time_wav, frequency_gen, label = "midi" )
-            ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.plot(frequency_wav_array, label = "wav")
+            plt.plot(frequency_gen_array, label = "midi" )
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title("Frequency comparison {}".format(wav_file))
-
-            for i in range(n):
-                ax1 = plt.subplot((n+2)*100+10 + i+2)
-                ax1.plot(time_list[i], frequency_wav_list[i], label = "wav")
-                ax1.plot(time_list[i], frequency_gen_list[i], label = "midi" )
-                ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-
-            plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
-            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.show()
 
-        return frequency_wav_list, loudness_wav_list, frequency_gen_list, loudness_gen_list
+        return frequency_wav_array, loudness_wav_array, frequency_gen_array, loudness_gen_array
     
 
 
@@ -223,10 +208,10 @@ if __name__ == '__main__':
         for filename in filenames:
             midi_file = filename + ".mid"
             wav_file = filename + ".wav"
-            e = Eval()
-            score = e.evaluate(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
+            e = ContoursGetter()
+            score = e.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
             pbar.update(1)
-            break
+
 
             
             
