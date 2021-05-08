@@ -139,7 +139,6 @@ class ContoursGetter:
             onsets[idx["on"]]=1.0
             onsets[idx["off"]]=-1.0
 
-
         parts_index = self.get_not_silence(indexes, time_wav)
         # loudness mapping : 
         
@@ -151,7 +150,6 @@ class ContoursGetter:
         # # compute difference and score:
 
         #score = np.mean(diff_f0) + np.mean(diff_loudness)
-        time_array = np.empty(0)
         frequency_gen_array = np.empty(0)
         loudness_gen_array = np.empty(0)
         frequency_wav_array = np.empty(0)
@@ -196,14 +194,14 @@ class ContoursGetter:
             plt.show()
 
         return frequency_wav_array, loudness_wav_array, frequency_gen_array, loudness_gen_array
-    
 
+    
 
 if __name__ == '__main__':
     
     dataset_path = "dataset-midi-wav/"
     filenames =[file[len(dataset_path):-4] for file in glob.glob(dataset_path + "*.mid")]
-
+    duration = 0
     with tqdm(total=len(filenames)) as pbar:
         for filename in filenames:
             midi_file = filename + ".mid"
@@ -211,6 +209,7 @@ if __name__ == '__main__':
             e = ContoursGetter()
             score = e.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
             pbar.update(1)
+
 
 
             
