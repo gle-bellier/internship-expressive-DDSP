@@ -67,12 +67,23 @@ class ContoursGetter:
 
     def get_notes_loudness(self, loudness, onsets):
         notes_loudness = np.zeros_like(loudness)
-        for i in range(len(onsets)-1):
-            a, b = onsets[i], onsets[i+1]
+        previous_i = 0
+        for i in range(len(onsets)):
+            a, b = onsets[i]
+            
+            if previous_i!=a:
+                notes_loudness[previous_i:a] = np.mean(loudness[previous_i:a])
+            else:
+                notes_loudness[previous_i] = loudness[previous_i]
+
             if a!=b:
                 notes_loudness[a:b] = np.max(loudness[a:b])
             else:
                 notes_loudness[a] = loudness[a]
+
+            previous_i = b
+
+
         return notes_loudness 
     
 
@@ -80,8 +91,7 @@ class ContoursGetter:
         seq = note_seq.midi_file_to_note_sequence(midi_file)
         onsets = []
         for note in seq.notes:
-            onsets.append(int(note.start_time*frame_rate))
-            onsets.append(int(note.end_time*frame_rate))
+            onsets.append((int(note.start_time*frame_rate), int(note.end_time*frame_rate)))
 
         return onsets
 
@@ -113,7 +123,7 @@ class ContoursGetter:
         # From midi file : 
         c = Converter()
         midi_data = pm.PrettyMIDI(dataset_path + midi_file)
-        time_gen, pitch_gen, loudness_gen = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)# sampling_rate/block_size, None)# time_wav)
+        time_gen, pitch_gen, loudness_midi = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)# sampling_rate/block_size, None)# time_wav)
         
         midi_onsets = self.get_onsets(dataset_path + midi_file, sampling_rate//block_size)
         loudness_gen = self.get_notes_loudness(loudness_wav, midi_onsets)
@@ -180,12 +190,12 @@ class ContoursGetter:
 
 
         if verbose:
-            plt.plot(loudness_wav_array, label = "wav")
-            plt.plot(loudness_gen_array, label = "midi" )
+
+            plt.plot(loudness_gen, label = "gen")
+            plt.plot(loudness_midi, label = "midi" )
             plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title("Loudness comparison {}".format(wav_file))
             plt.show()
-
 
             plt.plot(frequency_wav_array, label = "wav")
             plt.plot(frequency_gen_array, label = "midi" )
@@ -209,6 +219,7 @@ if __name__ == '__main__':
             e = ContoursGetter()
             score = e.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
             pbar.update(1)
+
 
 
 
