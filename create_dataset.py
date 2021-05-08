@@ -46,6 +46,7 @@ class ContoursDataset(Dataset):
                 pbar.update(1)
         
         self.length = len(self.u_f0)
+        self.segments = []
 
 
 
@@ -56,9 +57,10 @@ class ContoursDataset(Dataset):
     def get_random_indexes(self, length = 2000, overlap = 0.0):
 
         seg_length = int((1 - overlap) * length)
-        i_max = np.floor((self.length - seg_length)/seg_length)
+        i_max = np.floor((self.length - length)/seg_length)
+
         i = np.random.randint(i_max+1)
-        return i*length, (i+1)*length
+        return i*seg_length, i*seg_length + length
 
 
 
@@ -67,8 +69,9 @@ class ContoursDataset(Dataset):
 
     def __getitem__(self, idx):
         
-        start, end = self.get_random_indexes(length=2000, overlap=0.2)
-
+        start, end = self.get_random_indexes(length=2000, overlap=0.5)
+        #print("Indexes: [{}:{}]".format(start, end))
+        self.segments.append((start,end))
 
         return self.u_f0[start:end], self.u_loudness[start:end], self.e_f0[start:end], self.e_loudness[start:end]
 
@@ -80,21 +83,35 @@ class ContoursDataset(Dataset):
 
 if __name__ == "__main__":
 
-
+    VERBOSE = False
     dataset_path = "dataset-midi-wav/"
     g = ContoursDataset(dataset_path)
-    for i in range(10):
+    print("Full size : {}".format(g.length/100))
+
+    for i in range(200):
         u_f0, u_loudness, e_f0, e_loudness = g[0]
         
-        plt.plot(e_f0, label = "wav")
-        plt.plot(u_f0, label = "midi" )
-        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        plt.title("Frequency comparison")
-        plt.show()
+        if VERBOSE:
+            plt.plot(e_f0, label = "wav")
+            plt.plot(u_f0, label = "midi" )
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.title("Frequency comparison")
+            plt.show()
 
 
-        plt.plot(e_loudness, label = "wav")
-        plt.plot(u_loudness, label = "midi" )
-        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        plt.title("Loudness comparison")
+            plt.plot(e_loudness, label = "wav")
+            plt.plot(u_loudness, label = "midi" )
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.title("Loudness comparison")
+            plt.show()
+
+
+    if VERBOSE:
+        n = g.length
+        for i in range(len(g.segments)):
+            v = np.zeros(n)
+            a, b = g.segments[i]
+            v[a:b] = 0.5 + i/1000
+            plt.plot(v)
+        plt.title("Segments")
         plt.show()
