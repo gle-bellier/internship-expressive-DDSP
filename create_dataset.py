@@ -89,22 +89,15 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=12)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=12)
 
 
-print("Size train set : ", len(train_dataset))
-print("Size test set : ", len(test_dataset))
+print("train set : {} batches".format(len(train_dataset)))
+print("test set : {} batches".format(len(test_dataset)))
 
 
-# for train_sample in train_loader:
-#     print(train_sample[0].shape)
+for train_sample in train_loader:
+    pass
 
-# for test_sample in test_loader:
-#     print(test_sample[0].shape)
-
-
-
-
-
-
-
+for test_sample in test_loader:
+    pass
 
 
 
