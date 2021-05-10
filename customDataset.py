@@ -60,16 +60,21 @@ class ContoursTestDataset(Dataset):
         self.e_f0 = e_f0
         self.e_loudness = e_loudness
 
-        self.length = len(self.u_f0)    
+        self.length = len(self.u_f0)
+
+        self.segments = []
 
 
     def __len__(self):
         return self.length//self.sample_length
+        
 
 
 
     def __getitem__(self, idx):
         start = int(idx * self.sample_length)
         end = int(start + self.sample_length)
+        self.segments.append((start,end))
+
         #print("Indexes: [{}:{}]".format(start, end))
         return self.u_f0[start:end], self.u_loudness[start:end], self.e_f0[start:end], self.e_loudness[start:end]

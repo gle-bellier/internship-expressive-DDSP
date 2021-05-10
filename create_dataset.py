@@ -1,21 +1,34 @@
-from __future__ import print_function, division
-import os
-import torch
-import pandas as pd
 from tqdm import tqdm
 
 import numpy as np
 import matplotlib.pyplot as plt
-from torch.utils.data import Dataset, DataLoader
 import glob
 
 
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
+from models.LSTMContours import LSTMContours
+
+import torch
+import torch.utils.data
+from torch import nn, optim
+from torch.nn import functional as F
+from torchvision import datasets, transforms
+
+
+
+
+
+
+
+##### CREATE TRAIN AND TEST DATASET #####
+
 
 sampling_rate = 100
 dataset_path = "dataset-midi-wav/"
 filenames =[file[len(dataset_path):-4] for file in glob.glob(dataset_path + "*.mid")]
+ratio = 0.7 # ration between train and test datasets
+batch_size = 16
 
 
 u_f0 = np.empty(0)
@@ -51,7 +64,7 @@ full_length = len(u_f0)
 # we need to split the dataset between training and testing
 
 
-ratio = 0.7
+
 i_cut = np.floor(ratio * full_length)
 
 i = 0 
@@ -85,8 +98,11 @@ train_dataset = ContoursTrainDataset(train_u_f0, train_u_loudness, train_e_f0, t
 test_dataset = ContoursTestDataset(test_u_f0, test_u_loudness, test_e_f0, test_e_loudness, sample_length=2000, transform=None)
 
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=12)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=12)
+
+
+
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
 
 
 print("train set : {} batches".format(len(train_dataset)))
@@ -101,13 +117,31 @@ for test_sample in test_loader:
 
 
 
-VERBOSE = True
 
+### PLOT SAMPLES USED FOR TRAINING AND TESTING ###
+VERBOSE = False
 if VERBOSE:
     for i in range(len(train_dataset.segments)):
         v = np.zeros(full_length)
         a, b = train_dataset.segments[i]
         v[a:b] = 0.5 + i/1000
-        plt.plot(v)
+        plt.plot(v, color = "blue")
+
+    for i in range(len(test_dataset.segments)):
+        v = np.zeros(full_length)
+        a, b = test_dataset.segments[i]
+        v[i_cut_real + a:i_cut_real + b] = 0.5 + i/1000
+        plt.plot(v, color = "red")
+
     plt.title("Segments")
-    plt.show()
+    plt.show()    
+
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
+
+print('using', device)
+
+model = LSTMContours().to(device)
+print(model.parameters)
