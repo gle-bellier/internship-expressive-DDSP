@@ -119,7 +119,7 @@ for test_sample in test_loader:
 
 
 ### PLOT SAMPLES USED FOR TRAINING AND TESTING ###
-VERBOSE = False
+VERBOSE = True
 if VERBOSE:
     for i in range(len(train_dataset.segments)):
         v = np.zeros(full_length)

@@ -31,7 +31,7 @@ class ContoursTrainDataset(Dataset):
 
 
     def __len__(self):
-        return self.length//self.sample_length
+        return int(self.length/((1-self.overlap)*self.sample_length))
 
 
     def get_random_indexes(self):
