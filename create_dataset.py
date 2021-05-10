@@ -46,7 +46,7 @@ with tqdm(total=len(filenames)) as pbar:
         midi_file = filename + ".mid"
         wav_file = filename + ".wav"
         g = ContoursGetter()
-        u_f0_track, u_loudness_track, e_f0_track, e_loudness_track = g.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=False)
+        u_f0_track, u_loudness_track, e_f0_track, e_loudness_track = g.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, standard_deviation=False, verbose=False)
         
         u_f0 = np.concatenate((u_f0, u_f0_track))
         u_loudness = np.concatenate((u_loudness, u_loudness_track))
@@ -143,5 +143,18 @@ else:
 
 print('using', device)
 
-model = LSTMContours().to(device)
+
+
+
+
+### MODEL INSTANCIATION ###
+
+
+input_size = 32
+hidden_size = 32
+output_size = 32
+
+
+
+model = LSTMContours(input_size, hidden_size, output_size).to(device)
 print(model.parameters)

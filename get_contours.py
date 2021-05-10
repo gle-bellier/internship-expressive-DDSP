@@ -86,6 +86,27 @@ class ContoursGetter:
 
         return notes_loudness 
     
+    def get_freq_stddev(self, frequencies, onsets):
+        freq_stddev = np.zeros_like(frequencies)
+        previous_i = 0
+        for i in range(len(onsets)):
+            a, b = onsets[i]            
+            if previous_i!=a:
+                freq_stddev[previous_i:a] = frequencies[previous_i:a] - np.mean(frequencies[previous_i:a])
+                freq_stddev[previous_i:a] /= np.max(np.abs(freq_stddev[previous_i:a]))
+            else:
+                freq_stddev[previous_i] = 0
+
+            if a!=b:
+                freq_stddev[a:b] = frequencies[a:b] - np.mean(frequencies[a:b])
+                freq_stddev[a:b] /= np.max(np.abs(freq_stddev[a:b]))
+            else:
+                freq_stddev[a] = 0
+
+            previous_i = b
+
+        return freq_stddev 
+    
 
     def get_onsets(self, midi_file, frame_rate):
         seq = note_seq.midi_file_to_note_sequence(midi_file)
@@ -109,7 +130,7 @@ class ContoursGetter:
 
 
 
-    def get_contours(self, dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration = 3, verbose=False):
+    def get_contours(self, dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration = 3, standard_deviation = False, verbose=False):
 
         # From text file
         
@@ -127,6 +148,12 @@ class ContoursGetter:
         
         midi_onsets = self.get_onsets(dataset_path + midi_file, sampling_rate//block_size)
         loudness_gen = self.get_notes_loudness(loudness_wav, midi_onsets)
+
+        # If we want only standard deviation of notes frequencies 
+        if standard_deviation:
+            print("Computing standard deviation")
+            frequency_wav = self.get_freq_stddev(frequency_wav, midi_onsets)
+
 
 
         frequency_gen = li.core.midi_to_hz(pitch_gen)
@@ -198,7 +225,7 @@ class ContoursGetter:
             plt.show()
 
             plt.plot(frequency_wav_array, label = "wav")
-            plt.plot(frequency_gen_array, label = "midi" )
+            #plt.plot(frequency_gen_array, label = "midi" )
             plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title("Frequency comparison {}".format(wav_file))
             plt.show()
@@ -217,8 +244,9 @@ if __name__ == '__main__':
             midi_file = filename + ".mid"
             wav_file = filename + ".wav"
             e = ContoursGetter()
-            score = e.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
+            score = e.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, standard_deviation=True, verbose=True)
             pbar.update(1)
+            break
 
 
 

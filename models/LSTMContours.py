@@ -19,6 +19,6 @@ class LSTMContours(nn.Module):
         self.output_size = output_size
 
 
-        self.conv = nn.Conv1d(self.input_size, self.input_size*2)
+        self.conv = nn.Conv1d(self.input_size, self.input_size*2, kernel_size=3)
         self.lstm = nn.LSTMCell(self.input_size*2, self.hidden_size)
         self.linear = nn.Linear(self.hidden_size, self.output_size)

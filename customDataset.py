@@ -26,16 +26,8 @@ class ContoursTrainDataset(Dataset):
         self.e_loudness = e_loudness
 
 
-
-
-
-
         self.length = len(self.u_f0)    
         self.segments = []
-
-
-
-
 
 
     def __len__(self):
