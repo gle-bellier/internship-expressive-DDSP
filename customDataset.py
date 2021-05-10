@@ -13,15 +13,28 @@ class ContoursTrainDataset(Dataset):
         self.sample_length = sample_length
         self.overlap = overlap
 
+        if self.transform is not None:
+            u_f0 = self.transform(u_f0)
+            u_loudness = self.transform(u_loudness)
+            e_f0 = self.transform(e_f0)
+            e_loudness = self.transform(e_loudness)
+        
+        
         self.u_f0 = u_f0
         self.u_loudness = u_loudness
         self.e_f0 = e_f0
         self.e_loudness = e_loudness
 
+
+
+
+
+
         self.length = len(self.u_f0)    
-
-
         self.segments = []
+
+
+
 
 
 
@@ -54,6 +67,13 @@ class ContoursTestDataset(Dataset):
 
         self.transform = transform
         self.sample_length = sample_length
+
+        if self.transform is not None:
+            u_f0 = self.transform(u_f0)
+            u_loudness = self.transform(u_loudness)
+            e_f0 = self.transform(e_f0)
+            e_loudness = self.transform(e_loudness)
+        
 
         self.u_f0 = u_f0
         self.u_loudness = u_loudness

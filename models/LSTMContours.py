@@ -11,8 +11,14 @@ import matplotlib.pyplot as plt
 
 
 class LSTMContours(nn.Module):
-    def __init__(self):
+    def __init__(self, input_size, hidden_size, output_size):
         super(LSTMContours, self).__init__()
         
-        self.fc1 = nn.Linear(256, 512)
-        
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+
+
+        self.conv = nn.Conv1d(self.input_size, self.input_size*2)
+        self.lstm = nn.LSTMCell(self.input_size*2, self.hidden_size)
+        self.linear = nn.Linear(self.hidden_size, self.output_size)
