@@ -132,7 +132,7 @@ if VERBOSE:
         a, b = test_dataset.segments[i]
         v[i_cut_real + a:i_cut_real + b] = 0.5 + i/1000
         plt.plot(v, color = "red")
-
+                    
     plt.title("Segments")
     plt.show()    
 
