@@ -14,25 +14,26 @@ class ContoursTrainDataset(Dataset):
         self.overlap = overlap
         self.seq_length = seq_length
 
-        if self.transform is not None:
-            u_f0 = self.transform(u_f0)
-            u_loudness = self.transform(u_loudness)
-            e_f0 = self.transform(e_f0)
-            e_loudness = self.transform(e_loudness)
-            e_f0_mean = self.transform(e_f0_mean)
-            e_f0_stddev = self.transform(e_f0_stddev)
-        
-        
-        self.u_f0 = u_f0
-        self.u_loudness = u_loudness
-        self.e_f0 = e_f0
-        self.e_loudness = e_loudness
-        self.e_f0_mean = e_f0_mean
-        self.e_f0_stddev = e_f0_stddev
+        self.u_f0 = u_f0.reshape(-1,1)
+        self.u_loudness = u_loudness.reshape(-1,1)
+        self.e_f0 = e_f0.reshape(-1,1)
+        self.e_loudness = e_loudness.reshape(-1,1)
+        self.e_f0_mean = e_f0_mean.reshape(-1,1)
+        self.e_f0_stddev = e_f0_stddev.reshape(-1,1)
 
+        if self.transform is not None:
+            self.u_f0 = self.transform(self.u_f0)
+            self.u_loudness = self.transform(self.u_loudness)
+            self.e_f0 = self.transform(self.e_f0)
+            self.e_loudness = self.transform(self.e_loudness)
+            self.e_f0_mean = self.transform(self.e_f0_mean)
+            self.e_f0_stddev = self.transform(self.e_f0_stddev)
 
         self.length = len(self.u_f0)    
         self.segments = []
+        
+        print("ufqd")
+        print(self.u_f0.shape)
 
 
     def __len__(self):
@@ -83,10 +84,10 @@ class ContoursTrainDataset(Dataset):
 
         # get windows : 
 
-        self.u_f0, self.e_f0, self.e_f0_mean, self.e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
-        self.u_loudness, self.e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
+        u_f0, e_f0, e_f0_mean, e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
+        u_loudness, e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
 
-        return self.u_f0, self.u_loudness, self.e_f0, self.e_loudness, self.e_f0_mean, self.e_f0_stddev
+        return u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev
         
 
 
@@ -103,21 +104,21 @@ class ContoursTestDataset(Dataset):
         self.overlap = overlap
         self.seq_length = seq_length
 
+        self.u_f0 = u_f0.reshape(-1,1)
+        self.u_loudness = u_loudness.reshape(-1,1)
+        self.e_f0 = e_f0.reshape(-1,1)
+        self.e_loudness = e_loudness.reshape(-1,1)
+        self.e_f0_mean = e_f0_mean.reshape(-1,1)
+        self.e_f0_stddev = e_f0_stddev.reshape(-1,1)
+
         if self.transform is not None:
-            u_f0 = self.transform(u_f0)
-            u_loudness = self.transform(u_loudness)
-            e_f0 = self.transform(e_f0)
-            e_loudness = self.transform(e_loudness)
-            e_f0_mean = self.transform(e_f0_mean)
-            e_f0_stddev = self.transform(e_f0_stddev)
+            self.u_f0 = self.transform(self.u_f0)
+            self.u_loudness = self.transform(self.u_loudness)
+            self.e_f0 = self.transform(self.e_f0)
+            self.e_loudness = self.transform(self.e_loudness)
+            self.e_f0_mean = self.transform(self.e_f0_mean)
+            self.e_f0_stddev = self.transform(self.e_f0_stddev)
         
-        
-        self.u_f0 = u_f0
-        self.u_loudness = u_loudness
-        self.e_f0 = e_f0
-        self.e_loudness = e_loudness
-        self.e_f0_mean = e_f0_mean
-        self.e_f0_stddev = e_f0_stddev
 
 
         self.length = len(self.u_f0)    
@@ -173,10 +174,10 @@ class ContoursTestDataset(Dataset):
 
         # get windows : 
 
-        self.u_f0, self.e_f0, self.e_f0_mean, self.e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
-        self.u_loudness, self.e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
+        u_f0, e_f0, e_f0_mean, e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
+        u_loudness, e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
 
-        return self.u_f0, self.u_loudness, self.e_f0, self.e_loudness, self.e_f0_mean, self.e_f0_stddev
+        return u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev
         
 
 
