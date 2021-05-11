@@ -15,6 +15,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 
+from sklearn.preprocessing import MinMaxScaler
 
 
 
@@ -109,11 +110,97 @@ print("train set : {} batches".format(len(train_dataset)))
 print("test set : {} batches".format(len(test_dataset)))
 
 
-for train_sample in train_loader:
-    pass
+# for train_sample in train_loader:
+#     pass
 
-for test_sample in test_loader:
-    pass
+# for test_sample in test_loader:
+#     pass
+
+
+
+
+
+
+
+
+
+
+
+for train_sample in train_loader:
+    
+    u_f0, u_loudness, e_f0, e_loudness = train_sample
+
+
+    sc = MinMaxScaler()
+
+
+    training_data_pitch = sc.fit_transform(pitch.reshape(-1, 1))
+    training_data_loudness = sc.fit_transform(loudness.reshape(-1, 1))
+
+
+seq_length = 4
+
+pitch_x, pitch_y = sliding_windows(training_data_pitch, seq_length)
+loudness_x, loudness_y = sliding_windows(training_data_loudness, seq_length)
+
+
+dataX_pitch = Variable(torch.Tensor(np.array(pitch_x)))
+dataY_pitch = Variable(torch.Tensor(np.array(pitch_y)))
+
+dataX_loudness = Variable(torch.Tensor(np.array(loudness_x)))
+dataY_loudness = Variable(torch.Tensor(np.array(loudness_y)))
+
+trainX_pitch = Variable(torch.Tensor(np.array(pitch_x[:train_size])))
+trainY_pitch = Variable(torch.Tensor(np.array(pitch_y[:train_size])))
+
+trainX_loudness = Variable(torch.Tensor(np.array(loudness_x[:train_size])))
+trainY_loudness = Variable(torch.Tensor(np.array(loudness_y[:train_size])))
+
+testX_pitch = Variable(torch.Tensor(np.array(pitch_x[train_size:])))
+testY_pitch = Variable(torch.Tensor(np.array(pitch_y[train_size:])))
+
+testX_loudness = Variable(torch.Tensor(np.array(loudness_x[train_size:])))
+testY_loudness = Variable(torch.Tensor(np.array(loudness_y[train_size:])))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### MODEL INSTANCIATION ###
+
+
+input_size = 32
+hidden_size = 32
+output_size = 32
+
+
+
+model = LSTMContours(input_size, hidden_size, output_size).to(device)
+print(model.parameters)
+
+
+
+
+
 
 
 
@@ -142,19 +229,3 @@ else:
     device = torch.device("cpu")
 
 print('using', device)
-
-
-
-
-
-### MODEL INSTANCIATION ###
-
-
-input_size = 32
-hidden_size = 32
-output_size = 32
-
-
-
-model = LSTMContours(input_size, hidden_size, output_size).to(device)
-print(model.parameters)

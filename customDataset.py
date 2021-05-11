@@ -7,23 +7,28 @@ class ContoursTrainDataset(Dataset):
     """ Unexpressive and expressive contours Dataset"""
 
 
-    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, sample_length=2000, overlap = 0.3, transform=None):
+    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev, seq_length = 20, sample_length=2000, overlap = 0.3, transform=None):
 
         self.transform = transform
         self.sample_length = sample_length
         self.overlap = overlap
+        self.seq_length = seq_length
 
         if self.transform is not None:
             u_f0 = self.transform(u_f0)
             u_loudness = self.transform(u_loudness)
             e_f0 = self.transform(e_f0)
             e_loudness = self.transform(e_loudness)
+            e_f0_mean = self.transform(e_f0_mean)
+            e_f0_stddev = self.transform(e_f0_stddev)
         
         
         self.u_f0 = u_f0
         self.u_loudness = u_loudness
         self.e_f0 = e_f0
         self.e_loudness = e_loudness
+        self.e_f0_mean = e_f0_mean
+        self.e_f0_stddev = e_f0_stddev
 
 
         self.length = len(self.u_f0)    
@@ -44,49 +49,153 @@ class ContoursTrainDataset(Dataset):
 
 
 
+    def sliding_windows_freq(self, u_f0, e_f0, e_f0_mean, e_f0_stddev): # label like
+        x, y , y_mean, y_stddev = [], [], [], []
+        for i in range(len(u_f0)-self.seq_length-1):
+            _x = u_f0[i:(i+self.seq_length)]
+            _y = e_f0[i+self.seq_length]
+            _y_mean = e_f0_mean[i+self.seq_length]
+            _y_stddev = e_f0_stddev[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+            y_mean.append(_y_mean)
+            y_stddev.append(_y_stddev)
+
+        return np.array(x), np.array(y), np.array(y_mean), np.array(y_stddev)
+
+    def sliding_windows_loudness(self, u_loudness, e_loudness): # label like
+        x = []
+        y = []
+        for i in range(len(u_loudness)-self.seq_length-1):
+            _x = u_loudness[i:(i+self.seq_length)]
+            _y = e_loudness[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+
+        return np.array(x),np.array(y)
+
+
     def __getitem__(self, idx):
         start, end = self.get_random_indexes()
         #print("Indexes: [{}:{}]".format(start, end))
         self.segments.append((start,end))
-        return self.u_f0[start:end], self.u_loudness[start:end], self.e_f0[start:end], self.e_loudness[start:end]
 
+
+        # get windows : 
+
+        self.u_f0, self.e_f0, self.e_f0_mean, self.e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
+        self.u_loudness, self.e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
+
+        return self.u_f0, self.u_loudness, self.e_f0, self.e_loudness, self.e_f0_mean, self.e_f0_stddev
         
+
+
+
+
 class ContoursTestDataset(Dataset):
     """ Unexpressive and expressive contours Dataset"""
 
 
-    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, sample_length=2000, transform=None):
+    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev, seq_length = 20, sample_length=2000, overlap = 0.3, transform=None):
 
         self.transform = transform
         self.sample_length = sample_length
+        self.overlap = overlap
+        self.seq_length = seq_length
 
         if self.transform is not None:
             u_f0 = self.transform(u_f0)
             u_loudness = self.transform(u_loudness)
             e_f0 = self.transform(e_f0)
             e_loudness = self.transform(e_loudness)
+            e_f0_mean = self.transform(e_f0_mean)
+            e_f0_stddev = self.transform(e_f0_stddev)
         
-
+        
         self.u_f0 = u_f0
         self.u_loudness = u_loudness
         self.e_f0 = e_f0
         self.e_loudness = e_loudness
+        self.e_f0_mean = e_f0_mean
+        self.e_f0_stddev = e_f0_stddev
 
-        self.length = len(self.u_f0)
 
+        self.length = len(self.u_f0)    
         self.segments = []
+
+
+    def get_random_indexes(self):
+
+        seg_length = int((1 - self.overlap) * self.sample_length)
+        i_max = np.floor((self.length - self.sample_length)/seg_length)
+
+        i = np.random.randint(i_max+1)
+        return int(i*seg_length), int(i*seg_length + self.sample_length)
+
+
+
+    def sliding_windows_freq(self, u_f0, e_f0, e_f0_mean, e_f0_stddev): # label like
+        x, y , y_mean, y_stddev = [], [], [], []
+        for i in range(len(u_f0)-self.seq_length-1):
+            _x = u_f0[i:(i+self.seq_length)]
+            _y = e_f0[i+self.seq_length]
+            _y_mean = e_f0_mean[i+self.seq_length]
+            _y_stddev = e_f0_stddev[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+            y_mean.append(_y_mean)
+            y_stddev.append(_y_stddev)
+
+        return np.array(x), np.array(y), np.array(y_mean), np.array(y_stddev)
+
+    def sliding_windows_loudness(self, u_loudness, e_loudness): # label like
+        x = []
+        y = []
+        for i in range(len(u_loudness)-self.seq_length-1):
+            _x = u_loudness[i:(i+self.seq_length)]
+            _y = e_loudness[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+
+        return np.array(x),np.array(y)
+
+
 
 
     def __len__(self):
         return self.length//self.sample_length
         
 
-
-
     def __getitem__(self, idx):
         start = int(idx * self.sample_length)
         end = int(start + self.sample_length)
         self.segments.append((start,end))
 
-        #print("Indexes: [{}:{}]".format(start, end))
-        return self.u_f0[start:end], self.u_loudness[start:end], self.e_f0[start:end], self.e_loudness[start:end]
+        # get windows : 
+
+        self.u_f0, self.e_f0, self.e_f0_mean, self.e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
+        self.u_loudness, self.e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
+
+        return self.u_f0, self.u_loudness, self.e_f0, self.e_loudness, self.e_f0_mean, self.e_f0_stddev
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
