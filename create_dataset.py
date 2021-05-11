@@ -171,11 +171,6 @@ print('using', device)
 
 
 
-for train_sample in train_loader:
-    print(train_sample[0].shape)
-
-
-
 
 
 
@@ -184,7 +179,7 @@ for train_sample in train_loader:
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 2
+num_epochs = 10
 learning_rate = 0.01
 input_size = 32
 hidden_size = 32
@@ -202,7 +197,7 @@ for epoch in range(num_epochs):
     for batch in train_loader:
 
         number_of_samples = batch[0].shape[0]
-        print("Number of samples in this batch : ", number_of_samples)
+        #print("Number of samples in this batch : ", number_of_samples)
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
@@ -214,23 +209,23 @@ for epoch in range(num_epochs):
         e_f0_stddev = Variable(torch.Tensor(e_f0_stddev.float()))
 
 
-        print("Input Shape")
-        print(u_f0.shape)
-        print(e_f0.shape)
+        # print("Input Shape")
+        # print(u_f0.shape)
+        # print(e_f0.shape)
         
-        outputs = lstm(u_f0)
+        outputs = lstm(u_f0).view(number_of_samples, sample_length)
         optimizer.zero_grad()
-        print("Output Shape")
-        print(outputs.shape)
+        # print("Output Shape")
+        # print(outputs.shape)
         # obtain the loss function
-        #loss = criterion(outputs, e_f0)
+        loss = criterion(outputs, e_f0)
         
-        #loss.backward()
+        loss.backward()
         
         optimizer.step()
-        #if epoch % 100 == 0:
-        #print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()))
-        break
+        
+    if epoch % 1 == 0:
+        print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()))
 
 
 
