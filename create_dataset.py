@@ -109,7 +109,7 @@ print("Test size : {}s".format(test_length/sampling_rate))
 
 sc = MinMaxScaler()
 
-train_dataset = ContoursTrainDataset(train_u_f0, train_u_loudness, train_e_f0, train_e_loudness, train_e_f0_mean, train_e_f0_stddev, seq_length = seq_length, sample_length=sample_length + seq_length+1, transform=None)#sc.fit_transform)#None)
+train_dataset = ContoursTrainDataset(train_u_f0, train_u_loudness, train_e_f0, train_e_loudness, train_e_f0_mean, train_e_f0_stddev, seq_length = seq_length, sample_length=sample_length + seq_length+1, transform=sc.fit_transform)#None)
 test_dataset = ContoursTestDataset(test_u_f0, test_u_loudness, test_e_f0, test_e_loudness, test_e_f0_mean, test_e_f0_stddev, seq_length = seq_length, sample_length=sample_length + seq_length+1, transform=None)
 
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
@@ -182,7 +182,7 @@ print('using', device)
 num_epochs = 10
 learning_rate = 0.01
 input_size = 32
-hidden_size = 32
+hidden_size = 64
 num_layers = 2
 
 
@@ -194,19 +194,21 @@ optimizer = torch.optim.Adam(lstm.parameters(), lr=learning_rate)
 
 # Train the model
 for epoch in range(num_epochs):
-    for batch in train_loader:
+    number_of_batch = 0
 
+    for batch in train_loader:
+        number_of_batch += 1
         number_of_samples = batch[0].shape[0]
         #print("Number of samples in this batch : ", number_of_samples)
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
-        u_f0 = Variable(torch.Tensor(u_f0.float()))
-        u_loudness = Variable(torch.Tensor(u_loudness.float()))
-        e_f0 = Variable(torch.Tensor(e_f0.float()))
-        e_loudness = Variable(torch.Tensor(e_loudness.float())) 
-        e_f0_mean = Variable(torch.Tensor(e_f0_mean.float()))
-        e_f0_stddev = Variable(torch.Tensor(e_f0_stddev.float()))
+        u_f0 = Variable(torch.Tensor(u_f0.float())).view(number_of_samples, sample_length, seq_length)
+        u_loudness = Variable(torch.Tensor(u_loudness.float())).view(number_of_samples, sample_length, seq_length)
+        e_f0 = Variable(torch.Tensor(e_f0.float())).view(number_of_samples, sample_length)
+        e_loudness = Variable(torch.Tensor(e_loudness.float())).view(number_of_samples, sample_length)
+        e_f0_mean = Variable(torch.Tensor(e_f0_mean.float())).view(number_of_samples, sample_length)
+        e_f0_stddev = Variable(torch.Tensor(e_f0_stddev.float())).view(number_of_samples, sample_length)
 
 
         # print("Input Shape")
@@ -218,14 +220,13 @@ for epoch in range(num_epochs):
         # print("Output Shape")
         # print(outputs.shape)
         # obtain the loss function
-        loss = criterion(outputs, e_f0)
+        loss = criterion(outputs, e_f0_mean)
         
         loss.backward()
         
         optimizer.step()
-        
     if epoch % 1 == 0:
-        print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()))
+        print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
 
 
 
