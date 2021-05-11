@@ -35,7 +35,7 @@ batch_size = 16
 sample_duration = 20
 seq_length = 32
 
-sample_length = sample_duration*sampling_rate + seq_length+1 # seq_length because of LSTM  window method
+sample_length = sample_duration*sampling_rate 
 
 
 u_f0 = np.empty(0)
@@ -109,8 +109,8 @@ print("Test size : {}s".format(test_length/sampling_rate))
 
 sc = MinMaxScaler()
 
-train_dataset = ContoursTrainDataset(train_u_f0, train_u_loudness, train_e_f0, train_e_loudness, train_e_f0_mean, train_e_f0_stddev, seq_length = seq_length, sample_length=sample_length, transform=None)
-test_dataset = ContoursTestDataset(test_u_f0, test_u_loudness, test_e_f0, test_e_loudness, test_e_f0_mean, test_e_f0_stddev, seq_length = seq_length, sample_length=sample_length, transform=None)
+train_dataset = ContoursTrainDataset(train_u_f0, train_u_loudness, train_e_f0, train_e_loudness, train_e_f0_mean, train_e_f0_stddev, seq_length = seq_length, sample_length=sample_length + seq_length+1, transform=None)#sc.fit_transform)#None)
+test_dataset = ContoursTestDataset(test_u_f0, test_u_loudness, test_e_f0, test_e_loudness, test_e_f0_mean, test_e_f0_stddev, seq_length = seq_length, sample_length=sample_length + seq_length+1, transform=None)
 
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
@@ -154,36 +154,25 @@ print('using', device)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 for train_sample in train_loader:
-    
-    u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = train_sample
-    u_f0 = Variable(torch.Tensor(u_f0.float()))
-    u_loudness = Variable(torch.Tensor(u_loudness.float()))
-    e_f0 = Variable(torch.Tensor(e_f0.float()))
-    e_loudness = Variable(torch.Tensor(e_loudness.float())) 
-    e_f0_mean = Variable(torch.Tensor(e_f0_mean.float()))
-    e_f0_stddev = Variable(torch.Tensor(e_f0_stddev.float()))
-    print(u_f0.shape)
-    print(u_loudness.shape)
-    print(e_f0.shape)
-    print(e_loudness.shape)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    print(train_sample[0].shape)
 
 
 
@@ -195,18 +184,53 @@ for train_sample in train_loader:
 ### MODEL INSTANCIATION ###
 
 
+num_epochs = 2
+learning_rate = 0.01
 input_size = 32
 hidden_size = 32
-output_size = 32
+num_layers = 2
 
 
+lstm = LSTMContours(input_size, hidden_size, num_layers, seq_length).to(device)
+print(lstm.parameters)
+criterion = torch.nn.MSELoss()    # mean-squared error for regression
+optimizer = torch.optim.Adam(lstm.parameters(), lr=learning_rate)
+#optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
 
-# model = LSTMContours(input_size, hidden_size, output_size).to(device)
-# print(model.parameters)
+# Train the model
+for epoch in range(num_epochs):
+    for batch in train_loader:
+
+        number_of_samples = batch[0].shape[0]
+        print("Number of samples in this batch : ", number_of_samples)
+
+        u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
+
+        u_f0 = Variable(torch.Tensor(u_f0.float()))
+        u_loudness = Variable(torch.Tensor(u_loudness.float()))
+        e_f0 = Variable(torch.Tensor(e_f0.float()))
+        e_loudness = Variable(torch.Tensor(e_loudness.float())) 
+        e_f0_mean = Variable(torch.Tensor(e_f0_mean.float()))
+        e_f0_stddev = Variable(torch.Tensor(e_f0_stddev.float()))
 
 
-
-
+        print("Input Shape")
+        print(u_f0.shape)
+        print(e_f0.shape)
+        
+        outputs = lstm(u_f0)
+        optimizer.zero_grad()
+        print("Output Shape")
+        print(outputs.shape)
+        # obtain the loss function
+        #loss = criterion(outputs, e_f0)
+        
+        #loss.backward()
+        
+        optimizer.step()
+        #if epoch % 100 == 0:
+        #print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()))
+        break
 
 
 

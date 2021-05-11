@@ -14,25 +14,25 @@ class ContoursTrainDataset(Dataset):
         self.overlap = overlap
         self.seq_length = seq_length
 
-        self.u_f0 = u_f0.reshape(-1,1)
-        self.u_loudness = u_loudness.reshape(-1,1)
-        self.e_f0 = e_f0.reshape(-1,1)
-        self.e_loudness = e_loudness.reshape(-1,1)
-        self.e_f0_mean = e_f0_mean.reshape(-1,1)
-        self.e_f0_stddev = e_f0_stddev.reshape(-1,1)
+        self.u_f0 = u_f0
+        self.u_loudness = u_loudness
+        self.e_f0 = e_f0
+        self.e_loudness = e_loudness
+        self.e_f0_mean = e_f0_mean
+        self.e_f0_stddev = e_f0_stddev
 
         if self.transform is not None:
-            self.u_f0 = self.transform(self.u_f0)
-            self.u_loudness = self.transform(self.u_loudness)
-            self.e_f0 = self.transform(self.e_f0)
-            self.e_loudness = self.transform(self.e_loudness)
-            self.e_f0_mean = self.transform(self.e_f0_mean)
-            self.e_f0_stddev = self.transform(self.e_f0_stddev)
+            self.u_f0 = self.transform(self.u_f0.reshape(-1,1))
+            self.u_loudness = self.transform(self.u_loudness.reshape(-1,1))
+            self.e_f0 = self.transform(self.e_f0.reshape(-1,1))
+            self.e_loudness = self.transform(self.e_loudness.reshape(-1,1))
+            self.e_f0_mean = self.transform(self.e_f0_mean.reshape(-1,1))
+            self.e_f0_stddev = self.transform(self.e_f0_stddev.reshape(-1,1))
 
         self.length = len(self.u_f0)    
         self.segments = []
         
-        print("ufqd")
+        print("ufqdb =")
         print(self.u_f0.shape)
 
 
@@ -104,20 +104,20 @@ class ContoursTestDataset(Dataset):
         self.overlap = overlap
         self.seq_length = seq_length
 
-        self.u_f0 = u_f0.reshape(-1,1)
-        self.u_loudness = u_loudness.reshape(-1,1)
-        self.e_f0 = e_f0.reshape(-1,1)
-        self.e_loudness = e_loudness.reshape(-1,1)
-        self.e_f0_mean = e_f0_mean.reshape(-1,1)
-        self.e_f0_stddev = e_f0_stddev.reshape(-1,1)
+        self.u_f0 = u_f0
+        self.u_loudness = u_loudness
+        self.e_f0 = e_f0
+        self.e_loudness = e_loudness
+        self.e_f0_mean = e_f0_mean
+        self.e_f0_stddev = e_f0_stddev
 
         if self.transform is not None:
-            self.u_f0 = self.transform(self.u_f0)
-            self.u_loudness = self.transform(self.u_loudness)
+            self.u_f0 = self.transform(self.u_f0.reshape(-1,1))
+            self.u_loudness = self.transform(self.u_loudness.reshape(-1,1))
             self.e_f0 = self.transform(self.e_f0)
-            self.e_loudness = self.transform(self.e_loudness)
-            self.e_f0_mean = self.transform(self.e_f0_mean)
-            self.e_f0_stddev = self.transform(self.e_f0_stddev)
+            self.e_loudness = self.transform(self.e_loudness.reshape(-1,1))
+            self.e_f0_mean = self.transform(self.e_f0_mean.reshape(-1,1))
+            self.e_f0_stddev = self.transform(self.e_f0_stddev.reshape(-1,1))
         
 
 
