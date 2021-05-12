@@ -28,15 +28,15 @@ else:
 print('using', device)
 
 
-
-train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=None)
+sc = MinMaxScaler()
+train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
     
 
 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 30
+num_epochs = 20
 learning_rate = 0.01
 input_size = 32
 hidden_size = 64
@@ -72,8 +72,16 @@ for epoch in range(num_epochs):
         e_f0_stddev = torch.Tensor(e_f0_stddev.float())
 
 
-        model_input = torch.cat([u_f0, u_loudness], -1)
-        ground_truth = torch.cat([e_f0, e_loudness], -1)
+        model_input = torch.cat([
+            u_f0[:, 1:],
+            u_loudness[:, 1:],
+            e_f0[:, :-1],
+            e_loudness[:, :-1]            
+            ], -1)
+        ground_truth = torch.cat([e_f0[:,1:], e_loudness[:,1:]], -1)
+
+        print("Model input shape ", model_input.shape)
+        print("Truth shape ", ground_truth.shape)
 
         
         output = model(model_input)
@@ -86,8 +94,6 @@ for epoch in range(num_epochs):
         
         optimizer.step()
 
-
-        break
     if epoch % 10 == 0:
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
         list_losses.append(loss.item()/number_of_batch)

@@ -28,8 +28,8 @@ else:
 print('using', device)
 
 
-
-train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=None)
+sc = MinMaxScaler()
+train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
     
 
 
@@ -79,6 +79,8 @@ for epoch in range(num_epochs):
         output = model(model_input)
         optimizer.zero_grad()
 
+
+
         # obtain the loss function
         loss = criterion(output, ground_truth)
         
@@ -87,7 +89,6 @@ for epoch in range(num_epochs):
         optimizer.step()
 
 
-        break
     if epoch % 10 == 0:
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
         list_losses.append(loss.item()/number_of_batch)
