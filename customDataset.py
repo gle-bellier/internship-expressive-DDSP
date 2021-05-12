@@ -7,12 +7,11 @@ class ContoursTrainDataset(Dataset):
     """ Unexpressive and expressive contours Dataset"""
 
 
-    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev, seq_length = 20, sample_length=2000, overlap = 0.3, transform=None):
+    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev, sample_length=2000, overlap = 0.3, transform=None):
 
         self.transform = transform
         self.sample_length = sample_length
         self.overlap = overlap
-        self.seq_length = seq_length
 
         self.u_f0 = u_f0.reshape(-1,1)
         self.u_loudness = u_loudness.reshape(-1,1)
@@ -67,12 +66,11 @@ class ContoursTestDataset(Dataset):
     """ Unexpressive and expressive contours Dataset"""
 
 
-    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev, seq_length = 20, sample_length=2000, overlap = 0.3, transform=None):
+    def __init__(self, u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev, sample_length=2000, overlap = 0.3, transform=None):
 
         self.transform = transform
         self.sample_length = sample_length
         self.overlap = overlap
-        self.seq_length = seq_length
 
         self.u_f0 = u_f0.reshape(-1,1)
         self.u_loudness = u_loudness.reshape(-1,1)

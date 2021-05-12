@@ -141,7 +141,7 @@ print('using', device)
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 500
+num_epochs = 300
 learning_rate = 0.01
 input_size = 32
 hidden_size = 64
@@ -153,6 +153,10 @@ print(model.parameters)
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 #optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
+
+
+list_losses = []
+
 
 # Train the model
 for epoch in range(num_epochs):
@@ -191,8 +195,12 @@ for epoch in range(num_epochs):
         break
     if epoch % 10 == 0:
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
+        list_losses.append(loss.item()/number_of_batch)
 
 
+plt.plot(list_losses)
+plt.title("Loss")
+plt.show()
 
 
 
