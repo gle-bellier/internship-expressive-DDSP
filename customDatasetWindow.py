@@ -3,7 +3,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
 
-class ContoursTrainDataset(Dataset):
+class ContoursWindowTrainDataset(Dataset):
     """ Unexpressive and expressive contours Dataset"""
 
 
@@ -31,6 +31,9 @@ class ContoursTrainDataset(Dataset):
 
         self.length = len(self.u_f0)    
         self.segments = []
+        
+        print("ufqdb =")
+        print(self.u_f0.shape)
 
 
     def __len__(self):
@@ -45,6 +48,34 @@ class ContoursTrainDataset(Dataset):
         i = np.random.randint(i_max+1)
         return int(i*seg_length), int(i*seg_length + self.sample_length)
 
+
+
+    def sliding_windows_freq(self, u_f0, e_f0, e_f0_mean, e_f0_stddev): # label like
+        x, y , y_mean, y_stddev = [], [], [], []
+        for i in range(len(u_f0)-self.seq_length-1):
+            _x = u_f0[i:(i+self.seq_length)]
+            _y = e_f0[i+self.seq_length]
+            _y_mean = e_f0_mean[i+self.seq_length]
+            _y_stddev = e_f0_stddev[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+            y_mean.append(_y_mean)
+            y_stddev.append(_y_stddev)
+
+        return np.array(x), np.array(y), np.array(y_mean), np.array(y_stddev)
+
+    def sliding_windows_loudness(self, u_loudness, e_loudness): # label like
+        x = []
+        y = []
+        for i in range(len(u_loudness)-self.seq_length-1):
+            _x = u_loudness[i:(i+self.seq_length)]
+            _y = e_loudness[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+
+        return np.array(x),np.array(y)
+
+
     def __getitem__(self, idx):
         start, end = self.get_random_indexes()
         #print("Indexes: [{}:{}]".format(start, end))
@@ -53,17 +84,16 @@ class ContoursTrainDataset(Dataset):
 
         # get windows : 
 
-        self.u_f0, self.e_f0, self.e_f0_mean, self.e_f0_stddev = self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end]
-        self.u_loudness, self.e_loudness = self.u_loudness[start:end], self.e_loudness[start:end]
+        u_f0, e_f0, e_f0_mean, e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
+        u_loudness, e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
 
-        return self.u_f0, self.u_loudness, self.e_f0, self.e_loudness, self.e_f0_mean, self.e_f0_stddev
+        return u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev
         
-        
 
 
 
 
-class ContoursTestDataset(Dataset):
+class ContoursWindowTestDataset(Dataset):
     """ Unexpressive and expressive contours Dataset"""
 
 
@@ -104,6 +134,35 @@ class ContoursTestDataset(Dataset):
         return int(i*seg_length), int(i*seg_length + self.sample_length)
 
 
+
+    def sliding_windows_freq(self, u_f0, e_f0, e_f0_mean, e_f0_stddev): # label like
+        x, y , y_mean, y_stddev = [], [], [], []
+        for i in range(len(u_f0)-self.seq_length-1):
+            _x = u_f0[i:(i+self.seq_length)]
+            _y = e_f0[i+self.seq_length]
+            _y_mean = e_f0_mean[i+self.seq_length]
+            _y_stddev = e_f0_stddev[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+            y_mean.append(_y_mean)
+            y_stddev.append(_y_stddev)
+
+        return np.array(x), np.array(y), np.array(y_mean), np.array(y_stddev)
+
+    def sliding_windows_loudness(self, u_loudness, e_loudness): # label like
+        x = []
+        y = []
+        for i in range(len(u_loudness)-self.seq_length-1):
+            _x = u_loudness[i:(i+self.seq_length)]
+            _y = e_loudness[i+self.seq_length]
+            x.append(_x)
+            y.append(_y)
+
+        return np.array(x),np.array(y)
+
+
+
+
     def __len__(self):
         return self.length//self.sample_length
         
@@ -115,10 +174,29 @@ class ContoursTestDataset(Dataset):
 
         # get windows : 
 
-        self.u_f0, self.e_f0, self.e_f0_mean, self.e_f0_stddev = self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end]
-        self.u_loudness, self.e_loudness = self.u_loudness[start:end], self.e_loudness[start:end]
+        u_f0, e_f0, e_f0_mean, e_f0_stddev = self.sliding_windows_freq(self.u_f0[start:end], self.e_f0[start:end], self.e_f0_mean[start:end], self.e_f0_stddev[start:end])
+        u_loudness, e_loudness = self.sliding_windows_loudness(self.u_loudness[start:end], self.e_loudness[start:end])
 
-        return self.u_f0, self.u_loudness, self.e_f0, self.e_loudness, self.e_f0_mean, self.e_f0_stddev
+        return u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev
         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
