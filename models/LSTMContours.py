@@ -21,26 +21,28 @@ class LSTMContours(nn.Module):
         self.hidden_size = hidden_size
         self.seq_length = seq_length
         
-        self.conv1d = nn.Conv1d(in_channels = 2000, out_channels=2000, kernel_size=5, stride=1, dilation=4)
+        self.lin = nn.Linear(2, input_size)
+        self.lkrelu = nn.LeakyReLU()
 
-
-
-        self.lstm = nn.LSTM(input_size=input_size//2, 
+        self.lstm = nn.LSTM(input_size=input_size, 
                             hidden_size=hidden_size,
                             num_layers=num_layers,
                             batch_first=True)
 
-        self.fc = nn.Linear(hidden_size, 1)
+        self.fc = nn.Linear(hidden_size, 2)
 
     def forward(self, x):
-        h_0 = Variable(torch.zeros(
-            self.num_layers, x.size(0), self.hidden_size))
+       
+        x = self.lin(x)
+
+
+        h_0 = torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size)
         
-        c_0 = Variable(torch.zeros(
-            self.num_layers, x.size(0), self.hidden_size))
+        c_0 = torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size)
+
         
-        x = self.conv1d(x)
-        #print("Size x ", x.shape)
         # Propagate input through LSTM
         out, (h_out, _) = self.lstm(x, (h_0, c_0))
         #out = out.contiguous().view(-1, self.hidden_size)

@@ -109,8 +109,8 @@ print("Test size : {}s".format(test_length/sampling_rate))
 
 sc = MinMaxScaler()
 
-train_dataset = ContoursTrainDataset(train_u_f0, train_u_loudness, train_e_f0, train_e_loudness, train_e_f0_mean, train_e_f0_stddev, seq_length = seq_length, sample_length=sample_length + seq_length+1, transform=None)#sc.fit_transform)#None)
-test_dataset = ContoursTestDataset(test_u_f0, test_u_loudness, test_e_f0, test_e_loudness, test_e_f0_mean, test_e_f0_stddev, seq_length = seq_length, sample_length=sample_length + seq_length+1, transform=None)
+train_dataset = ContoursTrainDataset(train_u_f0, train_u_loudness, train_e_f0, train_e_loudness, train_e_f0_mean, train_e_f0_stddev, seq_length = seq_length, sample_length=sample_length, transform=None)#sc.fit_transform)#None)
+test_dataset = ContoursTestDataset(test_u_f0, test_u_loudness, test_e_f0, test_e_loudness, test_e_f0_mean, test_e_f0_stddev, seq_length = seq_length, sample_length=sample_length, transform=None)
 
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
@@ -120,23 +120,6 @@ print("train set : {} batches".format(len(train_dataset)))
 print("test set : {} batches".format(len(test_dataset)))
 
 
-### PLOT SAMPLES USED FOR TRAINING AND TESTING ###
-VERBOSE = False
-if VERBOSE:
-    for i in range(len(train_dataset.segments)):
-        v = np.zeros(full_length)
-        a, b = train_dataset.segments[i]
-        v[a:b] = 0.5 + i/1000
-        plt.plot(v, color = "blue")
-
-    for i in range(len(test_dataset.segments)):
-        v = np.zeros(full_length)
-        a, b = test_dataset.segments[i]
-        v[i_cut_real + a:i_cut_real + b] = 0.5 + i/1000
-        plt.plot(v, color = "red")
-                    
-    plt.title("Segments")
-    plt.show()    
 
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
@@ -155,41 +138,20 @@ print('using', device)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 10
+num_epochs = 500
 learning_rate = 0.01
 input_size = 32
 hidden_size = 64
 num_layers = 2
 
 
-lstm = LSTMContours(input_size, hidden_size, num_layers, seq_length).to(device)
-print(lstm.parameters)
+model = LSTMContours(input_size, hidden_size, num_layers, seq_length).to(device)
+print(model.parameters)
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
-optimizer = torch.optim.Adam(lstm.parameters(), lr=learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 #optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
 
 # Train the model
@@ -211,16 +173,15 @@ for epoch in range(num_epochs):
         e_f0_stddev = torch.Tensor(e_f0_stddev.float())
 
 
-        print("Input Shape")
-        print(u_f0.shape)
-        print(e_f0.shape)
+        model_input = torch.cat([u_f0, u_loudness], -1)
+        ground_truth = torch.cat([e_f0, e_loudness], -1)
+
         
-        outputs = lstm(u_f0).view(number_of_samples, sample_length)
+        output = model(model_input)
         optimizer.zero_grad()
-        # print("Output Shape")
-        # print(outputs.shape)
+
         # obtain the loss function
-        loss = criterion(outputs, e_f0_mean)
+        loss = criterion(output, ground_truth)
         
         loss.backward()
         
@@ -228,10 +189,28 @@ for epoch in range(num_epochs):
 
 
         break
-    if epoch % 1 == 0:
+    if epoch % 10 == 0:
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
 
 
 
 
 
+
+### PLOT SAMPLES USED FOR TRAINING AND TESTING ###
+VERBOSE = False
+if VERBOSE:
+    for i in range(len(train_dataset.segments)):
+        v = np.zeros(full_length)
+        a, b = train_dataset.segments[i]
+        v[a:b] = 0.5 + i/1000
+        plt.plot(v, color = "blue")
+
+    for i in range(len(test_dataset.segments)):
+        v = np.zeros(full_length)
+        a, b = test_dataset.segments[i]
+        v[i_cut_real + a:i_cut_real + b] = 0.5 + i/1000
+        plt.plot(v, color = "red")
+                    
+    plt.title("Segments")
+    plt.show()    
