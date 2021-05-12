@@ -7,7 +7,7 @@ import glob
 from get_datasets import get_datasets
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTMContours import LSTMContours
+from models.LSTM4Contours import LSTMContours
 
 import torch
 import torch.utils.data
@@ -80,16 +80,12 @@ for epoch in range(num_epochs):
             ], -1)
         ground_truth = torch.cat([e_f0[:,1:], e_loudness[:,1:]], -1)
 
-        print("Model input shape ", model_input.shape)
-        print("Truth shape ", ground_truth.shape)
-
         
         output = model(model_input)
         optimizer.zero_grad()
 
         # obtain the loss function
         loss = criterion(output, ground_truth)
-        
         loss.backward()
         
         optimizer.step()
