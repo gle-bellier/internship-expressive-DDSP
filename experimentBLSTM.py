@@ -7,7 +7,7 @@ import glob
 from get_datasets import get_datasets
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTM4Contours import LSTMContours
+from models.BLSTM import BLSTMContours, LSTMContours
 
 import torch
 import torch.utils.data
@@ -38,9 +38,9 @@ train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sam
 
 num_epochs = 20
 learning_rate = 0.01
-input_size = 32
-hidden_size = 64
-num_layers = 2
+input_size = 64
+hidden_size = 512
+num_layers = 1
 
 
 model = LSTMContours(input_size, hidden_size, num_layers).to(device)
@@ -72,16 +72,10 @@ for epoch in range(num_epochs):
         e_f0_stddev = torch.Tensor(e_f0_stddev.float())
 
 
-        model_input = torch.cat([
-            u_f0[:, 1:],
-            u_loudness[:, 1:],
-            e_f0[:, :-1],
-            e_loudness[:, :-1]            
-            ], -1)
-        ground_truth = torch.cat([e_f0[:,1:], e_loudness[:,1:]], -1)
+        ground_truth = torch.cat([e_f0, e_loudness], -1)
 
         
-        output = model(model_input)
+        output = model(u_f0, u_loudness)
         optimizer.zero_grad()
 
         # obtain the loss function
