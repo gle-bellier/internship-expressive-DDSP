@@ -8,7 +8,7 @@ import csv
 from tqdm import tqdm
 import os
 import numpy as np
-import sounddevice as sd
+# import sounddevice as sd
 import soundfile as sf
 import matplotlib.pyplot as plt
 import librosa as li
