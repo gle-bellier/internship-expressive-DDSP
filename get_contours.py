@@ -4,6 +4,7 @@ import glob
 import sys
 from midiConverter import Converter
 
+import csv
 from tqdm import tqdm
 import os
 import numpy as np
@@ -254,17 +255,7 @@ class ContoursGetter:
 
         return frequency_wav_array, loudness_wav_array, frequency_gen_array, loudness_gen_array, frequency_wav_means, frequency_wav_stddev
 
-    def write_contours_dataset(self):
-        
-        print("Writing : \n")
-        print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
-        with open(file_path, 'w') as csvfile:
-            fieldnames = ["time", "f0", "confidence", "loudness"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
 
-            for t in range(time.shape[0]):
-               writer.writerow({"time": str(time[t]), "f0": str(f0[t]), "confidence" : str(confidence[t]), "loudness" : str(loudness[t])})
 
 
 
@@ -274,15 +265,48 @@ if __name__ == '__main__':
     dataset_path = "dataset-midi-wav/"
     filenames =[file[len(dataset_path):-4] for file in glob.glob(dataset_path + "*.mid")]
     duration = 0
+
+    u_f0 = np.empty(0)
+    u_loudness = np.empty(0)
+    e_f0 = np.empty(0)
+    e_loudness = np.empty(0)
+    e_f0_mean = np.empty(0)
+    e_f0_stddev = np.empty(0)
+
     with tqdm(total=len(filenames)) as pbar:
         for filename in filenames:
             midi_file = filename + ".mid"
             wav_file = filename + ".wav"
-            e = ContoursGetter()
-            score = e.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=True)
-            pbar.update(1)
-            break
+            g = ContoursGetter()
+            u_f0_track, u_loudness_track, e_f0_track, e_loudness_track, e_f0_mean_track, e_f0_stddev_track = g.get_contours(dataset_path, midi_file, wav_file, sampling_rate=16000, block_size=160, max_silence_duration=3, verbose=False)
+            
+            u_f0 = np.concatenate((u_f0, u_f0_track))
+            u_loudness = np.concatenate((u_loudness, u_loudness_track))
+            e_f0 = np.concatenate((e_f0, e_f0_track))
+            e_loudness = np.concatenate((e_loudness, e_loudness_track))
 
+            e_f0_mean = np.concatenate((e_f0_mean, e_f0_mean_track))
+            e_f0_stddev = np.concatenate((e_f0_stddev, e_f0_stddev_track))
+
+            pbar.update(1)
+
+
+
+        print("Writing : \n")
+
+        with open("dataset/contours.csv", 'w') as csvfile:
+            fieldnames = ["u_f0", "u_loudness", "e_f0", "e_loudness", "e_f0_mean", "e_f0_stddev"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for t in range(u_f0.shape[0]):
+               writer.writerow({"u_f0": str(u_f0[t]),
+                                "u_loudness": str(u_loudness[t]),
+                                "e_f0": str(e_f0[t]),
+                                "e_loudness": str(e_loudness[t]), 
+                                "e_f0_mean": str(e_f0_mean[t]), 
+                                "e_f0_stddev": str(e_f0_stddev[t])})
+                                
 
 
 
