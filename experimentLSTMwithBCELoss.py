@@ -30,7 +30,7 @@ print('using', device)
 
 
 sc = MinMaxScaler()
-train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)#sc.fit_transform)
+train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = sc.fit_transform)
     
 
 
@@ -40,8 +40,9 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
     pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1), pitch_size)
     cents_array = torch.zeros(frequencies.size(0), frequencies.size(1), cents_size)
     
+    min_freq = li.midi_to_hz(0)
     max_freq = li.midi_to_hz(pitch_size-1)
-    frequencies = torch.clip(frequencies, max = max_freq)
+    frequencies = torch.clip(frequencies, min = min_freq, max = max_freq)
 
     midi_pitch = torch.tensor(li.hz_to_midi(frequencies))
     midi_pitch = torch.round(midi_pitch).long()
@@ -111,6 +112,15 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
 
         pitch_size, cents_size = 100, 100
+
+ 
+
+        model_input = model_input.view(model_input.size(0), model_input.size(1))
+
+
+        model_input = torch.tensor(sc.inverse_transform(model_input))
+
+        model_input = model_input.view(model_input.size(0), model_input.size(1), 1)
         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(model_input, pitch_size, cents_size)
 
         # obtain the loss function
