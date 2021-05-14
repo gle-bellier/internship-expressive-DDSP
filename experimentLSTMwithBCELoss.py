@@ -10,12 +10,15 @@ from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
 from models.LSTMwithBCE import LSTMContoursBCE
 
+
 import torch
 import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torch.autograd import Variable
+from torch.utils.tensorboard import SummaryWriter
+
 
 from sklearn.preprocessing import MinMaxScaler
 
@@ -28,6 +31,9 @@ else:
 
 print('using', device)
 
+
+
+writer = SummaryWriter("runs/LSTM_BCE")
 
 sc = MinMaxScaler()
 train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)#sc.fit_transform)
@@ -80,6 +86,9 @@ num_layers = 2
 
 model = LSTMContoursBCE(input_size, hidden_size, num_layers).to(device)
 print(model.parameters)
+
+
+
 criterion = torch.nn.BCELoss()    # mean-squared error for regression
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 #optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
@@ -135,8 +144,14 @@ for epoch in range(num_epochs):
 
 
     if epoch % 2 == 0:
+        writer.add_scalar("Loss Train", loss.item()/number_of_batch, epoch)
+
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
         list_losses.append(loss.item()/number_of_batch)
+
+writer.flush()
+writer.close()
+
 
 
 
