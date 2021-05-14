@@ -1,4 +1,9 @@
 /dataset-midi-wav
+<<<<<<< HEAD
 /f0-confidence-loudness-files
 **/*.pyc
+=======
+# /f0-confidence-loudness-files
+.pyc
+>>>>>>> 4c98cd72e30a8538d7fd418a8ac23641a6ad29ac
 /runs

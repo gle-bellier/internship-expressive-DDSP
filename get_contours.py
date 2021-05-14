@@ -254,7 +254,20 @@ class ContoursGetter:
 
         return frequency_wav_array, loudness_wav_array, frequency_gen_array, loudness_gen_array, frequency_wav_means, frequency_wav_stddev
 
-    
+    def write_contours_dataset(self):
+        
+        print("Writing : \n")
+        print("Time shape = {}, f0 shape = {}, confidence shape = {}, loudness shape = {}".format(time.shape, f0.shape, confidence.shape, loudness.shape))
+        with open(file_path, 'w') as csvfile:
+            fieldnames = ["time", "f0", "confidence", "loudness"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for t in range(time.shape[0]):
+               writer.writerow({"time": str(time[t]), "f0": str(f0[t]), "confidence" : str(confidence[t]), "loudness" : str(loudness[t])})
+
+
+
 
 if __name__ == '__main__':
     

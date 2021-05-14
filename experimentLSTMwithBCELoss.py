@@ -77,7 +77,7 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 100
+num_epochs = 50
 learning_rate = 0.01
 input_size = 32
 hidden_size = 64
@@ -151,8 +151,6 @@ for epoch in range(num_epochs):
 
 writer.flush()
 writer.close()
-
-
 
 
 plt.plot(list_losses)
