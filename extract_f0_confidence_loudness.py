@@ -3,7 +3,7 @@ import os.path
 from os import path
 import matplotlib.pyplot as plt
 import csv
-import sounddevice as sd
+#import sounddevice as sd
 import soundfile as sf
 import numpy as np 
 import librosa as li
