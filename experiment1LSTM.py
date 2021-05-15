@@ -29,7 +29,7 @@ print('using', device)
 
 
 sc = MinMaxScaler()
-train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
     
 
 
@@ -82,7 +82,7 @@ for epoch in range(num_epochs):
 
 
         # obtain the loss function
-        loss = criterion(output, ground_truth)
+        loss = criterion(output, ground_truth.to(device))
         
         loss.backward()
         

@@ -120,7 +120,7 @@ for epoch in range(num_epochs):
         model_input = torch.unsqueeze(model_input, -1)
 
 
-        out_pitch, out_cents = model(model_input.float())
+        out_pitch, out_cents = model(model_input.float().to(device))
         optimizer.zero_grad()
 
         pitch_size, cents_size = 100, 100
