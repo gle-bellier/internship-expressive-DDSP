@@ -8,7 +8,6 @@ import glob
 
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTMContours import LSTMContours
 
 import torch
 import torch.utils.data
