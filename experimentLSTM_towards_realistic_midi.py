@@ -39,7 +39,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 500
+num_epochs = 1000
 learning_rate = 0.01
 input_size = 32
 hidden_size = 64
@@ -129,10 +129,12 @@ for epoch in range(num_epochs):
     if epoch % 10 == 9:
 
         print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss))
-        writer.add_scalar('Loss/train', train_loss , epoch+1)
+        print("Epoch: %d, validation loss: %1.5f" % (epoch+1, validation_loss))
 
-        print("Epoch: %d, Validation loss: %1.5f" % (epoch+1, validation_loss))
-        writer.add_scalar('Loss/validation', validation_loss , epoch+1)
+        writer.add_scalar(f'loss/check_info', {
+            'training': train_loss,
+            'validation': validation_loss,
+            }, epoch+1)
 
 
 
