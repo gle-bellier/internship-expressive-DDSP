@@ -70,10 +70,6 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
     return pitch_array, cents_array
 
 
-
-    
-
-
 ### MODEL INSTANCIATION ###
 
 
@@ -134,8 +130,8 @@ for epoch in range(num_epochs):
         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(model_input, pitch_size, cents_size)
 
         # obtain the loss function
-        loss_pitch = criterion(out_pitch, ground_truth_pitch)
-        loss_cents = criterion(out_pitch, ground_truth_cents)
+        loss_pitch = criterion(out_pitch, ground_truth_pitch.to(device))
+        loss_cents = criterion(out_pitch, ground_truth_cents.to(device))
 
         loss = loss_pitch + loss_cents
         loss.backward()

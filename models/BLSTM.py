@@ -52,8 +52,8 @@ class LSTMContours(nn.Module):
         x = torch.cat([x_p, x_v], -1)
         
         # Initialize BLSTM states 
-        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size)        
-        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size)
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)        
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
 
         # Propagate input through BLSTM
         out, (h_out, _) = self.lstm(x, (h_0, c_0))
@@ -117,8 +117,8 @@ class BLSTMContours(nn.Module):
         x = torch.cat([x_p, x_v], -1)
         
         # Initialize BLSTM states 
-        h_0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size)        
-        c_0 = torch.zeros(self.num_layers *2, x.size(0), self.hidden_size)
+        h_0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size, device = x.device)        
+        c_0 = torch.zeros(self.num_layers *2, x.size(0), self.hidden_size, device = x.device)
 
         # Propagate input through BLSTM
         out, (h_out, _) = self.lstm(x, (h_0, c_0))

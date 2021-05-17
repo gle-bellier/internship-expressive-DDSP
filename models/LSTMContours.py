@@ -36,9 +36,7 @@ class LSTMContours(nn.Module):
         x = self.lkrelu(x)
 
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
-        
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
-
         
         # Propagate input through LSTM
         out, (h_out, _) = self.lstm(x, (h_0, c_0))

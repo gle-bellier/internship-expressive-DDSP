@@ -81,11 +81,11 @@ for epoch in range(num_epochs):
         ground_truth = torch.cat([e_f0[:,1:], e_loudness[:,1:]], -1)
 
         
-        output = model(model_input)
+        output = model(model_input.to(device))
         optimizer.zero_grad()
 
         # obtain the loss function
-        loss = criterion(output, ground_truth)
+        loss = criterion(output, ground_truth.to(device))
         loss.backward()
         
         optimizer.step()
