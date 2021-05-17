@@ -23,6 +23,8 @@ class LSTMContoursBCE(nn.Module):
         self.lkrelu = nn.LeakyReLU()
 
         self.sig = nn.Sigmoid()
+        self.sm = nn.Softmax(dim=-1)
+
 
         self.lstm = nn.LSTM(input_size=input_size, 
                             hidden_size=hidden_size,
@@ -46,6 +48,8 @@ class LSTMContoursBCE(nn.Module):
         out = self.fc(out)
 
         out = self.sig(out)
+        out = self.sm(out)
+
 
         cents, pitch = torch.split(out, 100, dim = -1)
 
