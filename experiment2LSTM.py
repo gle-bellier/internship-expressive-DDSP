@@ -17,6 +17,7 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 
 from sklearn.preprocessing import MinMaxScaler
+from torch.utils.tensorboard import SummaryWriter
 
 
 
@@ -29,14 +30,16 @@ print('using', device)
 
 
 sc = MinMaxScaler()
-train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
-    
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
+
+writer = SummaryWriter("runs/2LSTM")    
+
 
 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 20
+num_epochs = 500
 learning_rate = 0.01
 input_size = 32
 hidden_size = 64
@@ -93,6 +96,8 @@ for epoch in range(num_epochs):
     if epoch % 10 == 0:
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
         list_losses.append(loss.item()/number_of_batch)
+        writer.add_scalar('Loss/train', loss.item()/number_of_batch , epoch)
+
 
 
 

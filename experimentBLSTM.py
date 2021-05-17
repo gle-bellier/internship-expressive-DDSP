@@ -17,7 +17,7 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 
 from sklearn.preprocessing import MinMaxScaler
-
+from torch.utils.tensorboard import SummaryWriter
 
 
 if torch.cuda.is_available():
@@ -27,23 +27,23 @@ else:
 
 print('using', device)
 
-
+writer = SummaryWriter("runs/BLSTM")    
 sc = MinMaxScaler()
-train_loader, test_loader = get_datasets(dataset_path = "dataset-midi-wav/", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
     
 
 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 20
+num_epochs = 500
 learning_rate = 0.01
 input_size = 64
 hidden_size = 512
 num_layers = 1
 
 
-model = LSTMContours(input_size, hidden_size, num_layers).to(device)
+model = BLSTMContours(input_size, hidden_size, num_layers).to(device)
 print(model.parameters)
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -86,13 +86,7 @@ for epoch in range(num_epochs):
 
     if epoch % 10 == 0:
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
+        writer.add_scalar('Loss/train', loss.item()/number_of_batch , epoch)
         list_losses.append(loss.item()/number_of_batch)
 
-
-
-plt.plot(list_losses)
-plt.title("Loss")
-plt.show()
-
-
-
+writer.close()
