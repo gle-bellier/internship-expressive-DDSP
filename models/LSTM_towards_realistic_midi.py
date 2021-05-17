@@ -20,20 +20,30 @@ class LSTMContours(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         
-        self.lin = nn.Linear(4, input_size)
+        self.lin1 = nn.Linear(4, 16)
+        self.lin2 = nn.Linear(16, input_size)
+
         self.lkrelu = nn.LeakyReLU()
+        self.bn = nn.BatchNorm1d(1999) # 2000 -1 (delay for prediction)
+
 
         self.lstm = nn.LSTM(input_size=input_size, 
                             hidden_size=hidden_size,
                             num_layers=num_layers,
                             batch_first=True)
 
-        self.fc = nn.Linear(hidden_size, 2)
+        self.fc1 = nn.Linear(hidden_size, 32)
+        self.fc2 = nn.Linear(32, 16)
+        self.fc3 = nn.Linear(16, 2)
 
     def forward(self, x):
        
-        x = self.lin(x)
+        x = self.lin1(x)
         x = self.lkrelu(x)
+        x = self.lin2(x)
+        x = self.lkrelu(x)
+
+        x = self.bn(x)
 
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
@@ -44,6 +54,14 @@ class LSTMContours(nn.Module):
         #out = out.contiguous().view(-1, self.hidden_size)
         out = self.lkrelu(out)
 
-        out = self.fc(out)
+
+        out = self.fc1(out)
+        x = self.lkrelu(x)
+        x = self.bn(x)
+
+        out = self.fc2(out)
+        x = self.lkrelu(x)
+        out = self.fc3(out)
+        x = self.lkrelu(x)
 
         return out
