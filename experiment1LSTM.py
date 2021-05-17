@@ -16,7 +16,7 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 
 
 
@@ -28,7 +28,7 @@ else:
 print('using', device)
 
 
-sc = MinMaxScaler()
+sc = StandardScaler()
 train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
     
 
@@ -92,12 +92,6 @@ for epoch in range(num_epochs):
     if epoch % 10 == 0:
         print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
         list_losses.append(loss.item()/number_of_batch)
-
-
-plt.plot(list_losses)
-plt.title("Loss")
-plt.show()
-
 
 
 
