@@ -155,20 +155,23 @@ class ContoursGetter:
         # From midi file : 
         c = Converter()
         midi_data = pm.PrettyMIDI(dataset_path + midi_file)
-        time_gen, pitch_gen, loudness_midi = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)# sampling_rate/block_size, None)# time_wav)
-        
+        time_gen, pitch_midi, _ = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)# sampling_rate/block_size, None)# time_wav)
+        frequency_midi = li.core.midi_to_hz(pitch_midi)
+
+
         midi_onsets = self.get_onsets(dataset_path + midi_file, sampling_rate//block_size)
-        loudness_gen = self.get_notes_loudness(loudness_wav, midi_onsets)
+        loudness_midi = self.get_notes_loudness(loudness_wav, midi_onsets)
+    
 
-
-
-        # If we want only standard deviation of notes frequencies 
-        
         frequency_wav_means, frequency_wav_stddev = self.get_freq_mean_stddev(frequency_wav, midi_onsets)
 
 
 
-        frequency_gen = li.core.midi_to_hz(pitch_gen)
+        
+        
+
+
+
         # want to erase really quiet notes
         #loudness_threshold = 0.20
         #frequency_gen = frequency_gen * (loudness_gen / np.max(loudness_gen)>loudness_threshold)
@@ -192,15 +195,15 @@ class ContoursGetter:
         # loudness mapping : 
         
 
-        diff_f0 = np.abs(frequency_gen - frequency_wav)
-        diff_loudness = np.abs(loudness_wav - loudness_gen)
+        diff_f0 = np.abs(frequency_midi - frequency_wav)
+        diff_loudness = np.abs(loudness_wav - loudness_midi)
 
 
         # # compute difference and score:
 
         #score = np.mean(diff_f0) + np.mean(diff_loudness)
-        frequency_gen_array = np.empty(0)
-        loudness_gen_array = np.empty(0)
+        frequency_midi_array = np.empty(0)
+        loudness_midi_array = np.empty(0)
         frequency_wav_array = np.empty(0)
         loudness_wav_array = np.empty(0)
         frequency_wav_means_array = np.empty(0)
@@ -222,11 +225,12 @@ class ContoursGetter:
                 end = len(time_wav)-1
 
 
+            
+            frequency_midi_array = np.concatenate((frequency_midi_array, frequency_midi[start:end]))
+            loudness_midi_array = np.concatenate((loudness_midi_array, loudness_midi[start:end]))
+
             frequency_wav_array = np.concatenate((frequency_wav_array, frequency_wav[start:end]))
             loudness_wav_array = np.concatenate((loudness_wav_array, loudness_wav[start:end]))
-
-            frequency_gen_array = np.concatenate((frequency_gen_array, frequency_gen[start:end]))
-            loudness_gen_array = np.concatenate((loudness_gen_array, loudness_gen[start:end]))
 
             frequency_wav_means_array = np.concatenate((frequency_wav_means_array, frequency_wav_means[start:end]))
             frequency_wav_stddev_array = np.concatenate((frequency_wav_stddev_array, frequency_wav_stddev[start:end]))
@@ -235,14 +239,14 @@ class ContoursGetter:
 
         if verbose:
 
-            plt.plot(loudness_gen, label = "gen")
+            plt.plot(loudness_midi, label = "gen")
             plt.plot(loudness_midi, label = "midi" )
             plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title("Loudness comparison {}".format(wav_file))
             plt.show()
 
             plt.plot(frequency_wav_array, label = "wav")
-            plt.plot(frequency_gen_array, label = "midi" )
+            plt.plot(frequency_midi_array, label = "midi" )
             plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title("Frequency comparison {}".format(wav_file))
             plt.show()
@@ -253,7 +257,7 @@ class ContoursGetter:
             plt.title("Frequency comparison {}".format(wav_file))
             plt.show()
 
-        return frequency_wav_array, loudness_wav_array, frequency_gen_array, loudness_gen_array, frequency_wav_means, frequency_wav_stddev
+        return  frequency_midi_array, loudness_midi_array,frequency_wav_array, loudness_wav_array, frequency_wav_means, frequency_wav_stddev
 
 
 
@@ -300,7 +304,7 @@ if __name__ == '__main__':
             writer.writeheader()
 
             for t in range(u_f0.shape[0]):
-               writer.writerow({"u_f0": str(u_f0[t]),
+                writer.writerow({"u_f0": str(u_f0[t]),
                                 "u_loudness": str(u_loudness[t]),
                                 "e_f0": str(e_f0[t]),
                                 "e_loudness": str(e_loudness[t]), 

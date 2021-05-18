@@ -46,6 +46,23 @@ with torch.no_grad():
     for i in range(number_of_examples):
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(test_data)
+
+
+        fig, (ax1, ax2) = plt.subplots(2, 1)
+        ax1.plot(u_f0.squeeze(), label = "u_f0")
+        ax1.plot(e_f0.squeeze(), label = "e_f0")
+        ax1.legend()
+        
+        ax2.plot(u_loudness.squeeze(), label = "u_loudness")
+        ax2.plot(e_loudness.squeeze(), label = "e_loudness")
+        ax2.legend()
+
+        plt.legend()
+        plt.show()
+
+
+
+
         u_f0 = torch.Tensor(u_f0.float())
         u_loudness = torch.Tensor(u_loudness.float())
         e_f0 = torch.Tensor(e_f0.float())
