@@ -73,7 +73,7 @@ def get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sam
     test_u_f0 = u_f0[i_cut:]
     test_u_loudness = u_loudness[i_cut:]
     test_e_f0 = e_f0[i_cut:]
-    test_e_loudness = u_loudness[i_cut:]
+    test_e_loudness = e_loudness[i_cut:]
     test_e_f0_mean = e_f0_mean[i_cut:]
     test_e_f0_stddev = e_f0_stddev[i_cut:]
     test_length = len(test_u_f0)    
