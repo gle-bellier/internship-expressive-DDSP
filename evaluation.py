@@ -38,7 +38,7 @@ sampling_rate = 100
 _, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = sampling_rate, sample_duration = 20, batch_size = 1, ratio = 0.7, transform=sc.fit_transform)
 test_data = iter(test_loader)
 
-number_of_examples = 10
+number_of_examples = 2
 
 
 
@@ -57,52 +57,48 @@ def get_model_next_step(model, u_f0, u_loudness, e_f0, e_loudness):
 
 model.eval()
 with torch.no_grad():
-
-    for i in range(number_of_examples):
-
-        init_u_f0, init_u_loudness, init_e_f0, init_e_loudness, init_e_f0_mean, init_e_f0_stddev = next(test_data)
-        u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(test_data)
+    with open("results.npy", "wb") as f:
+        for i in range(10):
+            _ = next(test_data)
 
 
+        for i in range(number_of_examples):
 
-
-        u_f0 = torch.cat([torch.Tensor(init_u_f0.float()), torch.Tensor(u_f0.float())], 1) 
-        u_loudness = torch.cat([torch.Tensor(init_u_loudness.float()), torch.Tensor(u_loudness.float())], 1)
-        
-        e_f0 = torch.Tensor(e_f0.float())
-        e_loudness = torch.Tensor(e_loudness.float())
+            init_u_f0, init_u_loudness, init_e_f0, init_e_loudness, init_e_f0_mean, init_e_f0_stddev = next(test_data)
+            u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(test_data)
 
 
 
-        out_f0 = e_f0[:, 1:]
-        out_loudness = e_loudness[:, 1:]
+
+            u_f0 = torch.cat([torch.Tensor(init_u_f0.float()), torch.Tensor(u_f0.float())], 1) 
+            u_loudness = torch.cat([torch.Tensor(init_u_loudness.float()), torch.Tensor(u_loudness.float())], 1)
+            
+            e_f0 = torch.Tensor(e_f0.float())
+            e_loudness = torch.Tensor(e_loudness.float())
 
 
-        n_step = 2000
-        for i in range(n_step):
-            out_f0, out_loudness = get_model_next_step(model, u_f0[:, i:1999+i], u_loudness[:, i:1999+i], out_f0, out_loudness)
+
+            out_f0 = e_f0[:, 1:]
+            out_loudness = e_loudness[:, 1:]
 
 
-        out_f0, out_loudness = out_f0.squeeze().detach(), out_loudness.squeeze().detach()
-        perf_f0, perf_loudness = e_f0[:,1:].squeeze().detach(), e_loudness[:,1:].squeeze().detach()
+            n_step = 2000
+            for i in range(n_step):
+                out_f0, out_loudness = get_model_next_step(model, u_f0[:, i:1999+i], u_loudness[:, i:1999+i], out_f0, out_loudness)
 
-        t = np.array([i/sampling_rate for i in range(out_f0.shape[0])])
-        
-        
-        
 
-        fig, (ax1, ax2) = plt.subplots(2, 1)
+            out_f0, out_loudness = out_f0.squeeze().detach(), out_loudness.squeeze().detach()
+            e_f0, e_loudness = e_f0[:,1:].squeeze().detach(), e_loudness[:,1:].squeeze().detach()
+            u_f0, u_loudness = u_f0.squeeze().detach()[-1999:], u_loudness.squeeze().detach()[-1999:]
 
-        ax1.plot(t, out_f0, label = "Model")
-        ax1.plot(t, u_f0, label = "Midi")
-        ax1.plot(t, perf_f0, label = "Performance")
-        ax1.legend()
-        
-        ax2.plot(t, out_loudness, label = "Model")
-        ax2.plot(t, u_f0, label = "Midi")
-        ax2.plot(t, perf_loudness, label = "Performance")
-        ax2.legend()
-
-        plt.legend()
-        plt.show()
+            t = np.array([i/sampling_rate for i in range(out_f0.shape[0])])
+            
+            np.save(f, t)
+            np.save(f, u_f0)
+            np.save(f, e_f0)
+            np.save(f, out_f0)
+            np.save(f, u_loudness)
+            np.save(f, e_loudness)
+            np.save(f, out_loudness)
+            
 
