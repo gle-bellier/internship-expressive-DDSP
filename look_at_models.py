@@ -40,11 +40,38 @@ test_data = iter(test_loader)
 
 number_of_examples = 20
 
+
+
+def get_model_next_step():
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 model.eval()
 with torch.no_grad():
 
     for i in range(number_of_examples):
 
+        init_u_f0, init_u_loudness, init_e_f0, init_e_loudness, init_e_f0_mean, init_e_f0_stddev = next(test_data)
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(test_data)
 
 
@@ -63,8 +90,8 @@ with torch.no_grad():
 
 
 
-        u_f0 = torch.Tensor(u_f0.float())
-        u_loudness = torch.Tensor(u_loudness.float())
+        u_f0 = torch.cat([torch.Tensor(init_u_f0.float()), torch.Tensor(u_f0.float())]) 
+        u_loudness = torch.cat([torch.Tensor(init_u_loudness.float()), torch.Tensor(u_loudness.float())])
         e_f0 = torch.Tensor(e_f0.float())
         e_loudness = torch.Tensor(e_loudness.float())
         e_f0_mean = torch.Tensor(e_f0_mean.float())

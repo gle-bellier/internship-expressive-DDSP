@@ -29,7 +29,7 @@ print('using', device)
 
 
 
-writer = SummaryWriter("runs/LSTM_towards_realistic_midi")    
+writer = SummaryWriter("runs/LSTM_towards_realistic_midi")
 
 sc = StandardScaler()
 train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
@@ -131,10 +131,8 @@ for epoch in range(num_epochs):
         print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss))
         print("Epoch: %d, validation loss: %1.5f" % (epoch+1, validation_loss))
 
-        writer.add_scalar(f'loss/check_info', {
-            'training': train_loss,
-            'validation': validation_loss,
-            }, epoch+1)
+        writer.add_scalar('training loss', train_loss, epoch+1)
+        writer.add_scalar('validation loss', validation_loss, epoch+1)
 
 
 
