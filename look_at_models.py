@@ -38,32 +38,18 @@ sampling_rate = 100
 _, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = sampling_rate, sample_duration = 20, batch_size = 1, ratio = 0.7, transform=sc.fit_transform)
 test_data = iter(test_loader)
 
-number_of_examples = 20
+number_of_examples = 2
 
 
 
-def get_model_next_step():
-    pass
+def get_model_next_step(model, u_f0, u_loudness, e_f0, e_loudness):
 
+        model_input = torch.cat([u_f0, u_loudness, e_f0, e_loudness], -1)
+        output = model(model_input.to(device))
+        out_f0, out_loudness = torch.split(output, 1, -1)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return out_f0, out_loudness
+    
 
 
 model.eval()
@@ -75,43 +61,31 @@ with torch.no_grad():
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(test_data)
 
 
-        fig, (ax1, ax2) = plt.subplots(2, 1)
-        ax1.plot(u_f0.squeeze(), label = "u_f0")
-        ax1.plot(e_f0.squeeze(), label = "e_f0")
-        ax1.legend()
+
+
+        u_f0 = torch.cat([torch.Tensor(init_u_f0.float()), torch.Tensor(u_f0.float())], 1) 
+        u_loudness = torch.cat([torch.Tensor(init_u_loudness.float()), torch.Tensor(u_loudness.float())], 1)
         
-        ax2.plot(u_loudness.squeeze(), label = "u_loudness")
-        ax2.plot(e_loudness.squeeze(), label = "e_loudness")
-        ax2.legend()
-
-        plt.legend()
-        plt.show()
-
-
-
-
-        u_f0 = torch.cat([torch.Tensor(init_u_f0.float()), torch.Tensor(u_f0.float())]) 
-        u_loudness = torch.cat([torch.Tensor(init_u_loudness.float()), torch.Tensor(u_loudness.float())])
         e_f0 = torch.Tensor(e_f0.float())
         e_loudness = torch.Tensor(e_loudness.float())
-        e_f0_mean = torch.Tensor(e_f0_mean.float())
-        e_f0_stddev = torch.Tensor(e_f0_stddev.float())
 
 
-        model_input = torch.cat([
-                u_f0[:, 1:],
-                u_loudness[:, 1:],
-                e_f0[:, :-1],
-                e_loudness[:, :-1]            
-                ], -1)
 
-        output = model(model_input.to(device))
+        out_f0 = e_f0[:, 1:]
+        out_loudness = e_loudness[:, 1:]
+
+        n_step = 2000
+        for i in range(n_step):
+            
+            out_f0, out_loudness = get_model_next_step(model, u_f0[:, i:1999+i], u_loudness[:, i:1999+i], out_f0, out_loudness)
 
 
-        out_f0, out_loudness = torch.split(output, 1, -1)
+
+
+
         out_f0, out_loudness = out_f0.squeeze().detach(), out_loudness.squeeze().detach()
-
         perf_f0, perf_loudness = e_f0[:,1:].squeeze().detach(), e_loudness[:,1:].squeeze().detach()
+
         t = np.array([i/sampling_rate for i in range(out_f0.shape[0])])
         
         
@@ -129,5 +103,4 @@ with torch.no_grad():
 
         plt.legend()
         plt.show()
-
 
