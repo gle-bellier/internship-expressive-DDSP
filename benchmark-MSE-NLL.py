@@ -19,7 +19,7 @@ from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
 
 
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 
 
 
@@ -34,8 +34,8 @@ print('using', device)
 
 writer = SummaryWriter("runs/benchmark")
 
-sc = MinMaxScaler()
-train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)#sc.fit_transform)
+sc = StandardScaler()
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = sc.fit_transform)
     
 
 
@@ -83,20 +83,18 @@ def pitch_cents_to_frequencies(pitch, cents):
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 50
+num_epochs = 5000
 learning_rate = 0.01
-input_size = 32
-hidden_size = 64
-num_layers = 2
+
 
 pitch_size, cents_size = 100, 100
 
 
-model_NLL = LSTMContoursNLL(input_size, hidden_size, num_layers).to(device)
+model_NLL = LSTMContoursNLL().to(device)
 print("Model Classification : ")
 print(model_NLL.parameters)
 
-model_MSE = LSTMContoursMSE(input_size, hidden_size, num_layers).to(device)
+model_MSE = LSTMContoursMSE().to(device)
 print("Model Continuous : ")
 print(model_MSE.parameters)
 
@@ -114,53 +112,102 @@ optimizer_MSE = torch.optim.Adam(model_MSE.parameters(), lr=learning_rate)
 for epoch in range(num_epochs):
 
     for batch in train_loader:
-        number_of_samples = batch[0].shape[0]
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
         u_f0 = torch.Tensor(u_f0.float())
-        u_loudness = torch.Tensor(u_loudness.float())
         e_f0 = torch.Tensor(e_f0.float())
-        e_loudness = torch.Tensor(e_loudness.float())
-        e_f0_mean = torch.Tensor(e_f0_mean.float())
-        e_f0_stddev = torch.Tensor(e_f0_stddev.float())
 
-        model_input = torch.squeeze(u_f0)
-        model_input = torch.tensor(sc.fit_transform(model_input))
-        model_input = torch.unsqueeze(model_input, -1)
+        model_input = torch.cat([u_f0[1:], e_f0[:-1]], -1)
 
+        out_pitch, out_cents = model_NLL(model_input.to(device))
+        optimizer_NLL.zero_grad()
 
-        out_pitch, out_cents = model(model_input.float().to(device))
-        optimizer.zero_grad()
+        out_continuous = model_MSE(model_input.to(device))
+        optimizer_MSE.zero_grad()
 
-        model_input = torch.squeeze(model_input)
-        model_input = torch.tensor(sc.inverse_transform(model_input))
-        model_input = torch.unsqueeze(model_input, -1)
+        target_frequencies = torch.squeeze(e_f0[1:])
+        target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
+        target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(e_f0, pitch_size, cents_size)
 
         # obtain the loss function
-        loss_pitch = criterion(out_pitch, ground_truth_pitch.to(device))
-        loss_cents = criterion(out_pitch, ground_truth_cents.to(device))
-
-        loss = loss_pitch + loss_cents
-        loss.backward()
+        train_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch.to(device))
+        train_loss_cents = criterion_NLL(out_pitch, ground_truth_cents.to(device))
+        train_loss_MSE = criterion_MSE(out_continuous, e_f0[1:])
+        train_loss_NLL = train_loss_pitch + train_loss_cents
         
-        optimizer.step()
+        train_loss_NLL.backward()
+        train_loss_MSE.backward()
+        
+        optimizer_NLL.step()
+        optimizer_MSE.step()
 
 
-    if epoch % 2 == 0:
-        writer.add_scalar("Loss Train", loss.item(), epoch)
-        print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()))
-        list_losses.append(loss.item())
+
+    # Compute validation losses : 
+
+    model_MSE.eval()
+    model_NLL.eval()
+    with torch.no_grad():
+        for batch in test_loader:
+
+            u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
+
+            u_f0 = torch.Tensor(u_f0.float())
+            e_f0 = torch.Tensor(e_f0.float())
+
+            model_input = torch.cat([u_f0[1:], e_f0[:-1]], -1)
+
+            out_pitch, out_cents = model_NLL(model_input.to(device))
+
+            out_continuous = model_MSE(model_input.to(device))
+
+            target_frequencies = torch.squeeze(e_f0[1:])
+            target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
+            target_frequencies = torch.unsqueeze(target_frequencies, -1)
+
+            ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(e_f0, pitch_size, cents_size)
+
+            # permute dimension for cross entropy loss function :
+
+            out_pitch = out_pitch.permute(0, 2, 1)
+            out_cents = out_cents.permute(0, 2, 1)
+
+            ground_truth_pitch = ground_truth_pitch.permute(0, 2, 1)
+            ground_truth_cents = ground_truth_cents.permute(0, 2, 1)
+
+            # obtain the loss function
+            test_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch.to(device))
+            test_loss_cents = criterion_NLL(out_pitch, ground_truth_cents.to(device))
+            test_loss_MSE = criterion_MSE(out_continuous, e_f0[1:])
+
+            test_loss_NLL = test_loss_pitch + test_loss_cents
+
+
+
+    
+    if epoch % 10 == 9:
+        print("--- Classification ---")
+        print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_NLL))
+        print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_NLL))
+
+        print("--- Continuous ---")
+        print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_MSE))
+        print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_MSE))
+
+        writer.add_scalar('training  NLLloss', train_loss_NLL, epoch+1)
+        writer.add_scalar('test NLLloss', test_loss_NLL, epoch+1)
+
+        writer.add_scalar('training  MSEloss', train_loss_MSE, epoch+1)
+        writer.add_scalar('test MSEloss', test_loss_MSE, epoch+1)
+
+
 
 writer.flush()
 writer.close()
 
-
-plt.plot(list_losses)
-plt.title("Loss")
-plt.show()
 
 
 

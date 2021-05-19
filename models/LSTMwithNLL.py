@@ -89,7 +89,7 @@ class LSTMContoursMSE(nn.Module):
                             batch_first=True)
 
         self.fc1 = nn.Linear(hidden_size, 256)
-        self.fc2 = nn.Linear(256, 2)
+        self.fc2 = nn.Linear(256, 1)
 
 
     def forward(self, x):
