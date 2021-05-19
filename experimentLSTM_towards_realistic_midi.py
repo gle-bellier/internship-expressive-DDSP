@@ -40,13 +40,10 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 
 
 num_epochs = 1000
-learning_rate = 0.01
-input_size = 32
-hidden_size = 64
-num_layers = 2
+learning_rate = 0.005
 
 
-model = LSTMContours(input_size, hidden_size, num_layers).to(device)
+model = LSTMContours().to(device)
 print(model.parameters)
 
 criterion = torch.nn.MSELoss()    # mean-squared error for regression
@@ -58,7 +55,6 @@ list_losses = []
 
 # Train the model
 for epoch in range(num_epochs):
-    number_of_batch = 0
 
     for batch in train_loader:
 
@@ -90,7 +86,7 @@ for epoch in range(num_epochs):
         loss = criterion(output, ground_truth.to(device))
         loss.backward()
 
-        train_loss = loss.item() / batch[0].size(-1)
+        train_loss = loss.item() 
         
         optimizer.step()
 
@@ -122,7 +118,7 @@ for epoch in range(num_epochs):
             
             output = model(model_input.to(device))
             loss = criterion(output, ground_truth.to(device))
-            validation_loss = loss.item() / batch[0].size(-1)
+            validation_loss = loss.item() 
 
 
     
@@ -136,6 +132,6 @@ for epoch in range(num_epochs):
 
 
 
-torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi.pth')
+torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi2.pth')
 
 

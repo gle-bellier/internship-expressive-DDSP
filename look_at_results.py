@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt
 
-number_samples = 3
+number_samples = 20
 
 with open("results.npy", "rb") as f:
     for i in range(number_samples):

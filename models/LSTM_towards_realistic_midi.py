@@ -13,15 +13,15 @@ import matplotlib.pyplot as plt
 
 class LSTMContours(nn.Module):
     
-    def __init__(self, input_size, hidden_size, num_layers):
+    def __init__(self, input_size = 256, hidden_size = 512, num_layers = 2):
         super(LSTMContours, self).__init__()
         
         self.num_layers = num_layers
         self.input_size = input_size
         self.hidden_size = hidden_size
         
-        self.lin1 = nn.Linear(4, 16)
-        self.lin2 = nn.Linear(16, input_size)
+        self.lin1 = nn.Linear(4, 64)
+        self.lin2 = nn.Linear(64, input_size)
 
         self.lkrelu = nn.LeakyReLU()
         self.bn = nn.BatchNorm1d(1999) # 2000 -1 (delay for prediction)
@@ -32,9 +32,9 @@ class LSTMContours(nn.Module):
                             num_layers=num_layers,
                             batch_first=True)
 
-        self.fc1 = nn.Linear(hidden_size, 32)
-        self.fc2 = nn.Linear(32, 16)
-        self.fc3 = nn.Linear(16, 2)
+        self.fc1 = nn.Linear(hidden_size, 256)
+        self.fc2 = nn.Linear(256, 64)
+        self.fc3 = nn.Linear(64, 2)
 
     def forward(self, x):
        
