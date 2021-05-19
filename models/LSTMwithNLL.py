@@ -10,21 +10,21 @@ import matplotlib.pyplot as plt
 
 
 
+
 class LSTMContoursNLL(nn.Module):
     
-    def __init__(self, input_size, hidden_size, num_layers):
+    def __init__(self, input_size = 256, hidden_size = 512, num_layers = 2):
         super(LSTMContoursNLL, self).__init__()
         
         self.num_layers = num_layers
         self.input_size = input_size
         self.hidden_size = hidden_size
         
-        self.lin1 = nn.Linear(1, 4)
-        self.lin2 = nn.Linear(4, 8)
-        self.lin3 = nn.Linear(8, input_size)
-        self.lkrelu = nn.LeakyReLU()
+        self.lin1 = nn.Linear(4, 64)
+        self.lin2 = nn.Linear(64, input_size)
 
-        self.sig = nn.Sigmoid()
+        self.lkrelu = nn.LeakyReLU()
+        self.bn = nn.BatchNorm1d(1999) # 2000 -1 (delay for prediction)
 
 
         self.lstm = nn.LSTM(input_size=input_size, 
@@ -32,9 +32,8 @@ class LSTMContoursNLL(nn.Module):
                             num_layers=num_layers,
                             batch_first=True)
 
-        self.fc1 = nn.Linear(hidden_size, 128)
-        self.fc2 = nn.Linear(hidden_size, 200)
-
+        self.fc1 = nn.Linear(hidden_size, 256)
+        self.fc2 = nn.Linear(256, 200)
 
     def forward(self, x):
        
@@ -42,8 +41,8 @@ class LSTMContoursNLL(nn.Module):
         x = self.lkrelu(x)
         x = self.lin2(x)
         x = self.lkrelu(x)
-        x = self.lin3(x)
-        x = self.lkrelu(x)
+
+        x = self.bn(x)
 
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
@@ -52,9 +51,14 @@ class LSTMContoursNLL(nn.Module):
         out, (h_out, _) = self.lstm(x, (h_0, c_0))
         #out = out.contiguous().view(-1, self.hidden_size)
         out = self.lkrelu(out)
+
+
         out = self.fc1(out)
         out = self.lkrelu(out)
+        out = self.bn(out)
+
         out = self.fc2(out)
+        out = self.lkrelu(out)
 
         cents, pitch = torch.split(out, 100, dim = -1)
 
@@ -62,29 +66,30 @@ class LSTMContoursNLL(nn.Module):
 
 
 
+
 class LSTMContoursMSE(nn.Module):
     
-    def __init__(self, input_size, hidden_size, num_layers):
+    def __init__(self, input_size = 256, hidden_size = 512, num_layers = 2):
         super(LSTMContoursMSE, self).__init__()
         
         self.num_layers = num_layers
         self.input_size = input_size
         self.hidden_size = hidden_size
         
-        self.lin1 = nn.Linear(1, 4)
-        self.lin2 = nn.Linear(4, 8)
-        self.lin3 = nn.Linear(8, input_size)
-        self.lkrelu = nn.LeakyReLU()
+        self.lin1 = nn.Linear(4, 64)
+        self.lin2 = nn.Linear(64, input_size)
 
-        self.sig = nn.Sigmoid()
+        self.lkrelu = nn.LeakyReLU()
+        self.bn = nn.BatchNorm1d(1999) # 2000 -1 (delay for prediction)
+
 
         self.lstm = nn.LSTM(input_size=input_size, 
                             hidden_size=hidden_size,
                             num_layers=num_layers,
                             batch_first=True)
 
-        self.fc1 = nn.Linear(hidden_size, 16)
-        self.fc2 = nn.Linear(16, 1)
+        self.fc1 = nn.Linear(hidden_size, 256)
+        self.fc2 = nn.Linear(256, 2)
 
 
     def forward(self, x):
@@ -93,8 +98,7 @@ class LSTMContoursMSE(nn.Module):
         x = self.lkrelu(x)
         x = self.lin2(x)
         x = self.lkrelu(x)
-        x = self.lin3(x)
-        x = self.lkrelu(x)
+        x = self.bn(x)
 
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
@@ -103,10 +107,12 @@ class LSTMContoursMSE(nn.Module):
         out, (h_out, _) = self.lstm(x, (h_0, c_0))
         #out = out.contiguous().view(-1, self.hidden_size)
         out = self.lkrelu(out)
+
         out = self.fc1(out)
         out = self.lkrelu(out)
-        out = self.fc2(out)
+        out = self.bn(out)
 
-        out = self.sig(out)
+        out = self.fc2(out)
+        out = self.lkrelu(out)
 
         return out

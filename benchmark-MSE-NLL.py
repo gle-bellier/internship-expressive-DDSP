@@ -8,7 +8,7 @@ import glob
 from get_datasets import get_datasets
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTMwithNLL import LSTMContoursNLL
+from models.LSTMwithNLL import LSTMContoursNLL, LSTMContoursMSE
 
 
 import torch
@@ -16,7 +16,6 @@ import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
-from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -93,17 +92,22 @@ num_layers = 2
 pitch_size, cents_size = 100, 100
 
 
-model = LSTMContoursNLL(input_size, hidden_size, num_layers).to(device)
-print(model.parameters)
+model_NLL = LSTMContoursNLL(input_size, hidden_size, num_layers).to(device)
+print("Model Classification : ")
+print(model_NLL.parameters)
+
+model_MSE = LSTMContoursMSE(input_size, hidden_size, num_layers).to(device)
+print("Model Continuous : ")
+print(model_MSE.parameters)
 
 
+criterion_NLL = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
+optimizer_NLL = torch.optim.Adam(model_NLL.parameters(), lr=learning_rate)
 
-criterion = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+criterion_MSE = torch.nn.MSELoss()    # Mean Square Error Loss for continuous contours
+optimizer_MSE = torch.optim.Adam(model_MSE.parameters(), lr=learning_rate)
+
 #optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
-
-
-list_losses = []
 
 
 # Train the model
