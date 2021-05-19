@@ -8,7 +8,7 @@ import glob
 from get_datasets import get_datasets
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTMwithBCE import LSTMContoursBCE
+from models.LSTMwithNLL import LSTMContoursNLL
 
 
 import torch
@@ -33,7 +33,7 @@ print('using', device)
 
 
 
-writer = SummaryWriter("runs/LSTM_BCE")
+writer = SummaryWriter("runs/benchmark")
 
 sc = MinMaxScaler()
 train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)#sc.fit_transform)
@@ -41,33 +41,44 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 
 
 def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
-
+    
     # one hot vectors : 
     pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1), pitch_size)
     cents_array = torch.zeros(frequencies.size(0), frequencies.size(1), cents_size)
     
-    min_freq = li.midi_to_hz(0)
-    max_freq = li.midi_to_hz(pitch_size-1)
-    frequencies = torch.clip(frequencies, min = min_freq, max = max_freq)
-
     midi_pitch = torch.tensor(li.hz_to_midi(frequencies))
     midi_pitch = torch.round(midi_pitch).long()
 
 
+    #print("Min =  {};  Max =  {} frequencies".format(li.midi_to_hz(0), li.midi_to_hz(pitch_size-1)))
+    midi_pitch_clip = torch.clip(midi_pitch, min = 0, max = pitch_size-1)
     round_freq = torch.tensor(li.midi_to_hz(midi_pitch))
+    
     cents = (1200 * torch.log2(frequencies / round_freq)).long()
 
 
     for i in range(0, pitch_array.size(0)):
         for j in range(0, pitch_array.size(1)):
-            pitch_array[i, j, midi_pitch[i, j, 0]] = 1
+            pitch_array[i, j, midi_pitch_clip[i, j, 0]] = 1
 
     for i in range(0, pitch_array.size(0)):
         for j in range(0, pitch_array.size(1)):
-            pitch_array[i, j, cents[i, j, 0] + 50] = 1
+            cents_array[i, j, cents[i, j, 0] + 50] = 1
 
 
-    return pitch_array, cents_array
+    return pitch_array, cents_array, midi_pitch_clip, cents
+
+
+
+def pitch_cents_to_frequencies(pitch, cents):
+
+    gen_pitch = torch.argmax(pitch, dim = -1)
+    gen_cents = torch.argmax(cents, dim = -1) - 50
+
+    gen_freq = torch.tensor(li.midi_to_hz(gen_pitch)) * torch.pow(2, gen_cents/1200)
+    gen_freq = torch.unsqueeze(gen_freq, -1)
+
+    return gen_freq
 
 
 ### MODEL INSTANCIATION ###
@@ -79,13 +90,15 @@ input_size = 32
 hidden_size = 64
 num_layers = 2
 
+pitch_size, cents_size = 100, 100
 
-model = LSTMContoursBCE(input_size, hidden_size, num_layers).to(device)
+
+model = LSTMContoursNLL(input_size, hidden_size, num_layers).to(device)
 print(model.parameters)
 
 
 
-criterion = torch.nn.BCELoss()    # mean-squared error for regression
+criterion = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 #optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
 
@@ -95,12 +108,9 @@ list_losses = []
 
 # Train the model
 for epoch in range(num_epochs):
-    number_of_batch = 0
 
     for batch in train_loader:
-        number_of_batch += 1
         number_of_samples = batch[0].shape[0]
-        #print("Number of samples in this batch : ", number_of_samples)
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
@@ -119,15 +129,11 @@ for epoch in range(num_epochs):
         out_pitch, out_cents = model(model_input.float().to(device))
         optimizer.zero_grad()
 
-        pitch_size, cents_size = 100, 100
-
- 
-
         model_input = torch.squeeze(model_input)
         model_input = torch.tensor(sc.inverse_transform(model_input))
         model_input = torch.unsqueeze(model_input, -1)
 
-        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(model_input, pitch_size, cents_size)
+        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(e_f0, pitch_size, cents_size)
 
         # obtain the loss function
         loss_pitch = criterion(out_pitch, ground_truth_pitch.to(device))
@@ -140,10 +146,9 @@ for epoch in range(num_epochs):
 
 
     if epoch % 2 == 0:
-        writer.add_scalar("Loss Train", loss.item()/number_of_batch, epoch)
-
-        print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()/number_of_batch))
-        list_losses.append(loss.item()/number_of_batch)
+        writer.add_scalar("Loss Train", loss.item(), epoch)
+        print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()))
+        list_losses.append(loss.item())
 
 writer.flush()
 writer.close()

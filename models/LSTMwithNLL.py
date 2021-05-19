@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 
 
 
-class LSTMContoursBCE(nn.Module):
+class LSTMContoursNLL(nn.Module):
     
     def __init__(self, input_size, hidden_size, num_layers):
-        super(LSTMContoursBCE, self).__init__()
+        super(LSTMContoursNLL, self).__init__()
         
         self.num_layers = num_layers
         self.input_size = input_size
