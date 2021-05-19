@@ -118,7 +118,7 @@ for epoch in range(num_epochs):
         u_f0 = torch.Tensor(u_f0.float())
         e_f0 = torch.Tensor(e_f0.float())
 
-        model_input = torch.cat([u_f0[1:], e_f0[:-1]], -1)
+        model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
 
         out_pitch, out_cents = model_NLL(model_input.to(device))
         optimizer_NLL.zero_grad()
@@ -126,7 +126,7 @@ for epoch in range(num_epochs):
         out_continuous = model_MSE(model_input.to(device))
         optimizer_MSE.zero_grad()
 
-        target_frequencies = torch.squeeze(e_f0[1:])
+        target_frequencies = torch.squeeze(e_f0[:,1:])
         target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
         target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
@@ -135,7 +135,7 @@ for epoch in range(num_epochs):
         # obtain the loss function
         train_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch.to(device))
         train_loss_cents = criterion_NLL(out_pitch, ground_truth_cents.to(device))
-        train_loss_MSE = criterion_MSE(out_continuous, e_f0[1:])
+        train_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:])
         train_loss_NLL = train_loss_pitch + train_loss_cents
         
         train_loss_NLL.backward()
@@ -184,8 +184,6 @@ for epoch in range(num_epochs):
             test_loss_MSE = criterion_MSE(out_continuous, e_f0[1:])
 
             test_loss_NLL = test_loss_pitch + test_loss_cents
-
-
 
     
     if epoch % 10 == 9:
