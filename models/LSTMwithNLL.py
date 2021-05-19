@@ -20,7 +20,7 @@ class LSTMContoursNLL(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         
-        self.lin1 = nn.Linear(4, 64)
+        self.lin1 = nn.Linear(2, 64)
         self.lin2 = nn.Linear(64, input_size)
 
         self.lkrelu = nn.LeakyReLU()
@@ -76,7 +76,7 @@ class LSTMContoursMSE(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         
-        self.lin1 = nn.Linear(4, 64)
+        self.lin1 = nn.Linear(2, 64)
         self.lin2 = nn.Linear(64, input_size)
 
         self.lkrelu = nn.LeakyReLU()
