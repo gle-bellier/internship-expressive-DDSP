@@ -39,7 +39,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 1000
+num_epochs = 800
 learning_rate = 0.005
 
 
