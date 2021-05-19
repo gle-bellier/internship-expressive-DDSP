@@ -35,7 +35,7 @@ print('using', device)
 writer = SummaryWriter("runs/benchmark")
 
 sc = StandardScaler()
-train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = sc.fit_transform)
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)# sc.fit_transform)
     
 
 
@@ -118,7 +118,15 @@ for epoch in range(num_epochs):
         u_f0 = torch.Tensor(u_f0.float())
         e_f0 = torch.Tensor(e_f0.float())
 
-        model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
+        u_f0_in = torch.squeeze(u_f0[:,1:])
+        u_f0_in = torch.tensor(sc.fit_transform(u_f0_in))
+        u_f0_in = torch.unsqueeze(u_f0_in, -1)
+        e_f0_in = torch.squeeze(e_f0[:,1:])
+        e_f0_in = torch.tensor(sc.fit_transform(e_f0_in))
+        e_f0_in = torch.unsqueeze(e_f0_in, -1)
+
+        model_input = torch.cat([u_f0_in, e_f0_in], -1)
+
 
         out_pitch, out_cents = model_NLL(model_input.to(device))
         optimizer_NLL.zero_grad()
