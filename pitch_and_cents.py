@@ -8,7 +8,6 @@ import glob
 from get_datasets import get_datasets
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTMwithBCE import LSTMContoursBCE
 
 
 import torch
@@ -21,12 +20,12 @@ from torch.utils.tensorboard import SummaryWriter
 
 train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 1, ratio = 0.7, transform = None)
 
-print("Size Dataset : ", len(train_loader))
-def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
+print("Size Train set : ", len(train_loader))
+def frequencies_to_pitch_cents(frequencies, pitch_size):
     
     # one hot vectors : 
-    pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1), pitch_size)
-    cents_array = torch.zeros(frequencies.size(0), frequencies.size(1), cents_size)
+    pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1))
+    cents_array = torch.zeros(frequencies.size(0), frequencies.size(1))
     
 
     midi_pitch = torch.tensor(li.hz_to_midi(frequencies))
@@ -37,33 +36,17 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
     #print("Min =  {};  Max =  {} frequencies".format(li.midi_to_hz(0), li.midi_to_hz(pitch_size-1)))
     midi_pitch_clip = torch.clip(midi_pitch, min = 0, max = pitch_size-1)
     round_freq = torch.tensor(li.midi_to_hz(midi_pitch))
-
-
-
-
-
-    
-
-
     
     cents = (1200 * torch.log2(frequencies / round_freq)).long()
 
 
-    plt.plot(round_freq.squeeze().detach()/100, label = "MIDI")
-    plt.plot(frequencies.squeeze().detach()/100, label = "FREQ")
-    plt.plot(cents.squeeze().detach(), label = "CENTS")
-    
-    plt.legend()
-    plt.show()
-
-
     for i in range(0, pitch_array.size(0)):
         for j in range(0, pitch_array.size(1)):
-            pitch_array[i, j, midi_pitch_clip[i, j, 0]] = 1
+            pitch_array[i, j] = midi_pitch_clip[i, j, 0]
 
-    for i in range(0, pitch_array.size(0)):
-        for j in range(0, pitch_array.size(1)):
-            cents_array[i, j, cents[i, j, 0] + 50] = 1
+    for i in range(0, cents_array.size(0)):
+        for j in range(0, cents_array.size(1)):
+            cents_array[i, j] = cents[i, j, 0] + 50
 
 
     return pitch_array, cents_array, midi_pitch_clip, cents
@@ -71,8 +54,8 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
 
 def pitch_cents_to_frequencies(pitch, cents):
 
-    gen_pitch = torch.argmax(pitch, dim = -1)
-    gen_cents = torch.argmax(cents, dim = -1) - 50
+    gen_pitch = pitch
+    gen_cents = cents - 50
 
     gen_freq = torch.tensor(li.midi_to_hz(gen_pitch)) * torch.pow(2, gen_cents/1200)
     gen_freq = torch.unsqueeze(gen_freq, -1)
@@ -89,7 +72,9 @@ for i in range(3):
     u_f0 = torch.Tensor(u_f0.float())
 
     pitch_size, cents_size = 100, 100
-    convert_pitch, convert_cents, midi_pitch_clip, cents = frequencies_to_pitch_cents(e_f0, pitch_size, cents_size)
+    convert_pitch, convert_cents, midi_pitch_clip, cents = frequencies_to_pitch_cents(e_f0, pitch_size)
+
+    print("Convert size : ", convert_pitch.size())
     convert_back_f0 = pitch_cents_to_frequencies(convert_pitch, convert_cents)
 
 

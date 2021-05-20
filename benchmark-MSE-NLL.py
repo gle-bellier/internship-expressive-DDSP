@@ -42,8 +42,8 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
     
     # one hot vectors : 
-    pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1), pitch_size)
-    cents_array = torch.zeros(frequencies.size(0), frequencies.size(1), cents_size)
+    pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1))
+    cents_array = torch.zeros(frequencies.size(0), frequencies.size(1))
     
     midi_pitch = torch.tensor(li.hz_to_midi(frequencies))
     midi_pitch = torch.round(midi_pitch).long()
@@ -58,11 +58,11 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
 
     for i in range(0, pitch_array.size(0)):
         for j in range(0, pitch_array.size(1)):
-            pitch_array[i, j, midi_pitch_clip[i, j, 0]] = 1
+            pitch_array[i, j] = midi_pitch_clip[i, j, 0]
 
-    for i in range(0, pitch_array.size(0)):
-        for j in range(0, pitch_array.size(1)):
-            cents_array[i, j, cents[i, j, 0] + 50] = 1
+    for i in range(0, cents_array.size(0)):
+        for j in range(0, cents_array.size(1)):
+            cents_array[i, j] = cents[i, j, 0] + 50
 
 
     return pitch_array, cents_array
@@ -71,10 +71,7 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
 
 def pitch_cents_to_frequencies(pitch, cents):
 
-    gen_pitch = torch.argmax(pitch, dim = -1)
-    gen_cents = torch.argmax(cents, dim = -1) - 50
-
-    gen_freq = torch.tensor(li.midi_to_hz(gen_pitch)) * torch.pow(2, gen_cents/1200)
+    gen_freq = torch.tensor(li.midi_to_hz(pitch)) * torch.pow(2, (cents-50)/1200)
     gen_freq = torch.unsqueeze(gen_freq, -1)
 
     return gen_freq
@@ -148,8 +145,12 @@ for epoch in range(num_epochs):
         out_pitch = out_pitch.permute(0, 2, 1)
         out_cents = out_cents.permute(0, 2, 1)
 
-        ground_truth_pitch = ground_truth_pitch.permute(0, 2, 1)
-        ground_truth_cents = ground_truth_cents.permute(0, 2, 1)
+        # ground_truth_pitch = ground_truth_pitch.permute(0, 2, 1)
+        # ground_truth_cents = ground_truth_cents.permute(0, 2, 1)
+
+        ground_truth_pitch = ground_truth_pitch.long()
+        ground_truth_cents = ground_truth_cents.long()
+
 
         print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
 
