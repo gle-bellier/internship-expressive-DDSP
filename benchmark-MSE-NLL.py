@@ -65,7 +65,7 @@ def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
             cents_array[i, j, cents[i, j, 0] + 50] = 1
 
 
-    return pitch_array, cents_array, midi_pitch_clip, cents
+    return pitch_array, cents_array
 
 
 
@@ -83,7 +83,7 @@ def pitch_cents_to_frequencies(pitch, cents):
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 5000
+num_epochs = 2
 learning_rate = 0.01
 
 
@@ -118,31 +118,44 @@ for epoch in range(num_epochs):
         u_f0 = torch.Tensor(u_f0.float())
         e_f0 = torch.Tensor(e_f0.float())
 
+
+
+
         u_f0_in = torch.squeeze(u_f0[:,1:])
-        u_f0_in = torch.tensor(sc.fit_transform(u_f0_in))
+        u_f0_in = torch.tensor(sc.fit_transform(u_f0_in)).float()
         u_f0_in = torch.unsqueeze(u_f0_in, -1)
         e_f0_in = torch.squeeze(e_f0[:,1:])
-        e_f0_in = torch.tensor(sc.fit_transform(e_f0_in))
+        e_f0_in = torch.tensor(sc.fit_transform(e_f0_in)).float()
         e_f0_in = torch.unsqueeze(e_f0_in, -1)
+
 
         model_input = torch.cat([u_f0_in, e_f0_in], -1)
 
-
         out_pitch, out_cents = model_NLL(model_input.to(device))
-        optimizer_NLL.zero_grad()
-
         out_continuous = model_MSE(model_input.to(device))
+
+        optimizer_NLL.zero_grad()
         optimizer_MSE.zero_grad()
 
         target_frequencies = torch.squeeze(e_f0[:,1:])
         target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
         target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
-        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(e_f0, pitch_size, cents_size)
+        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(e_f0[:,1:], pitch_size, cents_size)
+
+        print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
+
+        out_pitch = out_pitch.permute(0, 2, 1)
+        out_cents = out_cents.permute(0, 2, 1)
+
+        ground_truth_pitch = ground_truth_pitch.permute(0, 2, 1)
+        ground_truth_cents = ground_truth_cents.permute(0, 2, 1)
+
+        print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
 
         # obtain the loss function
         train_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch.to(device))
-        train_loss_cents = criterion_NLL(out_pitch, ground_truth_cents.to(device))
+        train_loss_cents = criterion_NLL(out_cents, ground_truth_cents.to(device))
         train_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:])
         train_loss_NLL = train_loss_pitch + train_loss_cents
         
@@ -169,10 +182,9 @@ for epoch in range(num_epochs):
             model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
 
             out_pitch, out_cents = model_NLL(model_input.to(device))
-
             out_continuous = model_MSE(model_input.to(device))
 
-            target_frequencies = torch.squeeze(e_f0[1:])
+            target_frequencies = torch.squeeze(e_f0[:,1:])
             target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
             target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
