@@ -39,7 +39,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
     
 
 
-def frequencies_to_pitch_cents(frequencies, pitch_size, cents_size):
+def frequencies_to_pitch_cents(frequencies, pitch_size):
     
     # one hot vectors : 
     pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1))
@@ -138,26 +138,26 @@ for epoch in range(num_epochs):
         target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
         target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
-        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(e_f0[:,1:], pitch_size, cents_size)
+        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
 
-        print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
+        #print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
 
-        out_pitch = out_pitch.permute(0, 2, 1)
-        out_cents = out_cents.permute(0, 2, 1)
+        out_pitch = out_pitch.permute(0, 2, 1).to(device)
+        out_cents = out_cents.permute(0, 2, 1).to(device)
 
         # ground_truth_pitch = ground_truth_pitch.permute(0, 2, 1)
         # ground_truth_cents = ground_truth_cents.permute(0, 2, 1)
 
-        ground_truth_pitch = ground_truth_pitch.long()
-        ground_truth_cents = ground_truth_cents.long()
+        ground_truth_pitch = ground_truth_pitch.long().to(device)
+        ground_truth_cents = ground_truth_cents.long().to(device)
 
 
-        print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
+        #print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
 
         # obtain the loss function
-        train_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch.to(device))
-        train_loss_cents = criterion_NLL(out_cents, ground_truth_cents.to(device))
-        train_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:])
+        train_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch)
+        train_loss_cents = criterion_NLL(out_cents, ground_truth_cents)
+        train_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:].to(device))
         train_loss_NLL = train_loss_pitch + train_loss_cents
         
         train_loss_NLL.backward()
@@ -189,20 +189,22 @@ for epoch in range(num_epochs):
             target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
             target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
-            ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(e_f0, pitch_size, cents_size)
+            ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
 
             # permute dimension for cross entropy loss function :
 
-            out_pitch = out_pitch.permute(0, 2, 1)
-            out_cents = out_cents.permute(0, 2, 1)
+            out_pitch = out_pitch.permute(0, 2, 1).to(device)
+            out_cents = out_cents.permute(0, 2, 1).to(device)
 
-            ground_truth_pitch = ground_truth_pitch.permute(0, 2, 1)
-            ground_truth_cents = ground_truth_cents.permute(0, 2, 1)
+            ground_truth_pitch = ground_truth_pitch.long().to(device)
+            ground_truth_cents = ground_truth_cents.long().to(device)
+
+
 
             # obtain the loss function
-            test_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch.to(device))
-            test_loss_cents = criterion_NLL(out_pitch, ground_truth_cents.to(device))
-            test_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:])
+            test_loss_pitch = criterion_NLL(out_pitch.to(device), ground_truth_pitch.to(device))
+            test_loss_cents = criterion_NLL(out_pitch.to(device), ground_truth_cents.to(device))
+            test_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:].to(device))
 
             test_loss_NLL = test_loss_pitch + test_loss_cents
 
