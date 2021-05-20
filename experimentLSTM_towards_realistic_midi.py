@@ -1,7 +1,6 @@
 from tqdm import tqdm
 
 import numpy as np
-import matplotlib.pyplot as plt
 import glob
 
 from get_datasets import get_datasets
@@ -18,7 +17,17 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 from sklearn.preprocessing import StandardScaler
+import signal
 
+def save_model():
+    torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi{}epochs.pth'.format(epoch))
+
+def keyboardInterruptHandler(signal, frame):
+
+    save_model()
+    exit(0)
+
+signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 
 if torch.cuda.is_available():
@@ -39,7 +48,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 5000
+num_epochs = 2000
 learning_rate = 0.001
 
 

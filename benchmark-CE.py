@@ -2,13 +2,12 @@ from tqdm import tqdm
 from time import time
 import librosa as li
 import numpy as np
-import matplotlib.pyplot as plt
 import glob
 
 from get_datasets import get_datasets
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTMwithNLL import LSTMContoursNLL, LSTMContoursMSE
+from models.benchmark_models import LSTMContoursCE
 
 
 import torch
@@ -20,7 +19,17 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 from sklearn.preprocessing import StandardScaler
+import signal
 
+def save_model():
+    torch.save(model_CE, 'models/saved_models/benchmark-CE{}epochs.pth'.format(epoch))
+
+def keyboardInterruptHandler(signal, frame):
+
+    save_model()
+    exit(0)
+
+signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 
 if torch.cuda.is_available():
@@ -32,7 +41,7 @@ print('using', device)
 
 
 
-writer = SummaryWriter("runs/benchmark")
+writer = SummaryWriter("runs/benchmark/CE")
 
 sc = StandardScaler()
 train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)# sc.fit_transform)
@@ -80,27 +89,21 @@ def pitch_cents_to_frequencies(pitch, cents):
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 2
+num_epochs = 1000
 learning_rate = 0.01
 
 
-pitch_size, cents_size = 100, 100
+pitch_size, cents_size = 100, 101
 
 
-model_NLL = LSTMContoursNLL().to(device)
+model_CE = LSTMContoursCE().to(device)
 print("Model Classification : ")
-print(model_NLL.parameters)
-
-model_MSE = LSTMContoursMSE().to(device)
-print("Model Continuous : ")
-print(model_MSE.parameters)
+print(model_CE.parameters)
 
 
-criterion_NLL = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
-optimizer_NLL = torch.optim.Adam(model_NLL.parameters(), lr=learning_rate)
+criterion_CE = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
+optimizer_CE = torch.optim.Adam(model_CE.parameters(), lr=learning_rate)
 
-criterion_MSE = torch.nn.MSELoss()    # Mean Square Error Loss for continuous contours
-optimizer_MSE = torch.optim.Adam(model_MSE.parameters(), lr=learning_rate)
 
 #optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
 
@@ -110,8 +113,7 @@ for epoch in range(num_epochs):
 
     for batch in train_loader:
 
-        model_MSE.train()
-        model_NLL.train()
+        model_CE.train()
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
@@ -131,11 +133,9 @@ for epoch in range(num_epochs):
 
         model_input = torch.cat([u_f0_in, e_f0_in], -1)
 
-        out_pitch, out_cents = model_NLL(model_input.to(device))
-        out_continuous = model_MSE(model_input.to(device))
+        out_pitch, out_cents = model_CE(model_input.to(device))
 
-        optimizer_NLL.zero_grad()
-        optimizer_MSE.zero_grad()
+        optimizer_CE.zero_grad()
 
         target_frequencies = torch.squeeze(e_f0[:,1:])
         target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
@@ -143,38 +143,26 @@ for epoch in range(num_epochs):
 
         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
 
-
         out_pitch = out_pitch.permute(0, 2, 1).to(device)
         out_cents = out_cents.permute(0, 2, 1).to(device)
 
         ground_truth_pitch = ground_truth_pitch.long().to(device)
         ground_truth_cents = ground_truth_cents.long().to(device)
 
-        # print("Ground truth pitch max : {}".format(torch.max(ground_truth_pitch, -1)))
-        # print("Ground truth pitch min : {}".format(torch.min(ground_truth_pitch, -1)))
-        # print("Ground truth cents max : {}".format(torch.max(ground_truth_cents, -1)))
-        # print("Ground truth cents min : {}".format(torch.min(ground_truth_cents, -1)))
-
-        # print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
 
         # obtain the loss function
-        train_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch)
-        train_loss_cents = criterion_NLL(out_cents, ground_truth_cents)
-        train_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:].to(device))
-        train_loss_NLL = train_loss_pitch + train_loss_cents
+        train_loss_pitch = criterion_CE(out_pitch, ground_truth_pitch)
+        train_loss_cents = criterion_CE(out_cents, ground_truth_cents)
+        train_loss_CE = train_loss_pitch + train_loss_cents
         
-        train_loss_NLL.backward()
-        train_loss_MSE.backward()
-        
-        optimizer_NLL.step()
-        optimizer_MSE.step()
+        train_loss_CE.backward()
+        optimizer_CE.step()
 
 
 
     # Compute validation losses : 
 
-    model_MSE.eval()
-    model_NLL.eval()
+    model_CE.eval()
     with torch.no_grad():
         for batch in test_loader:
 
@@ -185,8 +173,7 @@ for epoch in range(num_epochs):
 
             model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
 
-            out_pitch, out_cents = model_NLL(model_input.to(device))
-            out_continuous = model_MSE(model_input.to(device))
+            out_pitch, out_cents = model_CE(model_input.to(device))
 
             target_frequencies = torch.squeeze(e_f0[:,1:])
             target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
@@ -205,27 +192,20 @@ for epoch in range(num_epochs):
 
 
             # obtain the loss function
-            test_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch)
-            test_loss_cents = criterion_NLL(out_pitch, ground_truth_cents)
-            test_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:].to(device))
+            test_loss_pitch = criterion_CE(out_pitch, ground_truth_pitch)
+            test_loss_cents = criterion_CE(out_cents, ground_truth_cents)
 
-            test_loss_NLL = test_loss_pitch + test_loss_cents
+            test_loss_CE = test_loss_pitch + test_loss_cents
 
     
     if epoch % 10 == 9:
         print("--- Classification ---")
-        print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_NLL))
-        print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_NLL))
+        print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_CE))
+        print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_CE))
 
-        print("--- Continuous ---")
-        print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_MSE))
-        print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_MSE))
+        writer.add_scalar('training  CEloss', train_loss_CE, epoch+1)
+        writer.add_scalar('test CEloss', test_loss_CE, epoch+1)
 
-        writer.add_scalar('training  NLLloss', train_loss_NLL, epoch+1)
-        writer.add_scalar('test NLLloss', test_loss_NLL, epoch+1)
-
-        writer.add_scalar('training  MSEloss', train_loss_MSE, epoch+1)
-        writer.add_scalar('test MSEloss', test_loss_MSE, epoch+1)
 
 
 

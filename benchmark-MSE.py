@@ -2,13 +2,12 @@ from tqdm import tqdm
 from time import time
 import librosa as li
 import numpy as np
-import matplotlib.pyplot as plt
 import glob
 
 from get_datasets import get_datasets
 from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
-from models.LSTMwithNLL import LSTMContoursNLL, LSTMContoursMSE
+from models.benchmark_models import LSTMContoursMSE
 
 
 import torch
@@ -20,7 +19,17 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 from sklearn.preprocessing import StandardScaler
+import signal
 
+def save_model():
+    torch.save(model_MSE, 'models/saved_models/benchmark-MSE{}epochs.pth'.format(epoch))
+
+def keyboardInterruptHandler(signal, frame):
+
+    save_model()
+    exit(0)
+
+signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 
 if torch.cuda.is_available():
@@ -41,8 +50,8 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 2
-learning_rate = 0.01
+num_epochs = 2000
+learning_rate = 0.001
 
 
 model_MSE = LSTMContoursMSE().to(device)
@@ -52,8 +61,6 @@ print(model_MSE.parameters)
 
 criterion_MSE = torch.nn.MSELoss()    # Mean Square Error Loss for continuous contours
 optimizer_MSE = torch.optim.Adam(model_MSE.parameters(), lr=learning_rate)
-
-#optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
 
 
 # Train the model
