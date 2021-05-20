@@ -39,8 +39,8 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 800
-learning_rate = 0.005
+num_epochs = 5000
+learning_rate = 0.001
 
 
 model = LSTMContours().to(device)

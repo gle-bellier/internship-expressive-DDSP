@@ -57,11 +57,9 @@ class LSTMContours(nn.Module):
 
         out = self.fc1(out)
         out = self.lkrelu(out)
-        out = self.bn(out)
 
         out = self.fc2(out)
         out = self.lkrelu(out)
         out = self.fc3(out)
-        out = self.lkrelu(out)
 
         return out

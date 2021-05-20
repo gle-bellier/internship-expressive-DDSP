@@ -110,6 +110,9 @@ for epoch in range(num_epochs):
 
     for batch in train_loader:
 
+        model_MSE.train()
+        model_NLL.train()
+
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
         u_f0 = torch.Tensor(u_f0.float())
@@ -140,19 +143,19 @@ for epoch in range(num_epochs):
 
         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
 
-        #print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
 
         out_pitch = out_pitch.permute(0, 2, 1).to(device)
         out_cents = out_cents.permute(0, 2, 1).to(device)
 
-        # ground_truth_pitch = ground_truth_pitch.permute(0, 2, 1)
-        # ground_truth_cents = ground_truth_cents.permute(0, 2, 1)
-
         ground_truth_pitch = ground_truth_pitch.long().to(device)
         ground_truth_cents = ground_truth_cents.long().to(device)
 
+        # print("Ground truth pitch max : {}".format(torch.max(ground_truth_pitch, -1)))
+        # print("Ground truth pitch min : {}".format(torch.min(ground_truth_pitch, -1)))
+        # print("Ground truth cents max : {}".format(torch.max(ground_truth_cents, -1)))
+        # print("Ground truth cents min : {}".format(torch.min(ground_truth_cents, -1)))
 
-        #print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
+        # print("Ground Truth size {}, Model out size {}".format(ground_truth_pitch.size(), out_pitch.size()))
 
         # obtain the loss function
         train_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch)
@@ -202,8 +205,8 @@ for epoch in range(num_epochs):
 
 
             # obtain the loss function
-            test_loss_pitch = criterion_NLL(out_pitch.to(device), ground_truth_pitch.to(device))
-            test_loss_cents = criterion_NLL(out_pitch.to(device), ground_truth_cents.to(device))
+            test_loss_pitch = criterion_NLL(out_pitch, ground_truth_pitch)
+            test_loss_cents = criterion_NLL(out_pitch, ground_truth_cents)
             test_loss_MSE = criterion_MSE(out_continuous, e_f0[:,1:].to(device))
 
             test_loss_NLL = test_loss_pitch + test_loss_cents
