@@ -22,10 +22,10 @@ with open("results.npy", "rb") as f:
             ax1.plot(t, e_f0, label = "Performance")
             ax1.legend()
             
-            ax2.plot(t, out_loudness, label = "Model")
-            ax2.plot(t, u_loudness, label = "Midi")
-            ax2.plot(t, e_loudness, label = "Performance")
-            ax2.legend()
+            # ax2.plot(t, out_loudness, label = "Model")
+            # ax2.plot(t, u_loudness, label = "Midi")
+            # ax2.plot(t, e_loudness, label = "Performance")
+            # ax2.legend()
 
             plt.legend()
             plt.show()
