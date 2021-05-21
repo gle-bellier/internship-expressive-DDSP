@@ -1,3 +1,5 @@
-/audio-to-midi/dataset-midi-wav
-/audio-to-midi/f0-confidence-loudness-files
-.pyc
+/dataset-midi-wav
+/f0-confidence-loudness-files
+*.pyc
+/runs
+/__pycache__

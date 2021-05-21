@@ -5,8 +5,8 @@ import note_seq
 from note_seq.protobuf import music_pb2
 
 
-from MidiLikeSeq import MidiLikeSeq
-from NoteTupleSeq import NoteTupleSeq
+#from MidiLikeSeq import MidiLikeSeq
+#from NoteTupleSeq import NoteTupleSeq
 
 
 class Converter:
@@ -254,4 +254,3 @@ class Converter:
         pitches = np.argmax(notes, axis = 0)
         loudness = np.transpose(np.max(notes, axis = 0))
         return pitches, loudness
-
