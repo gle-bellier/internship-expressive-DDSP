@@ -20,7 +20,7 @@ from sklearn.preprocessing import StandardScaler
 import signal
 
 def save_model():
-    torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi{}epochs.pth'.format(epoch))
+    torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi3{}epochs.pth'.format(epoch))
 
 def keyboardInterruptHandler(signal, frame):
 
@@ -38,7 +38,7 @@ print('using', device)
 
 
 
-writer = SummaryWriter("runs/LSTM_towards_realistic_midi")
+writer = SummaryWriter("runs/LSTM_towards_realistic_midi50000")
 
 sc = StandardScaler()
 train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform=sc.fit_transform)
@@ -48,7 +48,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 5000
+num_epochs = 50000
 learning_rate = 0.001
 
 
@@ -141,6 +141,6 @@ for epoch in range(num_epochs):
 
 
 
-torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi2.pth')
+torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi3.pth')
 
 
