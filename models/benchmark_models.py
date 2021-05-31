@@ -32,6 +32,19 @@ class LSTMContoursCE(nn.Module):
         self.fc1 = nn.Linear(hidden_size, 256)
         self.fc2 = nn.Linear(256, 201)
 
+
+
+
+
+    def initialise_h0_c0(self, x):
+            
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
+
+        return h_0, c_0
+
+
+
     def forward(self, x):
        
         x = self.lin1(x)
@@ -60,6 +73,51 @@ class LSTMContoursCE(nn.Module):
         pitch, cents = torch.split(out, [100,101], dim = -1)
 
         return pitch, cents
+
+
+
+    def predict(self, pitch):
+    
+        f0 = torch.zeros_like(pitch)
+
+        x = torch.cat([pitch, f0], -1)
+        
+        x = self.lin1(x)
+        x = self.lkrelu(x)
+        x = self.lin2(x)
+        x = self.lkrelu(x)
+
+        x = self.bn(x)
+        
+        h_t, c_t = self.initialise_h0_c0(x)
+
+        for i in range(x.size(1)):
+
+            pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], h_t, c_t)
+
+
+            out = self.lkrelu(out)
+
+            out = self.fc1(out)
+            out = self.lkrelu(out)
+            out = self.bn(out)
+
+            out = self.fc2(out)
+            out = self.lkrelu(out)
+
+            pitch, cents = torch.split(out, [100,101], dim = -1)
+
+            # TODO : convert pitch cents to f0...
+
+
+            f0 = torch.split(pred, 1, 1)
+
+            x[:, i:i+1, 1] = f0
+
+        
+        e_f0, e_loudness = x[:, :, 1:]
+
+        return e_f0, e_loudness
         
 
 
@@ -90,6 +148,14 @@ class LSTMContoursMSE(nn.Module):
         self.fc2 = nn.Linear(256, 1)
 
 
+    def initialise_h0_c0(self, x):
+        
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
+
+        return h_0, c_0
+
+
     def forward(self, x):
        
         x = self.lin1(x)
@@ -114,3 +180,47 @@ class LSTMContoursMSE(nn.Module):
         out = self.lkrelu(out)
 
         return out
+
+    
+    def predict(self, pitch, loudness):
+    
+        f0 = torch.zeros_like(pitch)
+        l0 = torch.zeros_like(loudness)
+
+        x = torch.cat([pitch, loudness, f0, l0], -1)
+
+        x = self.lin1(x)
+        x = self.lkrelu(x)
+        x = self.bn(x)
+
+        x = self.lin2(x)
+        x = self.lkrelu(x)
+        x = self.bn(x)
+
+        
+        h_t, c_t = self.initialise_h0_c0(x)
+
+        for i in range(x.size(1)):
+
+            pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], h_t, c_t)
+
+
+            pred = self.fc1(pred)
+            pred = self.lkrelu(pred)
+            pred = self.bn(pred)
+
+            pred = self.fc2(pred)
+            pred = self.lkrelu(pred)
+            pred = self.bn(pred)
+            
+            pred = self.fc3(pred)
+
+            f0, l0 = torch.split(pred, 1, 1)
+
+            x[:, i:i+1, 2] = f0
+            x[:, i:i+1, 3] = l0
+
+        
+        e_f0, e_loudness = x[:, :, 2:]
+
+        return e_f0, e_loudness
