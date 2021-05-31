@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler
 import signal
 
 def save_model():
-    torch.save(model_MSE, 'models/saved_models/benchmark-MSE{}epochs.pth'.format(epoch))
+    torch.save(model_MSE, 'results/saved_models/benchmark-MSE{}epochs.pth'.format(epoch))
 
 def keyboardInterruptHandler(signal, frame):
 

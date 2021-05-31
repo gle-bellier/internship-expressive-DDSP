@@ -5,6 +5,7 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 
 import numpy as np
+import librosa as li
 
 
 
@@ -75,6 +76,14 @@ class LSTMContoursCE(nn.Module):
         return pitch, cents
 
 
+    def pitch_cents_to_frequencies(self, pitch, cents):
+    
+        gen_freq = torch.tensor(li.midi_to_hz(pitch.detach().numpy())) * torch.pow(2, (cents.detach().numpy()-50)/1200)
+        gen_freq = torch.unsqueeze(gen_freq, -1)
+
+        return gen_freq
+
+
 
     def predict(self, pitch):
     
@@ -107,10 +116,8 @@ class LSTMContoursCE(nn.Module):
 
             pitch, cents = torch.split(out, [100,101], dim = -1)
 
-            # TODO : convert pitch cents to f0...
 
-
-            f0 = torch.split(pred, 1, 1)
+            f0 = self.pitch_cents_to_frequencies(pitch, cents)
 
             x[:, i:i+1, 1] = f0
 

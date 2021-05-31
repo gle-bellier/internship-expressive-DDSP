@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler
 import signal
 
 def save_model():
-    torch.save(model_CE, 'models/saved_models/benchmark-CE{}epochs.pth'.format(epoch))
+    torch.save(model_CE, 'results/saved_models/benchmark-CE{}epochs.pth'.format(epoch))
 
 def keyboardInterruptHandler(signal, frame):
 
@@ -103,9 +103,6 @@ print(model_CE.parameters)
 
 criterion_CE = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
 optimizer_CE = torch.optim.Adam(model_CE.parameters(), lr=learning_rate)
-
-
-#optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
 
 
 # Train the model

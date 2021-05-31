@@ -19,7 +19,17 @@ from torch.utils.tensorboard import SummaryWriter
 
 from sklearn.preprocessing import StandardScaler
 
+import signal
 
+def save_model():
+    torch.save(model, 'results/saved_models/BLSTM_control_synth{}epochs.pth'.format(epoch))
+
+def keyboardInterruptHandler(signal, frame):
+
+    save_model()
+    exit(0)
+
+signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
@@ -124,6 +134,6 @@ for epoch in range(num_epochs):
 
 
 
-torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi.pth')
+torch.save(model, 'results/saved_models/LSTM_towards_realistic_midi.pth')
 
 

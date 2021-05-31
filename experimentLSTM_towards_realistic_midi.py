@@ -20,7 +20,7 @@ from sklearn.preprocessing import StandardScaler
 import signal
 
 def save_model():
-    torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi3{}epochs.pth'.format(epoch))
+    torch.save(model, 'results/saved_models/LSTM_towards_realistic_midi3{}epochs.pth'.format(epoch))
 
 def keyboardInterruptHandler(signal, frame):
 
@@ -141,6 +141,6 @@ for epoch in range(num_epochs):
 
 
 
-torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi_withpred.pth')
+torch.save(model, 'results/saved_models/LSTM_towards_realistic_midi_withpred.pth')
 
 
