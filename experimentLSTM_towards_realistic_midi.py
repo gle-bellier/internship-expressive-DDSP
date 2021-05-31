@@ -48,7 +48,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 50000
+num_epochs = 500
 learning_rate = 0.001
 
 
@@ -141,6 +141,6 @@ for epoch in range(num_epochs):
 
 
 
-torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi3.pth')
+torch.save(model, 'models/saved_models/LSTM_towards_realistic_midi_withpred.pth')
 
 

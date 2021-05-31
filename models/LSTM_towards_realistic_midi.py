@@ -35,6 +35,13 @@ class LSTMContours(nn.Module):
         self.fc2 = nn.Linear(256, 64)
         self.fc3 = nn.Linear(64, 2)
 
+    def initialise_h0_c0(self, x):
+        
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
+
+        return h_0, c_0
+
     def forward(self, x):
        
         x = self.lin1(x)
@@ -45,13 +52,10 @@ class LSTMContours(nn.Module):
         x = self.lkrelu(x)
         x = self.bn(x)
 
-        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
-        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
+        h_0, c_0 = self.initialise_h0_c0(x)
 
-        
         # Propagate input through LSTM
         out, (h_out, _) = self.lstm(x, (h_0, c_0))
-        #out = out.contiguous().view(-1, self.hidden_size)
 
         
         out = self.fc1(out)
@@ -65,3 +69,52 @@ class LSTMContours(nn.Module):
         out = self.fc3(out)
 
         return out
+
+    def predict(self, pitch, loudness):
+
+        f0 = torch.zeros_like(pitch)
+        l0 = torch.zeros_like(loudness)
+
+        x = torch.cat([pitch, loudness, f0, l0], -1)
+
+        x = self.lin1(x)
+        x = self.lkrelu(x)
+        x = self.bn(x)
+
+        x = self.lin2(x)
+        x = self.lkrelu(x)
+        x = self.bn(x)
+
+        
+        h_t, c_t = self.initialise_h0_c0(x)
+
+        for i in range(x.size(1)):
+
+            pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], h_t, c_t)
+
+
+            pred = self.fc1(pred)
+            pred = self.lkrelu(pred)
+            pred = self.bn(pred)
+
+            pred = self.fc2(pred)
+            pred = self.lkrelu(pred)
+            pred = self.bn(pred)
+            
+            pred = self.fc3(pred)
+
+            f0, l0 = torch.split(pred, 1, 1)
+
+            x[:, i:i+1, 2] = f0
+            x[:, i:i+1, 3] = l0
+
+        
+        e_f0, e_loudness = x[:, :, 2:]
+
+        return e_f0, e_loudness
+
+
+
+
+
+        
