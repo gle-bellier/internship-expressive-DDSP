@@ -147,37 +147,3 @@ class BLSTMContours(nn.Module):
 
 
 
-    def predict(self, x_pitch, x_velocity):
-        
-            f0 = torch.zeros_like(x_pitch)
-            l0 = torch.zeros_like(x_velocity)
-
-
-
-            x_p = self.dense1a(x_pitch)
-            x_v = self.dense1b(x_velocity)
-
-            x = torch.cat([x_p, x_v], -1)
-            
-            # Initialize BLSTM states 
-            h_t, c_t = self.initialise_h0_c0(x)
-
-            for i in range(x.size(1)):
-
-                out, (h_t, c_t)  = self.lstm(x[:, i:i+1], h_t, c_t)
-
-
-                out = torch.cat([x_pitch, out, x_velocity], -1)
-
-                out = self.dense2(out)        
-                out = self.lin1(out)
-            
-                y_pitch, y_velocity = torch.split(out, 1, dim = -1)
-
-                pitch_contour = self.sig(y_pitch) + self.lin2(x_pitch)
-                loudness_contour = self.sig(y_velocity) + self.lin2(x_velocity)
-
-            out = torch.cat([pitch_contour, loudness_contour], -1)
-
-            return out
-
