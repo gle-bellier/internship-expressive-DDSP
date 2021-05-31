@@ -60,6 +60,7 @@ class LSTMContoursCE(nn.Module):
         pitch, cents = torch.split(out, [100,101], dim = -1)
 
         return pitch, cents
+        
 
 
 
