@@ -24,9 +24,9 @@ class LSTMContours(nn.Module):
 
         self.lkrelu = nn.LeakyReLU()
 
-        self.bn1 = nn.BatchNorm1d(64) # 2000 -1 (delay for prediction)
+        self.bn1 = nn.BatchNorm1d(64) 
         self.bn2 = nn.BatchNorm1d(256)
-        self.bn3 = nn.BatchNorm1d(256) # 2000 -1 (delay for prediction)
+        self.bn3 = nn.BatchNorm1d(256) 
         self.bn4 = nn.BatchNorm1d(64)
 
 
@@ -43,24 +43,25 @@ class LSTMContours(nn.Module):
         
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
-
         return h_0, c_0
+
+
 
     def forward(self, x):
        
         x = self.lin1(x)
         x = self.lkrelu(x)
 
-        x = x.transpose(x, 1, 2)
+        x = x.transpose(1, 2)
         x = self.bn1(x)
-        x = x.transpose(x, 1, 2)
+        x = x.transpose(1, 2)
 
         x = self.lin2(x)
         x = self.lkrelu(x)
 
-        x = x.transpose(x, 1, 2)
+        x = x.transpose(1, 2)
         x = self.bn2(x)
-        x = x.transpose(x, 1, 2)
+        x = x.transpose(1, 2)
 
         h_0, c_0 = self.initialise_h0_c0(x)
 
@@ -71,78 +72,79 @@ class LSTMContours(nn.Module):
         out = self.fc1(out)
         out = self.lkrelu(out)
 
-        x = x.transpose(x, 1, 2)
+        out = out.transpose(1, 2)
         out = self.bn3(out)
-        x = x.transpose(x, 1, 2)
+        out = out.transpose(1, 2)
 
         out = self.fc2(out)
         out = self.lkrelu(out)
 
-        x = x.transpose(x, 1, 2)
+        out = out.transpose(1, 2)
         out = self.bn4(out)
-        x = x.transpose(x, 1, 2)
+        out = out.transpose(1, 2)
         
         out = self.fc3(out)
 
         return out
+
+
 
     def predict(self, pitch, loudness):
 
         f0 = torch.zeros_like(pitch)
         l0 = torch.zeros_like(loudness)
 
-        x = torch.cat([pitch, loudness, f0, l0], -1)
-
-        x = self.lin1(x)
-        x = self.lkrelu(x)
-
-        x = x.transpose(x, 1, 2)
-        x = self.bn1(x)
-        x = x.transpose(x, 1, 2)
-
-        x = self.lin2(x)
-        x = self.lkrelu(x)
-
-        x = x.transpose(x, 1, 2)
-        x = self.bn2(x)
-        x = x.transpose(x, 1, 2)
-
+        x_in = torch.cat([pitch, loudness, f0, l0], -1)
         
-        h_t, c_t = self.initialise_h0_c0(x)
+        h_t = torch.zeros(self.num_layers, 1, self.hidden_size, device = x_in.device)
+        c_t = torch.zeros(self.num_layers, 1, self.hidden_size, device = x_in.device)
 
-        for i in range(x.size(1)):
+        for i in range(x_in.size(1)):
 
-            print(h_t.shape)
-            print(c_t.shape)
-            print(x[:, i:i+1].shape)
-            
+            x = self.lin1(x_in)
+            x = self.lkrelu(x)
 
+            x = x.transpose(1, 2)
+            x = self.bn1(x)
+            x = x.transpose(1, 2)
+
+            x = self.lin2(x)
+            x = self.lkrelu(x)
+
+            x = x.transpose(1, 2)
+            x = self.bn2(x)
+            x = x.transpose(1, 2)
+        
             pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], (h_t, c_t))
 
 
             pred = self.fc1(pred)
             pred = self.lkrelu(pred)
+            
 
-            x = x.transpose(x, 1, 2)
+            pred = pred.transpose(1, 2)
             pred = self.bn3(pred)
-            x = x.transpose(x, 1, 2)
+            pred = pred.transpose(1, 2)
 
             pred = self.fc2(pred)
             pred = self.lkrelu(pred)
 
-            x = x.transpose(x, 1, 2)
+            pred = pred.transpose(1, 2)
             pred = self.bn4(pred)
-            x = x.transpose(x, 1, 2)
+            pred = pred.transpose(1, 2)
             
             pred = self.fc3(pred)
 
-            f0, l0 = torch.split(pred, 1, 1)
+            
 
-            x[:, i:i+1, 2] = f0
-            x[:, i:i+1, 3] = l0
+            f0, l0 = torch.split(pred, 1, -1)
 
-        
-        e_f0, e_loudness = x[:, :, 2:]
+
+            x_in[:, i:i+1, 2] = f0
+            x_in[:, i:i+1, 3] = l0
+
+
+        e_f0, e_loudness = x_in[:, :, 2:].split(1,-1)
 
         return e_f0, e_loudness
 

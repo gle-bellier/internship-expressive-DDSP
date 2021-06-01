@@ -35,6 +35,8 @@ print('using', device)
 save_path = "results/saved_models/"
 model_name = "LSTM_towards_realistic_midi.pth"
 
+wav_path = "results/saved_samples/"
+
 
 PATH = save_path + model_name 
 model = LSTMContours()
@@ -43,7 +45,7 @@ print(model.parameters)
 
 sc = StandardScaler()
 sampling_rate = 100
-number_of_examples = 50
+number_of_examples = 5
 
 
 
@@ -73,11 +75,8 @@ with torch.no_grad():
 
         audio = ddsp(e_f0, e_loudness).detach().squeeze().numpy()
 
-        print(audio.shape)
-
-
         sampling_rate = 16000
-        filename = "{}-sample{}.wav".format(model_name, i)
+        filename = "{}{}-sample{}.wav".format(wav_path, model_name[:-4], i)
 
         wav.write(filename, sampling_rate, audio.astype(np.int16))
 
