@@ -20,7 +20,7 @@ from sklearn.preprocessing import StandardScaler
 import signal
 
 def save_model():
-    torch.save(model.state_dict(), 'results/saved_models/LSTM_towards_realistic_midi3{}epochs.pt'.format(epoch))
+    torch.save(model.state_dict(), 'results/saved_models/LSTM_towards_realistic_midi{}epochs.pt'.format(epoch))
 
 def keyboardInterruptHandler(signal, frame):
 
@@ -48,7 +48,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 500
+num_epochs = 10000
 learning_rate = 0.001
 
 

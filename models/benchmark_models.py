@@ -22,8 +22,8 @@ class LSTMContoursCE(nn.Module):
         self.lin2 = nn.Linear(64, input_size)
 
         self.lkrelu = nn.LeakyReLU()
-        self.bn = nn.BatchNorm1d(1999) # 2000 -1 (delay for prediction)
-
+        self.bn1 = nn.BatchNorm1d(input_size)
+        self.bn2 = nn.BatchNorm1d(256) 
 
         self.lstm = nn.LSTM(input_size=input_size, 
                             hidden_size=hidden_size,
@@ -53,20 +53,27 @@ class LSTMContoursCE(nn.Module):
         x = self.lin2(x)
         x = self.lkrelu(x)
 
+
+
+        x = x.transpose(1, 2)
         x = self.bn(x)
+        x = x.transpose(1, 2)
 
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
 
         # Propagate input through LSTM
         out, (h_out, _) = self.lstm(x, (h_0, c_0))
-        #out = out.contiguous().view(-1, self.hidden_size)
+
         out = self.lkrelu(out)
 
 
         out = self.fc1(out)
         out = self.lkrelu(out)
+
+        out = out.transpose(1, 2)
         out = self.bn(out)
+        out = out.transpose(1, 2)
 
         out = self.fc2(out)
         out = self.lkrelu(out)
@@ -77,6 +84,8 @@ class LSTMContoursCE(nn.Module):
 
 
     def pitch_cents_to_frequencies(self, pitch, cents):
+
+        # TODO : Sampling from distributions...
     
         gen_freq = torch.tensor(li.midi_to_hz(pitch.detach().numpy())) * torch.pow(2, (cents.detach().numpy()-50)/1200)
         gen_freq = torch.unsqueeze(gen_freq, -1)
@@ -89,32 +98,40 @@ class LSTMContoursCE(nn.Module):
     
         f0 = torch.zeros_like(pitch)
 
-        x = torch.cat([pitch, f0], -1)
+        x_in = torch.cat([pitch, f0], -1)
         
-        x = self.lin1(x)
-        x = self.lkrelu(x)
-        x = self.lin2(x)
-        x = self.lkrelu(x)
-
-        x = self.bn(x)
         
-        h_t, c_t = self.initialise_h0_c0(x)
+        h_t = torch.zeros(self.num_layers, 1, self.hidden_size, device = x_in.device)
+        c_t = torch.zeros(self.num_layers, 1, self.hidden_size, device = x_in.device)
 
-        for i in range(x.size(1)):
+        for i in range(x_in.size(1)):
+
+            x = self.lin1(x_in)
+            x = self.lkrelu(x)
+            x = self.lin2(x)
+            x = self.lkrelu(x)
+
+            x = x.transpose(1, 2)
+            x = self.bn(x)
+            x = x.transpose(1, 2)
+        
 
             pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], h_t, c_t)
 
 
-            out = self.lkrelu(out)
+            pred = self.lkrelu(pred)
 
-            out = self.fc1(out)
-            out = self.lkrelu(out)
-            out = self.bn(out)
+            pred = self.fc1(pred)
+            pred = self.lkrelu(pred)
 
-            out = self.fc2(out)
-            out = self.lkrelu(out)
+            pred = pred.transpose(1, 2)
+            pred = self.bn(pred)
+            pred = pred.transpose(1, 2)
 
-            pitch, cents = torch.split(out, [100,101], dim = -1)
+            pred = self.fc2(pred)
+            pred = self.lkrelu(pred)
+
+            pitch, cents = torch.split(pred, [100,101], dim = -1)
 
 
             f0 = self.pitch_cents_to_frequencies(pitch, cents)
@@ -122,9 +139,9 @@ class LSTMContoursCE(nn.Module):
             x[:, i:i+1, 1] = f0
 
         
-        e_f0, e_loudness = x[:, :, 1:]
+        e_f0 = x[:, :, 1:]
 
-        return e_f0, e_loudness
+        return e_f0
         
 
 
@@ -143,7 +160,8 @@ class LSTMContoursMSE(nn.Module):
         self.lin2 = nn.Linear(64, input_size)
 
         self.lkrelu = nn.LeakyReLU()
-        self.bn = nn.BatchNorm1d(1999) # 2000 -1 (delay for prediction)
+        self.bn1 = nn.BatchNorm1d(input_size)
+        self.bn2 = nn.BatchNorm1d(64) 
 
 
         self.lstm = nn.LSTM(input_size=input_size, 
@@ -169,19 +187,19 @@ class LSTMContoursMSE(nn.Module):
         x = self.lkrelu(x)
         x = self.lin2(x)
         x = self.lkrelu(x)
-        x = self.bn(x)
+        x = self.bn1(x)
 
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
 
         # Propagate input through LSTM
         out, (h_out, _) = self.lstm(x, (h_0, c_0))
-        #out = out.contiguous().view(-1, self.hidden_size)
+
         out = self.lkrelu(out)
 
         out = self.fc1(out)
         out = self.lkrelu(out)
-        out = self.bn(out)
+        out = self.bn2(out)
 
         out = self.fc2(out)
         out = self.lkrelu(out)
@@ -189,45 +207,45 @@ class LSTMContoursMSE(nn.Module):
         return out
 
     
-    def predict(self, pitch, loudness):
+    def predict(self, pitch):
     
         f0 = torch.zeros_like(pitch)
-        l0 = torch.zeros_like(loudness)
 
-        x = torch.cat([pitch, loudness, f0, l0], -1)
+        x_in = torch.cat([pitch, f0], -1)
 
-        x = self.lin1(x)
-        x = self.lkrelu(x)
-        x = self.bn(x)
+        h_t = torch.zeros(self.num_layers, 1, self.hidden_size, device = x_in.device)
+        c_t = torch.zeros(self.num_layers, 1, self.hidden_size, device = x_in.device)
 
-        x = self.lin2(x)
-        x = self.lkrelu(x)
-        x = self.bn(x)
 
-        
-        h_t, c_t = self.initialise_h0_c0(x)
+        for i in range(x_in.size(1)):
 
-        for i in range(x.size(1)):
+            x = self.lin1(x_in)
+            x = self.lkrelu(x)
+
+            x = self.lin2(x)
+            x = self.lkrelu(x)
+
+            x = x.transpose(1, 2)
+            x = self.bn1(x)
+            x = x.transpose(1, 2)
+
 
             pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], h_t, c_t)
 
-
             pred = self.fc1(pred)
             pred = self.lkrelu(pred)
-            pred = self.bn(pred)
+
+            pred = pred.transpose(1, 2)
+            pred = self.bn2(pred)
+            pred = pred.transpose(1, 2)
+
 
             pred = self.fc2(pred)
             pred = self.lkrelu(pred)
-            pred = self.bn(pred)
             
-            pred = self.fc3(pred)
-
-            f0, l0 = torch.split(pred, 1, 1)
-
-            x[:, i:i+1, 2] = f0
-            x[:, i:i+1, 3] = l0
+            x[:, i:i+1, 1] = pred
 
         
-        e_f0, e_loudness = x[:, :, 2:]
+        e_f0 = x[:, :, 1:]
 
-        return e_f0, e_loudness
+        return e_f0
