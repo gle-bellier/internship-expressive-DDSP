@@ -44,7 +44,7 @@ print('using', device)
 writer = SummaryWriter("runs/benchmark/CE")
 
 sc = StandardScaler()
-train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)# sc.fit_transform)
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = sc.fit_transform)
     
 
 

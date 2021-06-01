@@ -44,7 +44,7 @@ print('using', device)
 writer = SummaryWriter("runs/benchmark/MSE")
 
 sc = StandardScaler()
-train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = None)# sc.fit_transform)
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = sc.fit_transform)
     
 
 ### MODEL INSTANCIATION ###
@@ -113,7 +113,6 @@ for epoch in range(num_epochs):
     
     if epoch % 10 == 9:
 
-        print("--- Continuous ---")
         print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_MSE))
         print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_MSE))
 
