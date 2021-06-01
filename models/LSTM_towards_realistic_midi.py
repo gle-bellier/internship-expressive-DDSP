@@ -75,7 +75,7 @@ class LSTMContours(nn.Module):
 
         context = None
 
-        for i in range(x_in.size(1)):
+        for i in range(x_in.size(1) - 1):
             x = x_in[:, i:i + 1]
 
             x = self.pre_lstm(x)
@@ -86,8 +86,8 @@ class LSTMContours(nn.Module):
 
             f0, l0 = torch.split(pred, 1, -1)
 
-            x_in[:, i:i + 1, 2] = f0
-            x_in[:, i:i + 1, 3] = l0
+            x_in[:, i + 1:i + 2, 2] = f0
+            x_in[:, i + 1:i + 2, 3] = l0
 
         e_f0, e_loudness = x_in[:, :, 2:].split(1, -1)
 
