@@ -75,7 +75,7 @@ class LSTMContours(nn.Module):
 
         context = None
 
-        for i in range(x_in.size(1)):
+        for i in range(x_in.size(1)-1):
             x = x_in[:, i:i + 1]
 
             x = self.pre_lstm(x)
