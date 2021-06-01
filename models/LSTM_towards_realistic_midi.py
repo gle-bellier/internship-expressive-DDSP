@@ -73,15 +73,14 @@ class LSTMContours(nn.Module):
 
         x_in = torch.cat([pitch, loudness, f0, l0], -1)
 
-        h_t = None
-        c_t = None
+        context = None
 
         for i in range(x_in.size(1)):
             x = x_in[:, i:i + 1]
 
             x = self.pre_lstm(x)
 
-            pred, (h_t, c_t) = self.lstm(x, (h_t, c_t))
+            pred, context = self.lstm(x, context)
 
             pred = self.post_lstm(pred)
 
