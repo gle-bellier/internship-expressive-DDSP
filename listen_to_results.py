@@ -86,22 +86,34 @@ with torch.no_grad():
         
 
 
-        u_f0_norm = torch.squeeze(u_f0[:,1:], -1)
+        u_f0_norm = torch.squeeze(u_f0[:,1:], 0)
         u_f0_norm = torch.tensor(sc_pitch.fit_transform(u_f0_norm)).float()
-        u_f0_norm = torch.unsqueeze(u_f0_norm, -1)
+        u_f0_norm = torch.unsqueeze(u_f0_norm, 0)
 
-        u_loudness_norm = torch.squeeze(u_loudness[:,1:], -1)
+        u_loudness_norm = torch.squeeze(u_loudness[:,1:], 0)
         u_loudness_norm = torch.tensor(sc_loudness.fit_transform(u_loudness_norm)).float()
-        u_loudness_norm = torch.unsqueeze(u_loudness_norm, -1)
+        u_loudness_norm = torch.unsqueeze(u_loudness_norm, 0)
+
+
+        print(u_f0_norm.shape)
+
+
+        plt.plot(u_f0_norm.squeeze(), label="midi")
+        plt.legend()
+        plt.show()
+
+        plt.plot(u_loudness_norm.squeeze(), label="midi")
+        plt.legend()
+        plt.show()
 
 
         out_f0, out_loudness = model.predict(u_f0_norm, u_loudness_norm)
 
 
-        out_f0 = torch.squeeze(out_f0)
+        out_f0 = torch.squeeze(out_f0, 0)
         out_f0 = torch.tensor(sc_pitch.inverse_transform(out_f0))
     
-        out_loudness = torch.squeeze(out_loudness)
+        out_loudness = torch.squeeze(out_loudness, 0)
         out_loudness = torch.tensor(sc_loudness.inverse_transform(out_loudness))
 
 
@@ -119,7 +131,7 @@ with torch.no_grad():
         out_f0 = out_f0.unsqueeze(0).unsqueeze(-1)
         out_loudness = out_loudness.unsqueeze(0).unsqueeze(-1)
 
-        
+
         audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
 
         plt.plot(audio)
