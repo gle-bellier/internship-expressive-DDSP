@@ -15,6 +15,12 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 
 from get_datasets import get_datasets
+from models.benchmark_models import *
+from models.LSTM_towards_realistic_midi import LSTMContours
+from models.BLSTM_Control_synth_app import BLSTMContours
+
+
+
 
 
 if torch.cuda.is_available():
@@ -31,7 +37,7 @@ model_name = "LSTM_towards_realistic_midi.pth"
 
 
 PATH = save_path + model_name 
-model = torch.load(PATH, map_location=device)
+model = LSTMContours()
 print(model.parameters)
 
 
@@ -62,7 +68,7 @@ with torch.no_grad():
         
 
 
-        e_f0, e_loudness = model.predict(u_f0, u_loudness)
+        e_f0, e_loudness = model.predict(u_f0[:, :-1], u_loudness[:, :-1])
 
 
         audio = ddsp(e_f0, e_loudness).detach().squeeze().numpy()

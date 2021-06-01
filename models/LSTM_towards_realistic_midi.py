@@ -23,7 +23,11 @@ class LSTMContours(nn.Module):
         self.lin2 = nn.Linear(64, 256)
 
         self.lkrelu = nn.LeakyReLU()
-        self.bn = nn.BatchNorm1d(1999) # 2000 -1 (delay for prediction)
+
+        self.bn1 = nn.BatchNorm1d(64) # 2000 -1 (delay for prediction)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.bn3 = nn.BatchNorm1d(256) # 2000 -1 (delay for prediction)
+        self.bn4 = nn.BatchNorm1d(64)
 
 
         self.lstm = nn.LSTM(input_size=input_size, 
@@ -46,11 +50,17 @@ class LSTMContours(nn.Module):
        
         x = self.lin1(x)
         x = self.lkrelu(x)
-        x = self.bn(x)
+
+        x = x.transpose(x, 1, 2)
+        x = self.bn1(x)
+        x = x.transpose(x, 1, 2)
 
         x = self.lin2(x)
         x = self.lkrelu(x)
-        x = self.bn(x)
+
+        x = x.transpose(x, 1, 2)
+        x = self.bn2(x)
+        x = x.transpose(x, 1, 2)
 
         h_0, c_0 = self.initialise_h0_c0(x)
 
@@ -60,11 +70,17 @@ class LSTMContours(nn.Module):
         
         out = self.fc1(out)
         out = self.lkrelu(out)
-        out = self.bn(out)
+
+        x = x.transpose(x, 1, 2)
+        out = self.bn3(out)
+        x = x.transpose(x, 1, 2)
 
         out = self.fc2(out)
         out = self.lkrelu(out)
-        out = self.bn(out)
+
+        x = x.transpose(x, 1, 2)
+        out = self.bn4(out)
+        x = x.transpose(x, 1, 2)
         
         out = self.fc3(out)
 
@@ -79,27 +95,44 @@ class LSTMContours(nn.Module):
 
         x = self.lin1(x)
         x = self.lkrelu(x)
-        x = self.bn(x)
+
+        x = x.transpose(x, 1, 2)
+        x = self.bn1(x)
+        x = x.transpose(x, 1, 2)
 
         x = self.lin2(x)
         x = self.lkrelu(x)
-        x = self.bn(x)
+
+        x = x.transpose(x, 1, 2)
+        x = self.bn2(x)
+        x = x.transpose(x, 1, 2)
 
         
         h_t, c_t = self.initialise_h0_c0(x)
 
         for i in range(x.size(1)):
 
-            pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], h_t, c_t)
+            print(h_t.shape)
+            print(c_t.shape)
+            print(x[:, i:i+1].shape)
+            
+
+            pred, (h_t, c_t)  = self.lstm(x[:, i:i+1], (h_t, c_t))
 
 
             pred = self.fc1(pred)
             pred = self.lkrelu(pred)
-            pred = self.bn(pred)
+
+            x = x.transpose(x, 1, 2)
+            pred = self.bn3(pred)
+            x = x.transpose(x, 1, 2)
 
             pred = self.fc2(pred)
             pred = self.lkrelu(pred)
-            pred = self.bn(pred)
+
+            x = x.transpose(x, 1, 2)
+            pred = self.bn4(pred)
+            x = x.transpose(x, 1, 2)
             
             pred = self.fc3(pred)
 
