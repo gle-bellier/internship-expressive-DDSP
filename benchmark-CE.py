@@ -42,9 +42,7 @@ print('using', device)
 
 
 writer = SummaryWriter("runs/benchmark/CE")
-
-sc = StandardScaler()
-train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7, transform = sc.fit_transform)
+train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7)
     
 
 
@@ -86,6 +84,19 @@ def pitch_cents_to_frequencies(pitch, cents):
     return gen_freq
 
 
+
+def std_transform(v):
+    std = torch.std(v, dim=1, keepdim=True)
+    m = torch.mean(v, dim=1, keepdim= True)
+
+    return (v - m) / std, m, std
+    
+
+def std_inv_transform(v, m , std):
+    return v * std + m
+
+
+
 ### MODEL INSTANCIATION ###
 
 
@@ -99,6 +110,8 @@ pitch_size, cents_size = 100, 101
 model_CE = LSTMContoursCE().to(device)
 print("Model Classification : ")
 print(model_CE.parameters)
+
+
 
 
 criterion_CE = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
@@ -116,27 +129,16 @@ for epoch in range(num_epochs):
 
         u_f0 = torch.Tensor(u_f0.float())
         e_f0 = torch.Tensor(e_f0.float())
+        target_frequencies = e_f0[:,1:]
 
 
+        u_f0 = std_transform(u_f0)[0]
+        e_f0 = std_transform(e_f0)[0]
 
-
-        u_f0_in = torch.squeeze(u_f0[:,1:])
-        u_f0_in = torch.tensor(sc.fit_transform(u_f0_in)).float()
-        u_f0_in = torch.unsqueeze(u_f0_in, -1)
-        e_f0_in = torch.squeeze(e_f0[:,1:])
-        e_f0_in = torch.tensor(sc.fit_transform(e_f0_in)).float()
-        e_f0_in = torch.unsqueeze(e_f0_in, -1)
-
-
-        model_input = torch.cat([u_f0_in, e_f0_in], -1)
-
+        model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
         out_pitch, out_cents = model_CE(model_input.to(device))
 
         optimizer_CE.zero_grad()
-
-        target_frequencies = torch.squeeze(e_f0[:,1:])
-        target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
-        target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
 
@@ -167,14 +169,14 @@ for epoch in range(num_epochs):
 
             u_f0 = torch.Tensor(u_f0.float())
             e_f0 = torch.Tensor(e_f0.float())
+            target_frequencies = e_f0[:,1:]
+
+
+            u_f0 = std_transform(u_f0)[0]
+            e_f0 = std_transform(e_f0)[0]
 
             model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
-
             out_pitch, out_cents = model_CE(model_input.to(device))
-
-            target_frequencies = torch.squeeze(e_f0[:,1:])
-            target_frequencies = torch.tensor(sc.inverse_transform(target_frequencies))
-            target_frequencies = torch.unsqueeze(target_frequencies, -1)
 
             ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
 
@@ -186,8 +188,6 @@ for epoch in range(num_epochs):
             ground_truth_pitch = ground_truth_pitch.long().to(device)
             ground_truth_cents = ground_truth_cents.long().to(device)
 
-
-
             # obtain the loss function
             test_loss_pitch = criterion_CE(out_pitch, ground_truth_pitch)
             test_loss_cents = criterion_CE(out_cents, ground_truth_cents)
@@ -196,7 +196,6 @@ for epoch in range(num_epochs):
 
     
     if epoch % 10 == 9:
-        print("--- Classification ---")
         print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_CE))
         print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_CE))
 

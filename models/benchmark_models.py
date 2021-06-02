@@ -69,7 +69,7 @@ class LSTMContoursCE(nn.Module):
        
         x = self.pre_lstm(x)
         out = self.lstm(x)[0]
-        x = self.post_lstm(x)
+        out = self.post_lstm(out)
 
         pitch, cents = torch.split(out, [100,101], dim = -1)
 
