@@ -4,6 +4,7 @@ import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
+from torch.distributions.categorical import Categorical
 
 import numpy as np
 import librosa as li
@@ -64,16 +65,6 @@ class LSTMContoursCE(nn.Module):
 
 
 
-
-    def initialise_h0_c0(self, x):
-            
-        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
-        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, device = x.device)
-
-        return h_0, c_0
-
-
-
     def forward(self, x):
        
         x = self.pre_lstm(x)
@@ -87,9 +78,15 @@ class LSTMContoursCE(nn.Module):
 
     def pitch_cents_to_frequencies(self, pitch, cents):
 
-        # TODO : Sampling from distributions...
+
+        pitch_dis = Categorical(pitch)
+        cents_dis = Categorical(cents)
+
+        sampled_pitch  = pitch_dis.sample().unsqueeze(-1)
+        sampled_cents  = cents_dis.sample().unsqueeze(-1)
+        
     
-        gen_freq = torch.tensor(li.midi_to_hz(pitch.detach().numpy())) * torch.pow(2, (cents.detach().numpy()-50)/1200)
+        gen_freq = torch.tensor(li.midi_to_hz(sampled_pitch.detach().numpy())) * torch.pow(2, (sampled_cents.detach().numpy()-50)/1200)
         gen_freq = torch.unsqueeze(gen_freq, -1)
 
         return gen_freq

@@ -50,7 +50,7 @@ train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", 
 ### MODEL INSTANCIATION ###
 
 
-num_epochs = 2000
+num_epochs = 4000
 learning_rate = 0.001
 
 
@@ -120,6 +120,6 @@ for epoch in range(num_epochs):
         writer.add_scalar('test MSEloss', test_loss_MSE, epoch+1)
 
 
-
+torch.save(model_MSE.state_dict(), 'results/saved_models/benchmark-MSE{}epochs.pt'.format(epoch))
 writer.flush()
 writer.close()

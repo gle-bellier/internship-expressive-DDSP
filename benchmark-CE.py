@@ -204,7 +204,7 @@ for epoch in range(num_epochs):
         writer.add_scalar('test CEloss', test_loss_CE, epoch+1)
 
 
-
+torch.save(model_CE.state_dict(), 'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
 
 writer.flush()
 writer.close()
