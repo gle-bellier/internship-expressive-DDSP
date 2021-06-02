@@ -19,6 +19,15 @@ from models.benchmark_models import *
 from models.LSTM_towards_realistic_midi import LSTMContours
 
 
+def std_transform(v):
+    std = torch.std(v, dim=1, keepdim=True)
+    m = torch.mean(v, dim=1, keepdim= True)
+
+    return (v - m) / std, m, std
+    
+
+def std_inv_transform(v, m , std):
+    return v * std + m
 
 
 
@@ -31,8 +40,9 @@ print('using', device)
 
 
 
+
 save_path = "results/saved_models/"
-model_name = "LSTM_towards_realistic_midi6613epochs.pt"
+model_name = "LSTM_towards_realistic_midi6346epochs.pt"
 wav_path = "results/saved_samples/"
 
 model = LSTMContours().to(device)
@@ -40,18 +50,10 @@ model.load_state_dict(torch.load(save_path + model_name, map_location = torch.de
 model.eval()
 
 
-print(model.parameters)
-
-
-
 
 PATH = save_path + model_name 
 model = LSTMContours()
 print(model.parameters)
-
-
-sc_pitch = StandardScaler()
-sc_loudness = StandardScaler()
 
 
 sampling_rate = 100
@@ -79,43 +81,27 @@ with torch.no_grad():
 
         plt.plot(u_f0.squeeze(), label="midi")
         plt.plot(e_f0.squeeze(), label="perf")
+        plt.legend()
         plt.show()
 
         plt.plot(u_loudness.squeeze(), label="midi")
         plt.plot(e_loudness.squeeze(), label="perf")
+        plt.legend()
         plt.show()
         
 
 
-        u_f0_norm = torch.squeeze(u_f0[:,1:], 0)
-        u_f0_norm = torch.tensor(sc_pitch.fit_transform(u_f0_norm)).float()
-        u_f0_norm = torch.unsqueeze(u_f0_norm, 0)
+        u_f0_norm, u_f0_mean, u_f0_std = std_transform(u_f0[:,1:])
+        u_loudness_norm, u_loudness_mean, u_loudness_std = std_transform(u_loudness[:,1:])
 
-        u_loudness_norm = torch.squeeze(u_loudness[:,1:], 0)
-        u_loudness_norm = torch.tensor(sc_loudness.fit_transform(u_loudness_norm)).float()
-        u_loudness_norm = torch.unsqueeze(u_loudness_norm, 0)
-
-
-        print(u_f0_norm.shape)
-
-
-        plt.plot(u_f0_norm.squeeze(), label="midi")
-        plt.legend()
-        plt.show()
-
-        plt.plot(u_loudness_norm.squeeze(), label="midi")
-        plt.legend()
-        plt.show()
-
+        u_f0_norm = u_f0_norm.float()
+        u_loudness_norm = u_loudness_norm.float()
 
         out_f0, out_loudness = model.predict(u_f0_norm, u_loudness_norm)
 
 
-        out_f0 = torch.squeeze(out_f0, 0)
-        out_f0 = torch.tensor(sc_pitch.inverse_transform(out_f0))
-    
-        out_loudness = torch.squeeze(out_loudness, 0)
-        out_loudness = torch.tensor(sc_loudness.inverse_transform(out_loudness))
+        out_f0 = std_inv_transform(out_f0, u_f0_mean, u_f0_std).float()
+        out_loudness = std_inv_transform(out_loudness, u_loudness_mean, u_loudness_std).float()
 
 
         plt.plot(u_f0.squeeze(), label="midi")
@@ -128,12 +114,6 @@ with torch.no_grad():
         plt.legend()
         plt.show()
         
-
-        out_f0 = out_f0.unsqueeze(0).unsqueeze(-1)
-        out_loudness = out_loudness.unsqueeze(0).unsqueeze(-1)
-
-
-
 
         model_audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
         filename = "{}{}-sample{}.wav".format(wav_path, model_name[:-3], i)
