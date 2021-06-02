@@ -9,7 +9,6 @@ from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
 from models.benchmark_models import LSTMContoursCE
 
-
 import torch
 import torch.utils.data
 from torch import nn, optim
@@ -17,20 +16,22 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
 
-
 from sklearn.preprocessing import StandardScaler
 import signal
 
+
 def save_model():
-    torch.save(model_CE.state_dict(), 'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
+    torch.save(model_CE.state_dict(),
+               'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
+
 
 def keyboardInterruptHandler(signal, frame):
 
     save_model()
     exit(0)
 
-signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
+signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
@@ -39,29 +40,28 @@ else:
 
 print('using', device)
 
-
-
 writer = SummaryWriter("runs/benchmark/CE")
-train_loader, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = 100, sample_duration = 20, batch_size = 16, ratio = 0.7)
-    
+train_loader, test_loader = get_datasets(dataset_file="dataset/contours.csv",
+                                         sampling_rate=100,
+                                         sample_duration=20,
+                                         batch_size=16,
+                                         ratio=0.7)
 
 
 def frequencies_to_pitch_cents(frequencies, pitch_size):
-    
-    # one hot vectors : 
+
+    # one hot vectors :
     pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1))
     cents_array = torch.zeros(frequencies.size(0), frequencies.size(1))
-    
+
     midi_pitch = torch.tensor(li.hz_to_midi(frequencies))
     midi_pitch = torch.round(midi_pitch).long()
 
-
     #print("Min =  {};  Max =  {} frequencies".format(li.midi_to_hz(0), li.midi_to_hz(pitch_size-1)))
-    midi_pitch_clip = torch.clip(midi_pitch, min = 0, max = pitch_size-1)
+    midi_pitch_clip = torch.clip(midi_pitch, min=0, max=pitch_size - 1)
     round_freq = torch.tensor(li.midi_to_hz(midi_pitch))
-    
-    cents = (1200 * torch.log2(frequencies / round_freq)).long()
 
+    cents = (1200 * torch.log2(frequencies / round_freq)).long()
 
     for i in range(0, pitch_array.size(0)):
         for j in range(0, pitch_array.size(1)):
@@ -71,52 +71,43 @@ def frequencies_to_pitch_cents(frequencies, pitch_size):
         for j in range(0, cents_array.size(1)):
             cents_array[i, j] = cents[i, j, 0] + 50
 
-
     return pitch_array, cents_array
-
 
 
 def pitch_cents_to_frequencies(pitch, cents):
 
-    gen_freq = torch.tensor(li.midi_to_hz(pitch)) * torch.pow(2, (cents-50)/1200)
+    gen_freq = torch.tensor(li.midi_to_hz(pitch)) * torch.pow(
+        2, (cents - 50) / 1200)
     gen_freq = torch.unsqueeze(gen_freq, -1)
 
     return gen_freq
 
 
-
 def std_transform(v):
     std = torch.std(v, dim=1, keepdim=True)
-    m = torch.mean(v, dim=1, keepdim= True)
+    m = torch.mean(v, dim=1, keepdim=True)
 
     return (v - m) / std, m, std
-    
 
-def std_inv_transform(v, m , std):
+
+def std_inv_transform(v, m, std):
     return v * std + m
-
 
 
 ### MODEL INSTANCIATION ###
 
-
 num_epochs = 1000
-learning_rate = 0.01
-
+learning_rate = 0.0001
 
 pitch_size, cents_size = 100, 101
-
 
 model_CE = LSTMContoursCE().to(device)
 print("Model Classification : ")
 print(model_CE.parameters)
 
-
-
-
-criterion_CE = torch.nn.CrossEntropyLoss()    # Cross Entropy Loss for Classification tasks
+criterion_CE = torch.nn.CrossEntropyLoss(
+)  # Cross Entropy Loss for Classification tasks
 optimizer_CE = torch.optim.Adam(model_CE.parameters(), lr=learning_rate)
-
 
 # Train the model
 for epoch in range(num_epochs):
@@ -129,18 +120,18 @@ for epoch in range(num_epochs):
 
         u_f0 = torch.Tensor(u_f0.float())
         e_f0 = torch.Tensor(e_f0.float())
-        target_frequencies = e_f0[:,1:]
-
+        target_frequencies = e_f0[:, 1:]
 
         u_f0 = std_transform(u_f0)[0]
         e_f0 = std_transform(e_f0)[0]
 
-        model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
+        model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1)
         out_pitch, out_cents = model_CE(model_input.to(device))
 
         optimizer_CE.zero_grad()
 
-        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
+        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
+            target_frequencies, pitch_size)
 
         out_pitch = out_pitch.permute(0, 2, 1).to(device)
         out_cents = out_cents.permute(0, 2, 1).to(device)
@@ -148,18 +139,15 @@ for epoch in range(num_epochs):
         ground_truth_pitch = ground_truth_pitch.long().to(device)
         ground_truth_cents = ground_truth_cents.long().to(device)
 
-
         # obtain the loss function
         train_loss_pitch = criterion_CE(out_pitch, ground_truth_pitch)
         train_loss_cents = criterion_CE(out_cents, ground_truth_cents)
         train_loss_CE = train_loss_pitch + train_loss_cents
-        
+
         train_loss_CE.backward()
         optimizer_CE.step()
 
-
-
-    # Compute validation losses : 
+    # Compute validation losses :
 
     model_CE.eval()
     with torch.no_grad():
@@ -169,16 +157,16 @@ for epoch in range(num_epochs):
 
             u_f0 = torch.Tensor(u_f0.float())
             e_f0 = torch.Tensor(e_f0.float())
-            target_frequencies = e_f0[:,1:]
-
+            target_frequencies = e_f0[:, 1:]
 
             u_f0 = std_transform(u_f0)[0]
             e_f0 = std_transform(e_f0)[0]
 
-            model_input = torch.cat([u_f0[:,1:], e_f0[:,:-1]], -1)
+            model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1)
             out_pitch, out_cents = model_CE(model_input.to(device))
 
-            ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(target_frequencies, pitch_size)
+            ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
+                target_frequencies, pitch_size)
 
             # permute dimension for cross entropy loss function :
 
@@ -194,20 +182,15 @@ for epoch in range(num_epochs):
 
             test_loss_CE = test_loss_pitch + test_loss_cents
 
-    
     if epoch % 10 == 9:
-        print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss_CE))
-        print("Epoch: %d, test loss: %1.5f" % (epoch+1, test_loss_CE))
+        print("Epoch: %d, training loss: %1.5f" % (epoch + 1, train_loss_CE))
+        print("Epoch: %d, test loss: %1.5f" % (epoch + 1, test_loss_CE))
 
-        writer.add_scalar('training  CEloss', train_loss_CE, epoch+1)
-        writer.add_scalar('test CEloss', test_loss_CE, epoch+1)
+        writer.add_scalar('training  CEloss', train_loss_CE, epoch + 1)
+        writer.add_scalar('test CEloss', test_loss_CE, epoch + 1)
 
-
-torch.save(model_CE.state_dict(), 'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
+torch.save(model_CE.state_dict(),
+           'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
 
 writer.flush()
 writer.close()
-
-
-
-
