@@ -17,7 +17,7 @@ class NormalizedRectifiedLinear(nn.Module):
         self.linear = nn.Linear(input_size, output_size)
 
         if norm:
-            self.norm = nn.BatchNorm1d(output_size)
+            self.norm = nn.LayerNorm(output_size)
         else:
             self.norm = None
 
@@ -28,9 +28,9 @@ class NormalizedRectifiedLinear(nn.Module):
         if self.activation:
             x = nn.functional.leaky_relu(x)
         if self.norm is not None:
-            x = x.transpose(1, 2)
+            # x = x.transpose(1, 2)
             x = self.norm(x)
-            x = x.transpose(1, 2)
+            # x = x.transpose(1, 2)
 
         return x
 

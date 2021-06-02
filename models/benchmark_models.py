@@ -165,3 +165,52 @@ class LSTMContoursMSE(nn.Module):
         e_f0 = x[:, :, 1:]
 
         return e_f0
+
+
+class LSTMContoursFullCat(nn.Module):
+    def __init__(self, input_size=512, hidden_size=512, num_layers=1):
+        super(LSTMContoursFullCat, self).__init__()
+
+        self.num_layers = num_layers
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+
+        self.pre_lstm = nn.Sequential(
+            NormalizedRectifiedLinear(201, 256),
+            NormalizedRectifiedLinear(256, input_size),
+        )
+
+        self.lstm = nn.LSTM(input_size=input_size,
+                            hidden_size=hidden_size,
+                            num_layers=num_layers,
+                            batch_first=True)
+
+        self.post_lstm = nn.Sequential(
+            NormalizedRectifiedLinear(hidden_size, 256),
+            NormalizedRectifiedLinear(256, 201),
+        )
+
+    def forward(self, x):
+
+        x = self.pre_lstm(x)
+        out = self.lstm(x)[0]
+        out = self.post_lstm(out)
+
+        pitch, cents = torch.split(out, [100, 101], dim=-1)
+
+        return pitch, cents
+
+    def pitch_cents_to_frequencies(self, pitch, cents):
+
+        pitch_dis = Categorical(pitch)
+        cents_dis = Categorical(cents)
+
+        sampled_pitch = pitch_dis.sample().unsqueeze(-1)
+        sampled_cents = cents_dis.sample().unsqueeze(-1)
+
+        gen_freq = torch.tensor(li.midi_to_hz(
+            sampled_pitch.detach().numpy())) * torch.pow(
+                2, (sampled_cents.detach().numpy() - 50) / 1200)
+        gen_freq = torch.unsqueeze(gen_freq, -1)
+
+        return gen_freq

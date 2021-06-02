@@ -97,7 +97,7 @@ def std_inv_transform(v, m, std):
 ### MODEL INSTANCIATION ###
 
 num_epochs = 1000
-learning_rate = 0.0001
+learning_rate = 0.00005
 
 pitch_size, cents_size = 100, 101
 
