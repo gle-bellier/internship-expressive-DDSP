@@ -32,7 +32,7 @@ print('using', device)
 
 
 save_path = "results/saved_models/"
-model_name = "LSTM_towards_realistic_midi_withpred.pt"
+model_name = "LSTM_towards_realistic_midi6613epochs.pt"
 wav_path = "results/saved_samples/"
 
 model = LSTMContours().to(device)
@@ -56,6 +56,7 @@ sc_loudness = StandardScaler()
 
 sampling_rate = 100
 number_of_examples = 1
+RESYNTH = False
 
 
 
@@ -132,18 +133,15 @@ with torch.no_grad():
         out_loudness = out_loudness.unsqueeze(0).unsqueeze(-1)
 
 
-        audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
-
-        plt.plot(audio)
-        plt.show()
-    
-        print(audio)
 
 
-
-
-        sampling_rate = 16000
+        model_audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
         filename = "{}{}-sample{}.wav".format(wav_path, model_name[:-3], i)
+        write(filename, 16000, model_audio)
 
-        write(filename, sampling_rate, audio)
+        if RESYNTH:
+            resynth_audio = ddsp(e_f0, e_loudness).detach().squeeze().numpy()
+            filename = "{}{}-sample{}-resynth.wav".format(wav_path, model_name[:-3], i)
+            write(filename, 16000, model_audio)
+
 
