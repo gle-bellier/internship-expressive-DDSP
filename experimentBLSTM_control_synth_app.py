@@ -134,6 +134,7 @@ for epoch in range(num_epochs):
 
 
 
+
 torch.save(model.state_dict(), 'results/saved_models/LSTM_towards_realistic_midi.pt')
 
 
