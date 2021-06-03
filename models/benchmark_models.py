@@ -85,7 +85,9 @@ class LSTMContoursCE(nn.Module):
 
         gen_freq = torch.tensor(li.midi_to_hz(
             sampled_pitch.detach().numpy())) * torch.pow(
-                2, (sampled_cents.detach().numpy() - 50) / 1200)
+                torch.ones_like(sampled_cents) * 2,
+                (sampled_cents - 50) / 1200)
+
         gen_freq = torch.unsqueeze(gen_freq, -1)
 
         return gen_freq
@@ -107,11 +109,15 @@ class LSTMContoursCE(nn.Module):
             pred = self.post_lstm(pred)
 
             pitch, cents = torch.split(pred, [100, 101], dim=-1)
+
+            pitch = torch.softmax(pitch, dim=-1)
+            cents = torch.softmax(cents, dim=-1)
+
             f0 = self.pitch_cents_to_frequencies(pitch, cents)
 
-            x[:, i + 1:i + 2, 1] = f0
+            x_in[:, i + 1:i + 2, 1] = f0
 
-        e_f0 = x[:, :, 1:]
+        e_f0 = x_in[:, :, 1:]
 
         return e_f0
 
@@ -149,6 +155,7 @@ class LSTMContoursMSE(nn.Module):
     def predict(self, pitch):
 
         f0 = torch.zeros_like(pitch)
+
         x_in = torch.cat([pitch, f0], -1)
 
         context = None
@@ -160,9 +167,9 @@ class LSTMContoursMSE(nn.Module):
             pred, context = self.lstm(x, context)
             pred = self.post_lstm(pred)
 
-            x[:, i + 1:i + 2, 1] = pred
+            x_in[:, i + 1:i + 2, 1] = pred
 
-        e_f0 = x[:, :, 1:]
+        e_f0 = x_in[:, :, 1:]
 
         return e_f0
 
