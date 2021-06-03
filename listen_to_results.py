@@ -50,7 +50,7 @@ print(model.parameters)
 
 sampling_rate = 100
 number_of_examples = 5
-RESYNTH = False
+RESYNTH = True
 
 _, test_loader = get_datasets(dataset_file="dataset/contours.csv",
                               sampling_rate=sampling_rate,
@@ -104,7 +104,8 @@ with torch.no_grad():
         write(filename, 16000, model_audio)
 
         if RESYNTH:
-            resynth_audio = ddsp(e_f0, e_loudness).detach().squeeze().numpy()
+            resynth_audio = ddsp(
+                e_f0.float(), e_loudness.float()).detach().squeeze().numpy()
             filename = "{}{}-sample{}-resynth.wav".format(
                 wav_path, model_name[:-3], i)
             write(filename, 16000, model_audio)
