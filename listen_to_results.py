@@ -90,12 +90,15 @@ with torch.no_grad():
         plt.plot(u_f0.squeeze(), label="midi")
         plt.plot(e_f0.squeeze(), label="perf")
         plt.plot(out_f0.squeeze(), label="model")
+        plt.title("{}{}-sample{} - Pitch".format(wav_path, model_name[:-3], i))
         plt.legend()
         plt.show()
 
         plt.plot(u_loudness.squeeze(), label="midi")
         plt.plot(e_loudness.squeeze(), label="perf")
         plt.plot(out_loudness.squeeze(), label="model")
+        plt.title("{}{}-sample{} - Loudness".format(wav_path, model_name[:-3],
+                                                    i))
         plt.legend()
         plt.show()
 
