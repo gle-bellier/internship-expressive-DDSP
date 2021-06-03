@@ -40,7 +40,7 @@ else:
 
 print('using', device)
 
-writer = SummaryWriter("runs/benchmark/CE")
+writer = SummaryWriter("runs/benchmark/CElong")
 train_loader, test_loader = get_datasets(dataset_file="dataset/contours.csv",
                                          sampling_rate=100,
                                          sample_duration=20,
@@ -96,7 +96,7 @@ def std_inv_transform(v, m, std):
 
 ### MODEL INSTANCIATION ###
 
-num_epochs = 1000
+num_epochs = 10000
 learning_rate = 0.00005
 
 pitch_size, cents_size = 100, 101
