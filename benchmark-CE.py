@@ -84,8 +84,8 @@ def pitch_cents_to_frequencies(pitch, cents):
 
 
 def std_transform(v):
-    std = torch.std(v, dim=1, keepdim=True)
-    m = torch.mean(v, dim=1, keepdim=True)
+    std = torch.std(v, dim=(1, 2), keepdim=True)
+    m = torch.mean(v, dim=(1, 2), keepdim=True)
 
     return (v - m) / std, m, std
 
@@ -98,6 +98,8 @@ def std_inv_transform(v, m, std):
 
 num_epochs = 1000
 learning_rate = 0.00005
+
+loss_ratio = 0.1  # ratio between loss for pitches and loss for cents
 
 pitch_size, cents_size = 100, 101
 
@@ -122,10 +124,9 @@ for epoch in range(num_epochs):
         e_f0 = torch.Tensor(e_f0.float())
         target_frequencies = e_f0[:, 1:]
 
-        u_f0 = std_transform(u_f0)[0]
-        e_f0 = std_transform(e_f0)[0]
-
         model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1)
+        model_input = std_transform(model_input)[0]
+
         out_pitch, out_cents = model_CE(model_input.to(device))
 
         optimizer_CE.zero_grad()
@@ -142,7 +143,7 @@ for epoch in range(num_epochs):
         # obtain the loss function
         train_loss_pitch = criterion_CE(out_pitch, ground_truth_pitch)
         train_loss_cents = criterion_CE(out_cents, ground_truth_cents)
-        train_loss_CE = train_loss_pitch + train_loss_cents
+        train_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
 
         train_loss_CE.backward()
         optimizer_CE.step()
@@ -159,10 +160,9 @@ for epoch in range(num_epochs):
             e_f0 = torch.Tensor(e_f0.float())
             target_frequencies = e_f0[:, 1:]
 
-            u_f0 = std_transform(u_f0)[0]
-            e_f0 = std_transform(e_f0)[0]
-
             model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1)
+            model_input = std_transform(model_input)[0]
+
             out_pitch, out_cents = model_CE(model_input.to(device))
 
             ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
@@ -180,7 +180,7 @@ for epoch in range(num_epochs):
             test_loss_pitch = criterion_CE(out_pitch, ground_truth_pitch)
             test_loss_cents = criterion_CE(out_cents, ground_truth_cents)
 
-            test_loss_CE = test_loss_pitch + test_loss_cents
+            test_loss_CE = test_loss_pitch + test_loss_cents * loss_ratio
 
     if epoch % 10 == 9:
         print("Epoch: %d, training loss: %1.5f" % (epoch + 1, train_loss_CE))

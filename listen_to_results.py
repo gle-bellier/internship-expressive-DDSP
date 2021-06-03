@@ -46,7 +46,6 @@ model.load_state_dict(
 model.eval()
 
 PATH = save_path + model_name
-model = LSTMContours()
 print(model.parameters)
 
 sampling_rate = 100
@@ -75,14 +74,18 @@ with torch.no_grad():
         u_loudness_norm, u_loudness_mean, u_loudness_std = std_transform(
             u_loudness[:, 1:])
 
+        e_f0_norm, e_f0_mean, e_f0_std = std_transform(e_f0[:, 1:])
+        e_loudness_norm, e_loudness_mean, e_loudness_std = std_transform(
+            e_loudness[:, 1:])
+
         u_f0_norm = u_f0_norm.float()
         u_loudness_norm = u_loudness_norm.float()
 
         out_f0, out_loudness = model.predict(u_f0_norm, u_loudness_norm)
 
-        out_f0 = std_inv_transform(out_f0, u_f0_mean, u_f0_std).float()
-        out_loudness = std_inv_transform(out_loudness, u_loudness_mean,
-                                         u_loudness_std).float()
+        out_f0 = std_inv_transform(out_f0, e_f0_mean, e_f0_std).float()
+        out_loudness = std_inv_transform(out_loudness, e_loudness_mean,
+                                         e_loudness_std).float()
 
         plt.plot(u_f0.squeeze(), label="midi")
         plt.plot(e_f0.squeeze(), label="perf")
