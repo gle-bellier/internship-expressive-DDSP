@@ -29,10 +29,10 @@ def std_inv_transform(v, m, std):
     return v * std + m
 
 
-def cents_score(freq, target_freq):
-    cents = 1200 * torch.log2(freq / target_freq)
-    score = cents.mean(dim=1)
-    return score
+def score_diff_cents(freq, target_freq):
+    cents = 1200 * np.log2(freq / target_freq)
+    mean, median = np.mean(cents), np.median(cents)
+    return mean, median
 
 
 if torch.cuda.is_available():
@@ -51,12 +51,12 @@ wav_path = "results/saved_samples/benchmark/"
 model_CE = LSTMContoursCE().to(device)
 model_MSE = LSTMContoursMSE().to(device)
 
-model_CE.load_state_dict(
-    torch.load(save_path + model_name_CE, map_location=torch.device("cpu")))
-model_CE.eval()
-model_MSE.load_state_dict(
-    torch.load(save_path + model_name_MSE, map_location=torch.device("cpu")))
-model_MSE.eval()
+# model_CE.load_state_dict(
+#     torch.load(save_path + model_name_CE, map_location=torch.device("cpu")))
+# model_CE.eval()
+# model_MSE.load_state_dict(
+#     torch.load(save_path + model_name_MSE, map_location=torch.device("cpu")))
+# model_MSE.eval()
 
 PATH_CE = save_path + model_name_CE
 PATH_MSE = save_path + model_name_MSE
@@ -64,9 +64,10 @@ PATH_MSE = save_path + model_name_MSE
 sampling_rate = 100
 number_of_examples = 5
 
-SYNTH = True
+SYNTH = False
 RESYNTH = False
-PLOT = True
+PLOT = False
+COMPARE = True
 
 _, test_loader = get_datasets(dataset_file="dataset/contours.csv",
                               sampling_rate=sampling_rate,
@@ -96,18 +97,14 @@ with torch.no_grad():
         u_f0_norm = u_f0_norm.float()
         u_loudness_norm = u_loudness_norm.float()
 
-        out_f0_MSE, out_loudness_MSE = model_CE.predict(
-            u_f0_norm, u_loudness_norm)
-        out_f0_CE, out_loudness_CE = model_MSE.predict(u_f0_norm,
-                                                       u_loudness_norm)
+        out_f0_CE = model_CE.predict(u_f0_norm)
+        out_f0_MSE = model_MSE.predict(u_f0_norm)
 
         out_f0_CE = std_inv_transform(out_f0_CE, u_f0_mean, u_f0_std).float()
-        out_loudness_CE = std_inv_transform(out_loudness_CE, u_loudness_mean,
-                                            u_loudness_std).float()
+        out_loudness_CE = u_loudness[:, 1:]
 
-        out_f0_CE = std_inv_transform(out_f0_CE, u_f0_mean, u_f0_std).float()
-        out_loudness_CE = std_inv_transform(out_loudness_CE, u_loudness_mean,
-                                            u_loudness_std).float()
+        out_f0_MSE = std_inv_transform(out_f0_MSE, u_f0_mean, u_f0_std).float()
+        out_loudness_MSE = u_loudness[:, 1:]
 
         if PLOT:
             plt.plot(u_f0.squeeze(), label="midi")
@@ -125,19 +122,37 @@ with torch.no_grad():
             plt.show()
 
         if SYNTH:
-            model_audio_CE = ddsp(out_f0_CE,
-                                  out_loudness_CE).detach().squeeze().numpy()
+            model_audio_CE = ddsp(
+                out_f0_CE.float(),
+                out_loudness_CE.float()).detach().squeeze().numpy()
             filename = "{}{}-sample{}.wav".format(wav_path, model_name_CE[:-3],
                                                   i)
             write(filename, 16000, model_audio_CE)
 
             model_audio_MSE = ddsp(
-                out_f0_MSE, out_loudness_MSE).detach().squeeze().numpy()
+                out_f0_MSE.float(),
+                out_loudness_MSE.float()).detach().squeeze().numpy()
             filename = "{}{}-sample{}.wav".format(wav_path,
                                                   model_name_MSE[:-3], i)
             write(filename, 16000, model_audio_MSE)
 
         if RESYNTH:
-            resynth_audio = ddsp(e_f0, e_loudness).detach().squeeze().numpy()
+            resynth_audio = ddsp(
+                e_f0.float(), e_loudness.float()).detach().squeeze().numpy()
             filename = "{}-resynth-sample{}.wav".format(wav_path, i)
             write(filename, 16000, resynth_audio)
+
+        if COMPARE:
+            n_CE_f0 = out_f0_CE.detach().squeeze().numpy()
+            n_MSE_f0 = out_f0_MSE.detach().squeeze().numpy()
+            n_target_f0 = e_f0[:, 1:].detach().squeeze().numpy()
+
+            score_CE = score_diff_cents(n_CE_f0, n_target_f0)
+            score_MSE = score_diff_cents(n_MSE_f0, n_target_f0)
+
+            print(
+                "CE score : mean = {:.3f} cents, median = {:.3f} cents".format(
+                    score_CE[0], score_CE[1]))
+
+            print("MSE score : mean = {:.3f} cents, median = {:.3f} cents".
+                  format(score_MSE[0], score_MSE[1]))
