@@ -17,12 +17,48 @@ from sklearn.preprocessing import StandardScaler
 from get_datasets import get_datasets
 from models.benchmark_models import LSTMContoursCE, LSTMContoursMSE
 
+<<<<<<< HEAD
+
+def std_transform(v):
+    std = torch.std(v, dim=1, keepdim=True)
+    m = torch.mean(v, dim=1, keepdim= True)
+
+    return (v - m) / std, m, std
+    
+
+def std_inv_transform(v, m , std):
+    return v * std + m
+
+
+
+=======
+>>>>>>> 2a25ecd91a37762caaea57fc2dafe0b1a29bc83a
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
 else:
     device = torch.device("cpu")
 print('using', device)
 
+<<<<<<< HEAD
+
+
+
+
+save_path = "results/saved_models/"
+model_name = "LSTM_towards_realistic_midi6346epochs.pt"
+wav_path = "results/saved_samples/"
+
+model = LSTMContours().to(device)
+model.load_state_dict(torch.load(save_path + model_name, map_location = torch.device("cpu")))
+model.eval()
+
+
+
+PATH = save_path + model_name 
+model = LSTMContours()
+print(model.parameters)
+
+=======
 save_path = "results/saved_models/"
 model_name = "LSTM_towards_realistic_midi6613epochs.pt"
 wav_path = "results/saved_samples/"
@@ -38,11 +74,25 @@ PATH = save_path + model_name
 
 sc_pitch = StandardScaler()
 sc_loudness = StandardScaler()
+>>>>>>> 2a25ecd91a37762caaea57fc2dafe0b1a29bc83a
 
 sampling_rate = 100
 number_of_examples = 1
 RESYNTH = False
 
+<<<<<<< HEAD
+
+
+_, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = sampling_rate, sample_duration = 20, batch_size = 1, ratio = 0.7, transform=None)#sc.fit_transform)
+test_data = iter(test_loader)
+
+
+
+
+ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts")
+
+
+=======
 _, test_loader = get_datasets(dataset_file="dataset/contours.csv",
                               sampling_rate=sampling_rate,
                               sample_duration=20,
@@ -53,20 +103,49 @@ test_data = iter(test_loader)
 
 ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts")
 
+>>>>>>> 2a25ecd91a37762caaea57fc2dafe0b1a29bc83a
 model.eval()
 with torch.no_grad():
     for i in range(number_of_examples):
         print("Sample {} reconstruction".format(i))
 
+<<<<<<< HEAD
+        u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(test_data)
+
+
+        plt.plot(u_f0.squeeze(), label="midi")
+        plt.plot(e_f0.squeeze(), label="perf")
+        plt.legend()
+=======
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(
             test_data)
 
         plt.plot(u_f0.squeeze(), label="midi")
         plt.plot(e_f0.squeeze(), label="perf")
+>>>>>>> 2a25ecd91a37762caaea57fc2dafe0b1a29bc83a
         plt.show()
 
         plt.plot(u_loudness.squeeze(), label="midi")
         plt.plot(e_loudness.squeeze(), label="perf")
+<<<<<<< HEAD
+        plt.legend()
+        plt.show()
+        
+
+
+        u_f0_norm, u_f0_mean, u_f0_std = std_transform(u_f0[:,1:])
+        u_loudness_norm, u_loudness_mean, u_loudness_std = std_transform(u_loudness[:,1:])
+
+        u_f0_norm = u_f0_norm.float()
+        u_loudness_norm = u_loudness_norm.float()
+
+        out_f0, out_loudness = model.predict(u_f0_norm, u_loudness_norm)
+
+
+        out_f0 = std_inv_transform(out_f0, u_f0_mean, u_f0_std).float()
+        out_loudness = std_inv_transform(out_loudness, u_loudness_mean, u_loudness_std).float()
+
+=======
         plt.show()
 
         u_f0_norm = torch.squeeze(u_f0[:, 1:], 0)
@@ -96,6 +175,7 @@ with torch.no_grad():
         out_loudness = torch.squeeze(out_loudness, 0)
         out_loudness = torch.tensor(
             sc_loudness.inverse_transform(out_loudness))
+>>>>>>> 2a25ecd91a37762caaea57fc2dafe0b1a29bc83a
 
         plt.plot(u_f0.squeeze(), label="midi")
         plt.plot(out_f0.squeeze(), label="model")
@@ -106,9 +186,13 @@ with torch.no_grad():
         plt.plot(out_loudness.squeeze(), label="model")
         plt.legend()
         plt.show()
+<<<<<<< HEAD
+        
+=======
 
         out_f0 = out_f0.unsqueeze(0).unsqueeze(-1)
         out_loudness = out_loudness.unsqueeze(0).unsqueeze(-1)
+>>>>>>> 2a25ecd91a37762caaea57fc2dafe0b1a29bc83a
 
         model_audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
         filename = "{}{}-sample{}.wav".format(wav_path, model_name[:-3], i)
@@ -116,6 +200,13 @@ with torch.no_grad():
 
         if RESYNTH:
             resynth_audio = ddsp(e_f0, e_loudness).detach().squeeze().numpy()
+<<<<<<< HEAD
+            filename = "{}{}-sample{}-resynth.wav".format(wav_path, model_name[:-3], i)
+            write(filename, 16000, model_audio)
+
+
+=======
             filename = "{}{}-sample{}-resynth.wav".format(
                 wav_path, model_name[:-3], i)
             write(filename, 16000, model_audio)
+>>>>>>> 2a25ecd91a37762caaea57fc2dafe0b1a29bc83a
