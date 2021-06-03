@@ -83,9 +83,9 @@ with torch.no_grad():
 
         out_f0, out_loudness = model.predict(u_f0_norm, u_loudness_norm)
 
-        out_f0 = std_inv_transform(out_f0, e_f0_mean, e_f0_std).float()
-        out_loudness = std_inv_transform(out_loudness, e_loudness_mean,
-                                         e_loudness_std).float()
+        out_f0 = std_inv_transform(out_f0, u_f0_mean, u_f0_std).float()
+        out_loudness = std_inv_transform(out_loudness, u_loudness_mean,
+                                         u_loudness_std).float()
 
         plt.plot(u_f0.squeeze(), label="midi")
         plt.plot(e_f0.squeeze(), label="perf")
@@ -109,6 +109,5 @@ with torch.no_grad():
         if RESYNTH:
             resynth_audio = ddsp(
                 e_f0.float(), e_loudness.float()).detach().squeeze().numpy()
-            filename = "{}{}-sample{}-resynth.wav".format(
-                wav_path, model_name[:-3], i)
-            write(filename, 16000, model_audio)
+            filename = "{}resynth-sample{}.wav".format(wav_path, i)
+            write(filename, 16000, resynth_audio)

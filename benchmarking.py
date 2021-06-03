@@ -29,6 +29,12 @@ def std_inv_transform(v, m, std):
     return v * std + m
 
 
+def cents_score(freq, target_freq):
+    cents = 1200 * torch.log2(freq / target_freq)
+    score = cents.mean(dim=1)
+    return score
+
+
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
 else:
@@ -36,32 +42,42 @@ else:
 print('using', device)
 
 save_path = "results/saved_models/"
-model_name = "LSTM_towards_realistic_midi3540epochs.pt"
-wav_path = "results/saved_samples/"
 
-model = LSTMContours().to(device)
-model.load_state_dict(
-    torch.load(save_path + model_name, map_location=torch.device("cpu")))
-model.eval()
+model_name_CE = "benchmark-CE999epochs.pt"
+model_name_MSE = "benchmark-MSE3388epochs.pt"
 
-PATH = save_path + model_name
-print(model.parameters)
+wav_path = "results/saved_samples/benchmark/"
+
+model_CE = LSTMContoursCE().to(device)
+model_MSE = LSTMContoursMSE().to(device)
+
+model_CE.load_state_dict(
+    torch.load(save_path + model_name_CE, map_location=torch.device("cpu")))
+model_CE.eval()
+model_MSE.load_state_dict(
+    torch.load(save_path + model_name_MSE, map_location=torch.device("cpu")))
+model_MSE.eval()
+
+PATH_CE = save_path + model_name_CE
+PATH_MSE = save_path + model_name_MSE
 
 sampling_rate = 100
 number_of_examples = 5
+
+SYNTH = True
 RESYNTH = False
+PLOT = True
 
 _, test_loader = get_datasets(dataset_file="dataset/contours.csv",
                               sampling_rate=sampling_rate,
                               sample_duration=20,
                               batch_size=1,
                               ratio=0.7,
-                              transform=None)  #sc.fit_transform)
+                              transform=None)
 test_data = iter(test_loader)
 
 ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts")
 
-model.eval()
 with torch.no_grad():
     for i in range(number_of_examples):
         print("Sample {} reconstruction".format(i))
@@ -80,30 +96,48 @@ with torch.no_grad():
         u_f0_norm = u_f0_norm.float()
         u_loudness_norm = u_loudness_norm.float()
 
-        out_f0, out_loudness = model.predict(u_f0_norm, u_loudness_norm)
+        out_f0_MSE, out_loudness_MSE = model_CE.predict(
+            u_f0_norm, u_loudness_norm)
+        out_f0_CE, out_loudness_CE = model_MSE.predict(u_f0_norm,
+                                                       u_loudness_norm)
 
-        out_f0 = std_inv_transform(out_f0, e_f0_mean, e_f0_std).float()
-        out_loudness = std_inv_transform(out_loudness, e_loudness_mean,
-                                         e_loudness_std).float()
+        out_f0_CE = std_inv_transform(out_f0_CE, u_f0_mean, u_f0_std).float()
+        out_loudness_CE = std_inv_transform(out_loudness_CE, u_loudness_mean,
+                                            u_loudness_std).float()
 
-        plt.plot(u_f0.squeeze(), label="midi")
-        plt.plot(e_f0.squeeze(), label="perf")
-        plt.plot(out_f0.squeeze(), label="model")
-        plt.legend()
-        plt.show()
+        out_f0_CE = std_inv_transform(out_f0_CE, u_f0_mean, u_f0_std).float()
+        out_loudness_CE = std_inv_transform(out_loudness_CE, u_loudness_mean,
+                                            u_loudness_std).float()
 
-        plt.plot(u_loudness.squeeze(), label="midi")
-        plt.plot(e_loudness.squeeze(), label="perf")
-        plt.plot(out_loudness.squeeze(), label="model")
-        plt.legend()
-        plt.show()
+        if PLOT:
+            plt.plot(u_f0.squeeze(), label="midi")
+            plt.plot(e_f0.squeeze(), label="perf")
+            plt.plot(out_f0_CE.squeeze(), label="CE")
+            plt.plot(out_f0_MSE.squeeze(), label="MSE")
+            plt.legend()
+            plt.show()
 
-        model_audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
-        filename = "{}{}-sample{}.wav".format(wav_path, model_name[:-3], i)
-        write(filename, 16000, model_audio)
+            plt.plot(u_loudness.squeeze(), label="midi")
+            plt.plot(e_loudness.squeeze(), label="perf")
+            plt.plot(out_loudness_CE.squeeze(), label="CE")
+            plt.plot(out_loudness_MSE.squeeze(), label="MSE")
+            plt.legend()
+            plt.show()
+
+        if SYNTH:
+            model_audio_CE = ddsp(out_f0_CE,
+                                  out_loudness_CE).detach().squeeze().numpy()
+            filename = "{}{}-sample{}.wav".format(wav_path, model_name_CE[:-3],
+                                                  i)
+            write(filename, 16000, model_audio_CE)
+
+            model_audio_MSE = ddsp(
+                out_f0_MSE, out_loudness_MSE).detach().squeeze().numpy()
+            filename = "{}{}-sample{}.wav".format(wav_path,
+                                                  model_name_MSE[:-3], i)
+            write(filename, 16000, model_audio_MSE)
 
         if RESYNTH:
             resynth_audio = ddsp(e_f0, e_loudness).detach().squeeze().numpy()
-            filename = "{}{}-sample{}-resynth.wav".format(
-                wav_path, model_name[:-3], i)
-            write(filename, 16000, model_audio)
+            filename = "{}-resynth-sample{}.wav".format(wav_path, i)
+            write(filename, 16000, resynth_audio)
