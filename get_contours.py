@@ -214,7 +214,7 @@ class ContoursGetter:
 
         if verbose:
 
-            plt.plot(loudness_midi, label="gen")
+            plt.plot(loudness_wav, label="gen")
             plt.plot(loudness_midi, label="midi")
             plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.title("Loudness comparison {}".format(wav_file))
@@ -226,13 +226,13 @@ class ContoursGetter:
             plt.title("Frequency comparison {}".format(wav_file))
             plt.show()
 
-            plt.plot(frequency_wav_stddev_array, label="std dev")
-            plt.plot(frequency_wav_means_array /
-                     np.max(frequency_wav_means_array),
-                     label="pitch")
-            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-            plt.title("Frequency comparison {}".format(wav_file))
-            plt.show()
+            # plt.plot(frequency_wav_stddev_array, label="std dev")
+            # plt.plot(frequency_wav_means_array /
+            #          np.max(frequency_wav_means_array),
+            #          label="pitch")
+            # plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            # plt.title("Frequency comparison {}".format(wav_file))
+            # plt.show()
 
         return frequency_midi_array, loudness_midi_array, frequency_wav_array, loudness_wav_array, frequency_wav_means, frequency_wav_stddev
 
