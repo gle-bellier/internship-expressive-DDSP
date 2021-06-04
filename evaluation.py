@@ -57,8 +57,8 @@ class Evaluator:
 
     def listen(self, out, target, ddsp, saving_path=None, resynth=False):
 
-        out_f0, out_loudness = out.split(1, -1)
-        target_f0, target_loudness = target.split(1, -1)
+        out_f0, out_loudness = out.float().split(1, -1)
+        target_f0, target_loudness = target.float().split(1, -1)
 
         model_audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
         target_audio = ddsp(target_f0,
@@ -70,3 +70,5 @@ class Evaluator:
         if resynth is not None:
             filename = saving_path[:-4] + "-resynth.wav"
             write(filename, 16000, target_audio)
+
+        return model_audio

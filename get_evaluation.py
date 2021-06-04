@@ -97,5 +97,7 @@ with torch.no_grad():
 
         e = Evaluator()
         score = e.evaluate(model_out, target, PLOT=True)
+        out_audio = e.listen(model_out, target, ddsp,
+                             wav_path + model_name + "-{}.wav".format(i))
 
-        print(score)
+        print("Score : ", score)
