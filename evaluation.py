@@ -43,12 +43,8 @@ class Evaluator:
         out_f0, out_loudness = out.split(1, -1)
         target_f0, target_loudness = target.split(1, -1)
 
-        d_cents = 1200 * torch.log2(out_f0.squeeze() / target_f0.squeeze())
-
-        print(out_f0.squeeze())
-        print(target_f0.squeeze())
-
-        print(d_cents)
+        d_cents = 1200 * torch.log2(
+            torch.abs(out_f0.squeeze()) / target_f0.squeeze())
 
         if reduction == "mean":
             return torch.mean(d_cents).numpy()
