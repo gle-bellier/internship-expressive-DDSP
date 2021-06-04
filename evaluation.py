@@ -45,6 +45,11 @@ class Evaluator:
 
         d_cents = 1200 * torch.log2(out_f0.squeeze() / target_f0.squeeze())
 
+        print(out_f0.squeeze())
+        print(target_f0.squeeze())
+
+        print(d_cents)
+
         if reduction == "mean":
             return torch.mean(d_cents).numpy()
         elif reduction == "median":

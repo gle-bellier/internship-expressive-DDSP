@@ -13,9 +13,8 @@ import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
-from torch.autograd import Variable
 
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
 
 
 def get_datasets(dataset_file="dataset/contours.csv",
@@ -23,7 +22,8 @@ def get_datasets(dataset_file="dataset/contours.csv",
                  sample_duration=20,
                  batch_size=16,
                  ratio=0.7,
-                 transform=None):
+                 pitch_transform=None,
+                 loudness_transform=None):
 
     sample_length = sample_duration * sampling_rate
 
@@ -50,6 +50,10 @@ def get_datasets(dataset_file="dataset/contours.csv",
     e_loudness = np.array(e_loudness)
     e_f0_mean = np.array(e_f0_mean)
     e_f0_stddev = np.array(e_f0_stddev)
+
+    fits = preprocessing(
+        [u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev],
+        pitch_transform, loudness_transform)
 
     full_length = len(u_f0)
     # we need to split the dataset between training and testing
@@ -85,8 +89,7 @@ def get_datasets(dataset_file="dataset/contours.csv",
                                          train_e_loudness,
                                          train_e_f0_mean,
                                          train_e_f0_stddev,
-                                         sample_length=sample_length,
-                                         transform=transform)
+                                         sample_length=sample_length)
 
     test_dataset = ContoursTestDataset(test_u_f0,
                                        test_u_loudness,
@@ -94,12 +97,49 @@ def get_datasets(dataset_file="dataset/contours.csv",
                                        test_e_loudness,
                                        test_e_f0_mean,
                                        test_e_f0_stddev,
-                                       sample_length=sample_length,
-                                       transform=transform)
+                                       sample_length=sample_length)
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=batch_size)
     test_loader = torch.utils.data.DataLoader(test_dataset,
                                               batch_size=batch_size)
 
-    return train_loader, test_loader
+    return train_loader, test_loader, fits
+
+
+def preprocessing(data, pitch_transform, loudness_transform):
+    list_fits = []
+    print(len(data))
+    for i in range(len(data)):
+
+        contour = data[i].reshape(-1, 1)
+        if i in [1, 3]:  # correspond to loudness indexes
+            if loudness_transform == "Standardise":
+                sc = StandardScaler()
+                sc.fit(contour)
+                list_fits.append(sc)
+
+            elif loudness_transform == "Quantile":
+                q = QuantileTransformer()
+                q.fit(contour)
+                list_fits.append(q)
+
+            else:
+                list_fits.append(None)
+
+        else:
+            if pitch_transform == "Standardise":
+                sc = StandardScaler()
+                sc.fit(contour)
+                list_fits.append(sc)
+
+            elif pitch_transform == "Quantile":
+                q = QuantileTransformer()
+                q.fit(contour)
+                list_fits.append(q)
+
+            else:
+                list_fits.append(None)
+
+    print(len(list_fits))
+    return list_fits

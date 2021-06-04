@@ -13,10 +13,8 @@ class ContoursTrainDataset(Dataset):
                  e_f0_mean,
                  e_f0_stddev,
                  sample_length=2000,
-                 overlap=0.3,
-                 transform=None):
+                 overlap=0.3):
 
-        self.transform = transform
         self.sample_length = sample_length
         self.overlap = overlap
 
@@ -26,14 +24,6 @@ class ContoursTrainDataset(Dataset):
         self.e_loudness = e_loudness.reshape(-1, 1)
         self.e_f0_mean = e_f0_mean.reshape(-1, 1)
         self.e_f0_stddev = e_f0_stddev.reshape(-1, 1)
-
-        if self.transform is not None:
-            self.u_f0 = self.transform(self.u_f0)
-            self.u_loudness = self.transform(self.u_loudness)
-            self.e_f0 = self.transform(self.e_f0)
-            self.e_loudness = self.transform(self.e_loudness)
-            self.e_f0_mean = self.transform(self.e_f0_mean)
-            self.e_f0_stddev = self.transform(self.e_f0_stddev)
 
         self.length = len(self.u_f0)
         self.segments = []
@@ -74,10 +64,8 @@ class ContoursTestDataset(Dataset):
                  e_f0_mean,
                  e_f0_stddev,
                  sample_length=2000,
-                 overlap=0.3,
-                 transform=None):
+                 overlap=0.3):
 
-        self.transform = transform
         self.sample_length = sample_length
         self.overlap = overlap
 
@@ -87,14 +75,6 @@ class ContoursTestDataset(Dataset):
         self.e_loudness = e_loudness.reshape(-1, 1)
         self.e_f0_mean = e_f0_mean.reshape(-1, 1)
         self.e_f0_stddev = e_f0_stddev.reshape(-1, 1)
-
-        if self.transform is not None:
-            self.u_f0 = self.transform(self.u_f0)
-            self.u_loudness = self.transform(self.u_loudness)
-            self.e_f0 = self.transform(self.e_f0)
-            self.e_loudness = self.transform(self.e_loudness)
-            self.e_f0_mean = self.transform(self.e_f0_mean)
-            self.e_f0_stddev = self.transform(self.e_f0_stddev)
 
         self.length = len(self.u_f0)
         self.segments = []
