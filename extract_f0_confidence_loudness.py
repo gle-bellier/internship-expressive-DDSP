@@ -83,7 +83,6 @@ class Extractor:
     def extract_f0_confidence_loudness(self, filename, sampling_rate,
                                        block_size):
         audio, fs = li.load(filename, sr=sampling_rate)
-        # audio = resampy.resample(audio, fs, sampling_rate)
         loudness = self.extract_loudness(audio, sampling_rate, block_size)
         time, f0, confidence = self.extract_time_pitch_confidence(
             audio, sampling_rate, block_size)
