@@ -2,5 +2,5 @@
 /f0-confidence-loudness-files
 *.pyc
 /runs
-/__pycache__
+*pycache*
 .wav

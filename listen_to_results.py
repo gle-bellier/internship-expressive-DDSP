@@ -2,6 +2,8 @@ import io as io
 import scipy.io.wavfile as wav
 
 import torch
+
+torch.set_grad_enabled(False)
 import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
@@ -18,6 +20,8 @@ from get_datasets import get_datasets
 from models.benchmark_models import *
 from models.LSTM_towards_realistic_midi import LSTMContours
 
+from os import makedirs
+
 
 def std_transform(v):
     std = torch.std(v, dim=1, keepdim=True)
@@ -30,15 +34,14 @@ def std_inv_transform(v, m, std):
     return v * std + m
 
 
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")
-else:
-    device = torch.device("cpu")
+device = torch.device("cpu")
 print('using', device)
 
 save_path = "results/saved_models/"
 model_name = "LSTM_towards_realistic_midi3540epochs.pt"
 wav_path = "results/saved_samples/"
+
+makedirs(wav_path, exist_ok=True)
 
 model = LSTMContours().to(device)
 model.load_state_dict(
@@ -61,8 +64,8 @@ _, test_loader = get_datasets(dataset_file="dataset/contours.csv",
 test_data = iter(test_loader)
 
 ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts")
+ddsp.eval()
 
-model.eval()
 with torch.no_grad():
     for i in range(number_of_examples):
         print("Sample {} reconstruction".format(i))
