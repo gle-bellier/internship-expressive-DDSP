@@ -1,26 +1,19 @@
 import torch
 import matplotlib.pyplot as plt
+from scipy.io.wavfile import write
 
 
 class Evaluator:
-    def __init__(self, model, sr=100):
-        self.model = model
+    def __init__(self, sr=100):
         self.sr = sr
 
-    def evaluate(self,
-                 model_input,
-                 target,
-                 PLOT=False,
-                 SCORE=True,
-                 reduction="mean"):
-
-        out = self.model.predic(model_input)
+    def evaluate(self, out, target, PLOT=False, SCORE=True, reduction="mean"):
 
         if PLOT:
             self.plot(out, target)
 
         if SCORE:
-            self.score(out, target, reduction)
+            return self.score(out, target, reduction)
 
     def plot(self, out, target):
 
@@ -35,11 +28,14 @@ class Evaluator:
         ax1.plot(t, out_f0.squeeze(), label="Model")
         ax1.plot(t, target_f0.squeeze(), label="Target")
         ax1.set_title("Frequency")
+        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         ax2.plot(t, out_loudness.squeeze(), label="Model")
         ax2.plot(t, target_loudness.squeeze(), label="Target")
         ax2.set_title("Loudness")
+        ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.show()
 
     def score(self, out, target, reduction):
@@ -50,11 +46,27 @@ class Evaluator:
         d_cents = 1200 * torch.log2(out_f0.squeeze() / target_f0.squeeze())
 
         if reduction == "mean":
-            return torch.mean(d_cents)
+            return torch.mean(d_cents).numpy()
         elif reduction == "median":
-            return torch.media(d_cents)
+            return torch.media(d_cents).numpy()
         elif reduction == "sum":
-            return torch.sum(d_cents)
+            return torch.sum(d_cents).numpy()
         else:
             print("ERROR reduction type")
             return None
+
+    def listen(self, out, target, ddsp, saving_path=None, resynth=False):
+
+        out_f0, out_loudness = out.split(1, -1)
+        target_f0, target_loudness = target.split(1, -1)
+
+        model_audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
+        target_audio = ddsp(target_f0,
+                            target_loudness).detach().squeeze().numpy()
+
+        if saving_path is not None:
+            write(saving_path, 16000, model_audio)
+
+        if resynth is not None:
+            filename = saving_path[:-4] + "-resynth.wav"
+            write(filename, 16000, target_audio)
