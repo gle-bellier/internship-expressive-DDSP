@@ -3,4 +3,4 @@
 *.pyc
 /runs
 *pycache*
-.wav
+/results/saved_samples
