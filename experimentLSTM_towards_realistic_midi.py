@@ -78,8 +78,8 @@ for epoch in range(num_epochs):
 
         model_input = torch.cat(
             [u_f0[:, 1:], u_loudness[:, 1:], e_f0[:, :-1], e_loudness[:, :-1]],
-            -1)
-        ground_truth = torch.cat([e_f0[:, 1:], e_loudness[:, 1:]], -1)
+            -1).float()
+        ground_truth = torch.cat([e_f0[:, 1:], e_loudness[:, 1:]], -1).float()
 
         output = model(model_input.to(device))
         optimizer.zero_grad()

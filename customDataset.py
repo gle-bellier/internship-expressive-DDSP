@@ -18,12 +18,12 @@ class ContoursTrainDataset(Dataset):
         self.sample_length = sample_length
         self.overlap = overlap
 
-        self.u_f0 = torch.Tensor(u_f0.reshape(-1, 1)).float()
-        self.u_loudness = torch.Tensor(u_loudness.reshape(-1, 1)).float()
-        self.e_f0 = torch.Tensor(e_f0.reshape(-1, 1)).float()
-        self.e_loudness = torch.Tensor(e_loudness.reshape(-1, 1)).float()
-        self.e_f0_mean = torch.Tensor(e_f0_mean.reshape(-1, 1)).float()
-        self.e_f0_stddev = torch.Tensor(e_f0_stddev.reshape(-1, 1)).float()
+        self.u_f0 = u_f0.reshape(-1, 1)
+        self.u_loudness = u_loudness.reshape(-1, 1)
+        self.e_f0 = e_f0.reshape(-1, 1)
+        self.e_loudness = e_loudness.reshape(-1, 1)
+        self.e_f0_mean = e_f0_mean.reshape(-1, 1)
+        self.e_f0_stddev = e_f0_stddev.reshape(-1, 1)
 
         self.length = len(self.u_f0)
         self.segments = []
@@ -51,7 +51,9 @@ class ContoursTrainDataset(Dataset):
         u_loudness, e_loudness = self.u_loudness[start:end], self.e_loudness[
             start:end]
 
-        return u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev
+        return u_f0.astype(float), u_loudness.astype(float), e_f0.astype(
+            float), e_loudness.astype(float), e_f0_mean.astype(
+                float), e_f0_stddev.astype(float)
 
 
 class ContoursTestDataset(Dataset):
@@ -69,12 +71,12 @@ class ContoursTestDataset(Dataset):
         self.sample_length = sample_length
         self.overlap = overlap
 
-        self.u_f0 = torch.Tensor(u_f0.reshape(-1, 1)).float()
-        self.u_loudness = torch.Tensor(u_loudness.reshape(-1, 1)).float()
-        self.e_f0 = torch.Tensor(e_f0.reshape(-1, 1)).float()
-        self.e_loudness = torch.Tensor(e_loudness.reshape(-1, 1)).float()
-        self.e_f0_mean = torch.Tensor(e_f0_mean.reshape(-1, 1)).float()
-        self.e_f0_stddev = torch.Tensor(e_f0_stddev.reshape(-1, 1)).float()
+        self.u_f0 = u_f0.reshape(-1, 1)
+        self.u_loudness = u_loudness.reshape(-1, 1)
+        self.e_f0 = e_f0.reshape(-1, 1)
+        self.e_loudness = e_loudness.reshape(-1, 1)
+        self.e_f0_mean = e_f0_mean.reshape(-1, 1)
+        self.e_f0_stddev = e_f0_stddev.reshape(-1, 1)
 
         self.length = len(self.u_f0)
         self.segments = []
@@ -94,4 +96,6 @@ class ContoursTestDataset(Dataset):
         u_loudness, e_loudness = self.u_loudness[start:end], self.e_loudness[
             start:end]
 
-        return u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev
+        return u_f0.astype(float), u_loudness.astype(float), e_f0.astype(
+            float), e_loudness.astype(float), e_f0_mean.astype(
+                float), e_f0_stddev.astype(float)

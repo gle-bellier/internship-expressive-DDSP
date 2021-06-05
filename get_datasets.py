@@ -109,7 +109,6 @@ def get_datasets(dataset_file="dataset/contours.csv",
 
 def preprocessing(data, pitch_transform, loudness_transform):
     list_fits = []
-    print(len(data))
     for i in range(len(data)):
 
         contour = data[i].reshape(-1, 1)
@@ -141,5 +140,4 @@ def preprocessing(data, pitch_transform, loudness_transform):
             else:
                 list_fits.append(None)
 
-    print(len(list_fits))
     return list_fits
