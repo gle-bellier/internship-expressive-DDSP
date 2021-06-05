@@ -63,7 +63,7 @@ _, test_loader, fits = get_datasets(
     sample_duration=20,
     batch_size=1,
     ratio=0.7,
-    pitch_transform="Standardise",
+    pitch_transform="Quantile",
     loudness_transform="Standardise")  #sc.fit_transform)
 test_data = iter(test_loader)
 

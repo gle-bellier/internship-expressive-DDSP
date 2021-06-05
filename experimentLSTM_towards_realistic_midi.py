@@ -43,12 +43,16 @@ print('using', device)
 writer = SummaryWriter("runs/LSTM_towards_realistic_midi50000")
 
 sc = StandardScaler()
-train_loader, test_loader = get_datasets(dataset_file="dataset/contours.csv",
-                                         sampling_rate=100,
-                                         sample_duration=20,
-                                         batch_size=16,
-                                         ratio=0.7,
-                                         transform=sc.fit_transform)
+train_loader, test_loader, fits = get_datasets(
+    dataset_file="dataset/contours.csv",
+    sampling_rate=100,
+    sample_duration=20,
+    batch_size=16,
+    ratio=0.7,
+    pitch_transform="Quantile",
+    loudness_transform="Quantile")
+
+u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_std_fit = fits
 
 ### MODEL INSTANCIATION ###
 
