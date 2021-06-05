@@ -76,13 +76,6 @@ for epoch in range(num_epochs):
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
-        u_f0 = torch.Tensor(u_f0.float())
-        u_loudness = torch.Tensor(u_loudness.float())
-        e_f0 = torch.Tensor(e_f0.float())
-        e_loudness = torch.Tensor(e_loudness.float())
-        e_f0_mean = torch.Tensor(e_f0_mean.float())
-        e_f0_stddev = torch.Tensor(e_f0_stddev.float())
-
         model_input = torch.cat(
             [u_f0[:, 1:], u_loudness[:, 1:], e_f0[:, :-1], e_loudness[:, :-1]],
             -1)
@@ -106,13 +99,6 @@ for epoch in range(num_epochs):
         for batch in test_loader:
 
             u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
-
-            u_f0 = torch.Tensor(u_f0.float())
-            u_loudness = torch.Tensor(u_loudness.float())
-            e_f0 = torch.Tensor(e_f0.float())
-            e_loudness = torch.Tensor(e_loudness.float())
-            e_f0_mean = torch.Tensor(e_f0_mean.float())
-            e_f0_stddev = torch.Tensor(e_f0_stddev.float())
 
             model_input = torch.cat([
                 u_f0[:, 1:], u_loudness[:, 1:], e_f0[:, :-1],
