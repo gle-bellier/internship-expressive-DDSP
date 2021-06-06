@@ -89,15 +89,19 @@ def get_datasets(dataset_file="dataset/contours.csv",
                                          train_e_loudness,
                                          train_e_f0_mean,
                                          train_e_f0_stddev,
+                                         fits=fits,
                                          sample_length=sample_length)
 
-    test_dataset = ContoursTestDataset(test_u_f0,
-                                       test_u_loudness,
-                                       test_e_f0,
-                                       test_e_loudness,
-                                       test_e_f0_mean,
-                                       test_e_f0_stddev,
-                                       sample_length=sample_length)
+    test_dataset = ContoursTestDataset(
+        test_u_f0,
+        test_u_loudness,
+        test_e_f0,
+        test_e_loudness,
+        test_e_f0_mean,
+        test_e_f0_stddev,
+        fits=fits,
+        sample_length=sample_length,
+    )
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=batch_size)

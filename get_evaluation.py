@@ -25,15 +25,11 @@ from models.LSTM_towards_realistic_midi import LSTMContours
 from os import makedirs
 
 
-def std_transform(v):
-    std = torch.std(v, dim=1, keepdim=True)
-    m = torch.mean(v, dim=1, keepdim=True)
-
-    return (v - m) / std, m, std
-
-
-def std_inv_transform(v, m, std):
-    return v * std + m
+def inv_transform(data, transforms):
+    transform_data = []
+    for i in range(len(data)):
+        transform_data.append(transforms[i].inverse_transform(data[i]))
+    return transform_data
 
 
 device = torch.device("cpu")
@@ -57,14 +53,14 @@ sampling_rate = 100
 number_of_examples = 5
 RESYNTH = True
 
-_, test_loader, fits = get_datasets(
-    dataset_file="dataset/contours.csv",
-    sampling_rate=sampling_rate,
-    sample_duration=20,
-    batch_size=1,
-    ratio=0.7,
-    pitch_transform="Quantile",
-    loudness_transform="Standardise")  #sc.fit_transform)
+_, test_loader, fits = get_datasets(dataset_file="dataset/contours.csv",
+                                    sampling_rate=sampling_rate,
+                                    sample_duration=20,
+                                    batch_size=1,
+                                    ratio=0.7,
+                                    pitch_transform="Standardise",
+                                    loudness_transform="Standardise")
+
 test_data = iter(test_loader)
 
 u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_std_fit = fits
@@ -79,28 +75,10 @@ with torch.no_grad():
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(
             test_data)
 
-        target = torch.cat([e_f0[:, 1:], e_loudness[:, 1:]], -1)
+        u_f0 = u_f0[:, 1:].float()
+        u_loudness = u_loudness[:, 1:].float()
 
-        u_f0_norm, u_f0_mean, u_f0_std = std_transform(u_f0[:, 1:])
-        u_loudness_norm, u_loudness_mean, u_loudness_std = std_transform(
-            u_loudness[:, 1:])
-
-        u_f0_norm = torch.tensor(u_f0_fit.transform(
-            u_f0[:, 1:].squeeze(0))).unsqueeze(0)
-        u_loudness_norm = torch.tensor(
-            u_loudness_fit.transform(u_loudness[:,
-                                                1:].squeeze(0))).unsqueeze(0)
-
-        e_f0_norm = torch.tensor(e_f0_fit.transform(
-            e_f0[:, 1:].squeeze(0))).unsqueeze(0)
-        e_loudness_norm = torch.tensor(
-            e_loudness_fit.transform(e_loudness[:,
-                                                1:].squeeze(0))).unsqueeze(0)
-
-        u_f0_norm = u_f0_norm.float()
-        u_loudness_norm = u_loudness_norm.float()
-
-        out_f0, out_loudness = model.predict(u_f0_norm, u_loudness_norm)
+        out_f0, out_loudness = model.predict(u_f0, u_loudness)
 
         out_f0 = torch.tensor(u_f0_fit.inverse_transform(
             out_f0.squeeze(0))).unsqueeze(0)
@@ -108,6 +86,13 @@ with torch.no_grad():
             u_loudness_fit.inverse_transform(
                 out_loudness.squeeze(0))).unsqueeze(0)
 
+        e_f0 = torch.tensor(e_f0_fit.inverse_transform(
+            e_f0.squeeze(0))).unsqueeze(0)
+        e_loudness = torch.tensor(
+            e_loudness_fit.inverse_transform(
+                e_loudness.squeeze(0))).unsqueeze(0)
+
+        target = torch.cat([e_f0[:, 1:], e_loudness[:, 1:]], -1)
         model_out = torch.cat([out_f0, out_loudness], -1)
 
         e = Evaluator()
