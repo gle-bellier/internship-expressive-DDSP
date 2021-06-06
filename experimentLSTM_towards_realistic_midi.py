@@ -49,8 +49,8 @@ train_loader, test_loader, fits = get_datasets(
     sample_duration=20,
     batch_size=16,
     ratio=0.7,
-    pitch_transform="Quantile",
-    loudness_transform="Quantile")
+    pitch_transform="Standardise",
+    loudness_transform="Standardise")
 
 u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_std_fit = fits
 
@@ -103,7 +103,7 @@ for epoch in range(num_epochs):
             model_input = torch.cat([
                 u_f0[:, 1:], u_loudness[:, 1:], e_f0[:, :-1],
                 e_loudness[:, :-1]
-            ], -1)
+            ], -1).float()
             ground_truth = torch.cat([e_f0[:, 1:], e_loudness[:, 1:]], -1)
 
             output = model(model_input.to(device))
