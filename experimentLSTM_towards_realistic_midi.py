@@ -42,7 +42,6 @@ print('using', device)
 
 writer = SummaryWriter("runs/LSTM_towards_realistic_midi50000")
 
-sc = StandardScaler()
 train_loader, test_loader, fits = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
