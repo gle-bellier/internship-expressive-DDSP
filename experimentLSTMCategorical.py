@@ -39,14 +39,17 @@ else:
 print('using', device)
 
 writer = SummaryWriter("runs/benchmark/LSTMCategorical")
-train_loader, test_loader, _ = get_datasets(
+train_loader, test_loader, fits = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
     sample_duration=20,
     batch_size=16,
     ratio=0.7,
-    pitch_transform=None,
-    loudness_transform=None)
+    pitch_transform="Quantile",
+    loudness_transform="Quantile",
+    pitch_n_quantiles=100,
+    loudness_n_quantiles=100)
+u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_dev_fit = fits
 
 ### MODEL INSTANCIATION ###
 
@@ -70,16 +73,12 @@ for epoch in range(num_epochs):
 
         model.train()
 
-        u_f0, u_loudness, e_f0, e_loudness, _, _ = batch
+        u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_dev = batch
 
-        e_pitch, e_cents = frequencies_to_pitch_cents(e_f0)
-
-        u_pitch_cat, u_pitch_fit = get_data_categorical(u_f0, n_out=100)
-        e_cents_cat, e_cents_fit = get_data_categorical(e_cents, n_out=100)
-        u_loudness_cat, u_loudness_fit = get_data_categorical(u_loudness,
-                                                              n_out=100)
-        e_loudness_cat, e_loudness_fit = get_data_categorical(e_loudness,
-                                                              n_out=100)
+        u_pitch_cat = get_data_categorical(u_f0, n_out=100)
+        e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
+        u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
+        e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
 
         model_input = torch.cat([
             u_pitch_cat[:, 1:], e_cents_cat[:, :-1], u_loudness_cat[:, 1:],
@@ -111,18 +110,12 @@ for epoch in range(num_epochs):
     with torch.no_grad():
         for batch in test_loader:
 
-            u_f0, u_loudness, e_f0, e_loudness, _, _ = batch
-            target_frequencies = e_f0[:, 1:]
+            u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_dev = batch
 
-            e_pitch, e_cents = frequencies_to_pitch_cents(e_f0)
-
-            u_pitch_cat, u_pitch_fit = get_data_categorical(u_f0, n_out=100)
-            e_cents_cat, e_cents_fit = get_data_categorical(e_cents, n_out=100)
-
-            u_loudness_cat, u_loudness_fit = get_data_categorical(u_loudness,
-                                                                  n_out=100)
-            e_loudness_cat, e_loudness_fit = get_data_categorical(e_loudness,
-                                                                  n_out=100)
+            u_pitch_cat = get_data_categorical(u_f0, n_out=100)
+            e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
+            u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
+            e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
 
             model_input = torch.cat([
                 u_pitch_cat[:, 1:], e_cents_cat[:, :-1], u_loudness_cat[:, 1:],

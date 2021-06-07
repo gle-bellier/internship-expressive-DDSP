@@ -38,7 +38,9 @@ def get_datasets(dataset_file="dataset/contours.csv",
                  batch_size=16,
                  ratio=0.7,
                  pitch_transform=None,
-                 loudness_transform=None):
+                 loudness_transform=None,
+                 pitch_n_quantiles=None,
+                 loudness_n_quantiles=None):
 
     sample_length = sample_duration * sampling_rate
 
@@ -68,7 +70,8 @@ def get_datasets(dataset_file="dataset/contours.csv",
 
     fits = preprocessing(
         [u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev],
-        pitch_transform, loudness_transform)
+        pitch_transform, loudness_transform, pitch_n_quantiles,
+        loudness_n_quantiles)
 
     full_length = len(u_f0)
     # we need to split the dataset between training and testing
@@ -126,7 +129,8 @@ def get_datasets(dataset_file="dataset/contours.csv",
     return train_loader, test_loader, fits
 
 
-def preprocessing(data, pitch_transform, loudness_transform):
+def preprocessing(data, pitch_transform, loudness_transform, pitch_n_quantiles,
+                  loudness_n_quantiles):
     list_fits = []
     for i in range(len(data)):
 
@@ -138,7 +142,7 @@ def preprocessing(data, pitch_transform, loudness_transform):
                 list_fits.append(sc)
 
             elif loudness_transform == "Quantile":
-                q = QuantileTransformer()
+                q = QuantileTransformer(n_quantiles=loudness_n_quantiles)
                 q.fit(contour)
                 list_fits.append(q)
 
@@ -154,7 +158,7 @@ def preprocessing(data, pitch_transform, loudness_transform):
                 list_fits.append(sc)
 
             elif pitch_transform == "Quantile":
-                q = QuantileTransformer()
+                q = QuantileTransformer(n_quantiles=pitch_n_quantiles)
                 q.fit(contour)
                 list_fits.append(q)
 
