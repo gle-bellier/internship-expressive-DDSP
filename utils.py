@@ -4,7 +4,7 @@ from sklearn.preprocessing import QuantileTransformer
 import librosa as li
 
 
-def get_data_cat(data, n_out):
+def get_data_categorical(data, n_out):
     data_reshaped = data.reshape(data.size(0) * data.size(1), 1)
 
     q = QuantileTransformer(n_quantiles=n_out - 1)
