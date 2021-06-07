@@ -99,7 +99,11 @@ class ContoursGetter:
             if a != b:
                 freq_mean[a:b] = np.mean(frequencies[a:b])
                 freq_stddev[a:b] = frequencies[a:b] - np.mean(frequencies[a:b])
-                freq_stddev[a:b] /= np.max(np.abs(freq_stddev[a:b]))
+                d = np.max(np.abs(freq_stddev[a:b]))
+                if d != 0:
+                    freq_stddev[a:b] /= d
+                else:
+                    freq_stddev[a:b] = 1.0
             else:
                 freq_mean[a] = frequencies[a]
                 freq_stddev[a] = 0

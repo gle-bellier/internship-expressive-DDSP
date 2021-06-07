@@ -49,6 +49,7 @@ train_loader, test_loader, fits = get_datasets(
     loudness_transform="Quantile",
     pitch_n_quantiles=100,
     loudness_n_quantiles=100)
+
 u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_dev_fit = fits
 
 ### MODEL INSTANCIATION ###
@@ -76,7 +77,8 @@ for epoch in range(num_epochs):
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_dev = batch
 
         u_pitch_cat = get_data_categorical(u_f0, n_out=100)
-        e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
+        e_cents_cat = get_data_categorical(e_f0, n_out=100)
+        # TODO : change for e_f0_dev
         u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
         e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
 
