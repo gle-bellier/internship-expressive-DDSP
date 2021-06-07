@@ -13,6 +13,12 @@ def get_data_categorical(data, n_out):
     return data_one_hot
 
 
+def get_data_quantified(data, n_out):
+
+    data_idx = torch.round(data * (n_out - 1)).to(torch.int64)
+    return data_idx
+
+
 def get_data_from_categorical(cat, q, n_out):
     return torch.argmax(cat, dim=-1, keepdim=True) / (n_out - 1)
 
