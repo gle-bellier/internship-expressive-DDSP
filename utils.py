@@ -8,7 +8,7 @@ import numpy as np
 def get_data_categorical(data, n_out):
 
     data_idx = torch.round(data * (n_out - 1)).to(torch.int64)
-    data_one_hot = F.one_hot(data_idx.squeeze(-1))
+    data_one_hot = F.one_hot(data_idx.squeeze(-1), num_classes=n_out)
 
     return data_one_hot
 
