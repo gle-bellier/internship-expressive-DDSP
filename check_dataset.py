@@ -28,14 +28,19 @@ e_loudness = np.array(e_loudness)
 e_f0_mean = np.array(e_f0_mean)
 e_f0_stddev = np.array(e_f0_stddev)
 
-fig, (ax1, ax2) = plt.subplots(2, 1)
-ax1.plot(u_f0.squeeze()[8000:16000], label="u_f0")
-ax1.plot(e_f0.squeeze()[8000:16000], label="e_f0")
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+ax1.plot(u_f0.squeeze()[8000:10000], label="u_f0")
+ax1.plot(e_f0.squeeze()[8000:10000], label="e_f0")
 ax1.legend()
 
-ax2.plot(u_loudness.squeeze()[8000:16000], label="u_loudness")
-ax2.plot(e_loudness.squeeze()[8000:16000], label="e_loudness")
+ax2.plot(u_loudness.squeeze()[8000:10000], label="u_loudness")
+ax2.plot(e_loudness.squeeze()[8000:10000], label="e_loudness")
 ax2.legend()
+
+ax3.plot(e_f0_mean.squeeze()[8000:10000] / np.max(e_f0_mean),
+         label="u_loudness")
+ax3.plot(e_f0_stddev.squeeze()[8000:10000], label="e_loudness")
+ax3.legend()
 
 plt.legend()
 plt.show()
