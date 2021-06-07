@@ -15,6 +15,21 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
+from sklearn.base import BaseEstimator, TransformerMixin
+
+
+class Identity(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        pass
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        return X
+
+    def inverse_transform(self, X, y=None):
+        return X
 
 
 def get_datasets(dataset_file="dataset/contours.csv",
@@ -128,7 +143,9 @@ def preprocessing(data, pitch_transform, loudness_transform):
                 list_fits.append(q)
 
             else:
-                list_fits.append(None)
+                id = Identity()
+                id.fit(contour)
+                list_fits.append(id)
 
         else:
             if pitch_transform == "Standardise":
@@ -142,6 +159,8 @@ def preprocessing(data, pitch_transform, loudness_transform):
                 list_fits.append(q)
 
             else:
-                list_fits.append(None)
+                id = Identity()
+                id.fit(contour)
+                list_fits.append(id)
 
     return list_fits
