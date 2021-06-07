@@ -28,7 +28,9 @@ from os import makedirs
 def inv_transform(data, transforms):
     transform_data = []
     for i in range(len(data)):
-        transform_data.append(transforms[i].inverse_transform(data[i]))
+        transform_data.append(
+            torch.tensor(transforms[i].inverse_transform(
+                data[i].squeeze(0))).unsqueeze(0))
     return transform_data
 
 
@@ -80,17 +82,11 @@ with torch.no_grad():
 
         out_f0, out_loudness = model.predict(u_f0, u_loudness)
 
-        out_f0 = torch.tensor(u_f0_fit.inverse_transform(
-            out_f0.squeeze(0))).unsqueeze(0)
-        out_loudness = torch.tensor(
-            u_loudness_fit.inverse_transform(
-                out_loudness.squeeze(0))).unsqueeze(0)
+        out_f0, out_loudness = inv_transform([out_f0, out_loudness],
+                                             [u_f0_fit, u_loudness_fit])
 
-        e_f0 = torch.tensor(e_f0_fit.inverse_transform(
-            e_f0.squeeze(0))).unsqueeze(0)
-        e_loudness = torch.tensor(
-            e_loudness_fit.inverse_transform(
-                e_loudness.squeeze(0))).unsqueeze(0)
+        e_f0, e_loudness = inv_transform([e_f0, e_loudness],
+                                         [e_f0_fit, e_loudness_fit])
 
         target = torch.cat([e_f0[:, 1:], e_loudness[:, 1:]], -1)
         model_out = torch.cat([out_f0, out_loudness], -1)
