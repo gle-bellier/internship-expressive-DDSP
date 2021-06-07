@@ -5,7 +5,7 @@ import numpy as np
 import glob
 
 from get_datasets import get_datasets
-from models.LSTMCategorical import LSTMCategorical, LSTM_Categorical
+from models.LSTMCategorical import LSTMCategorical
 
 import torch
 import torch.utils.data
@@ -13,6 +13,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
+from sklearn.preprocessing import QuantileTransformer
 import signal
 
 
@@ -43,8 +44,8 @@ train_loader, test_loader, fits = get_datasets(
     sample_duration=20,
     batch_size=16,
     ratio=0.7,
-    pitch_transform="Quantile",
-    loudness_transform="Quantile")
+    pitch_transform=None,
+    loudness_transform=None)
 
 u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_std_fit = fits
 
@@ -75,31 +76,22 @@ def frequencies_to_pitch_cents(frequencies, pitch_size):
     return pitch_array, cents_array
 
 
-def pitch_cents_to_frequencies(pitch, cents):
+def get_dev_cat(data, n_quantiles):
 
-    gen_freq = torch.tensor(li.midi_to_hz(pitch)) * torch.pow(
-        2, (cents - 50) / 1200)
-    gen_freq = torch.unsqueeze(gen_freq, -1)
+    data_reshaped = data.reshape(data.size(0) * data.size(1), 1)
 
-    return gen_freq
+    q = QuantileTransformer(n_quantiles=n_quantiles)
+    q.fit(data_reshaped)
 
-
-def inv_transform(data, transforms):
-    transform_data = []
-    for i in range(len(data)):
-        transform_data.append(
-            torch.tensor(transforms[i].inverse_transform(
-                data[i].squeeze(0))).unsqueeze(0))
-    return transform_data
+    data_quantile = torch.tensor(q.transform(data_reshaped))
+    data_quantile = data_quantile.reshape(data.shape)
 
 
 ### MODEL INSTANCIATION ###
 
 num_epochs = 10000
 learning_rate = 0.00005
-
 loss_ratio = 0.1  # ratio between loss for pitches and loss for cents
-
 pitch_size, cents_size = 100, 101
 
 model = LSTMCategorical().to(device)
@@ -120,74 +112,78 @@ for epoch in range(num_epochs):
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
         target_frequencies = e_f0[:, 1:]
 
-        u_pitch, u_cents = frequencies_to_pitch_cents(u_f0[:, 1:], 100)
-        e_pitch, e_cents = frequencies_to_pitch_cents(e_f0[:, :-1], 100)
+        e_dev_cat = get_dev_cat(e_f0_stddev, n_quantiles=100)
+        break
+    break
 
-        model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1).float()
+#         u_pitch, u_cents = frequencies_to_pitch_cents(u_f0[:, 1:], 100)
+#         e_pitch, e_cents = frequencies_to_pitch_cents(e_f0[:, :-1], 100)
 
-        out_pitch, out_cents = model(model_input.to(device))
-        optimizer.zero_grad()
+#         model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1).float()
 
-        ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
-            target_frequencies, pitch_size)
+#         out_pitch, out_cents = model(model_input.to(device))
+#         optimizer.zero_grad()
 
-        out_pitch = out_pitch.permute(0, 2, 1).to(device)
-        out_cents = out_cents.permute(0, 2, 1).to(device)
+#         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
+#             target_frequencies, pitch_size)
 
-        ground_truth_pitch = ground_truth_pitch.long().to(device)
-        ground_truth_cents = ground_truth_cents.long().to(device)
+#         out_pitch = out_pitch.permute(0, 2, 1).to(device)
+#         out_cents = out_cents.permute(0, 2, 1).to(device)
 
-        # obtain the loss function
-        train_loss_pitch = criterion(out_pitch, ground_truth_pitch)
-        train_loss_cents = criterion(out_cents, ground_truth_cents)
-        train_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
+#         ground_truth_pitch = ground_truth_pitch.long().to(device)
+#         ground_truth_cents = ground_truth_cents.long().to(device)
 
-        train_loss_CE.backward()
-        optimizer.step()
+#         # obtain the loss function
+#         train_loss_pitch = criterion(out_pitch, ground_truth_pitch)
+#         train_loss_cents = criterion(out_cents, ground_truth_cents)
+#         train_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
 
-    # Compute validation losses :
+#         train_loss_CE.backward()
+#         optimizer.step()
 
-    model.eval()
-    with torch.no_grad():
-        for batch in test_loader:
+#     # Compute validation losses :
 
-            u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
+#     model.eval()
+#     with torch.no_grad():
+#         for batch in test_loader:
 
-            u_f0 = torch.Tensor(u_f0.float())
-            e_f0 = torch.Tensor(e_f0.float())
-            target_frequencies = e_f0[:, 1:]
+#             u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
 
-            model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1)
-            model_input = std_transform(model_input)[0]
+#             u_f0 = torch.Tensor(u_f0.float())
+#             e_f0 = torch.Tensor(e_f0.float())
+#             target_frequencies = e_f0[:, 1:]
 
-            out_pitch, out_cents = model(model_input.to(device))
+#             model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1)
+#             model_input = std_transform(model_input)[0]
 
-            ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
-                target_frequencies, pitch_size)
+#             out_pitch, out_cents = model(model_input.to(device))
 
-            # permute dimension for cross entropy loss function :
+#             ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
+#                 target_frequencies, pitch_size)
 
-            out_pitch = out_pitch.permute(0, 2, 1).to(device)
-            out_cents = out_cents.permute(0, 2, 1).to(device)
+#             # permute dimension for cross entropy loss function :
 
-            ground_truth_pitch = ground_truth_pitch.long().to(device)
-            ground_truth_cents = ground_truth_cents.long().to(device)
+#             out_pitch = out_pitch.permute(0, 2, 1).to(device)
+#             out_cents = out_cents.permute(0, 2, 1).to(device)
 
-            # obtain the loss function
-            test_loss_pitch = criterion(out_pitch, ground_truth_pitch)
-            test_loss_cents = criterion(out_cents, ground_truth_cents)
+#             ground_truth_pitch = ground_truth_pitch.long().to(device)
+#             ground_truth_cents = ground_truth_cents.long().to(device)
 
-            test_loss_CE = test_loss_pitch + test_loss_cents * loss_ratio
+#             # obtain the loss function
+#             test_loss_pitch = criterion(out_pitch, ground_truth_pitch)
+#             test_loss_cents = criterion(out_cents, ground_truth_cents)
 
-    if epoch % 10 == 9:
-        print("Epoch: %d, training loss: %1.5f" % (epoch + 1, train_loss_CE))
-        print("Epoch: %d, test loss: %1.5f" % (epoch + 1, test_loss_CE))
+#             test_loss_CE = test_loss_pitch + test_loss_cents * loss_ratio
 
-        writer.add_scalar('training  CEloss', train_loss_CE, epoch + 1)
-        writer.add_scalar('test CEloss', test_loss_CE, epoch + 1)
+#     if epoch % 10 == 9:
+#         print("Epoch: %d, training loss: %1.5f" % (epoch + 1, train_loss_CE))
+#         print("Epoch: %d, test loss: %1.5f" % (epoch + 1, test_loss_CE))
 
-torch.save(model.state_dict(),
-           'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
+#         writer.add_scalar('training  CEloss', train_loss_CE, epoch + 1)
+#         writer.add_scalar('test CEloss', test_loss_CE, epoch + 1)
 
-writer.flush()
-writer.close()
+# torch.save(model.state_dict(),
+#            'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
+
+# writer.flush()
+# writer.close()
