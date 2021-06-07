@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from sklearn.preprocessing import QuantileTransformer
+import librosa as li
 
 
 def get_data_cat(data, n_out):
@@ -25,3 +26,18 @@ def get_data_from_cat(cat, q, n_out):
     data_reshaped = torch.tensor(q.inverse_transform(data_q_reshaped))
     data = data_reshaped.reshape(data_q.shape)
     return data
+
+
+def frequencies_to_pitch_cents(frequencies):
+
+    midi_pitch = torch.tensor(li.hz_to_midi(frequencies))
+    midi_pitch = torch.round(midi_pitch).long()
+    round_freq = torch.tensor(li.midi_to_hz(midi_pitch))
+    cents = (1200 * torch.log2(frequencies / round_freq)).long()
+
+    return round_freq, cents
+
+
+def pitch_cents_to_frequencies(pitch, cents):
+
+    return pitch * torch.pow(2, cents / 1200)

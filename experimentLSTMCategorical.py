@@ -6,6 +6,7 @@ import glob
 
 from get_datasets import get_datasets
 from models.LSTMCategorical import LSTMCategorical
+from utils import *
 
 import torch
 import torch.utils.data
@@ -38,7 +39,7 @@ else:
 print('using', device)
 
 writer = SummaryWriter("runs/benchmark/LSTMCategorical")
-train_loader, test_loader, fits = get_datasets(
+train_loader, test_loader, _ = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
     sample_duration=20,
@@ -46,46 +47,6 @@ train_loader, test_loader, fits = get_datasets(
     ratio=0.7,
     pitch_transform=None,
     loudness_transform=None)
-
-u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_std_fit = fits
-
-
-def frequencies_to_pitch_cents(frequencies, pitch_size):
-
-    # one hot vectors :
-    pitch_array = torch.zeros(frequencies.size(0), frequencies.size(1))
-    cents_array = torch.zeros(frequencies.size(0), frequencies.size(1))
-
-    midi_pitch = torch.tensor(li.hz_to_midi(frequencies))
-    midi_pitch = torch.round(midi_pitch).long()
-
-    #print("Min =  {};  Max =  {} frequencies".format(li.midi_to_hz(0), li.midi_to_hz(pitch_size-1)))
-    midi_pitch_clip = torch.clip(midi_pitch, min=0, max=pitch_size - 1)
-    round_freq = torch.tensor(li.midi_to_hz(midi_pitch))
-
-    cents = (1200 * torch.log2(frequencies / round_freq)).long()
-
-    for i in range(0, pitch_array.size(0)):
-        for j in range(0, pitch_array.size(1)):
-            pitch_array[i, j] = midi_pitch_clip[i, j, 0]
-
-    for i in range(0, cents_array.size(0)):
-        for j in range(0, cents_array.size(1)):
-            cents_array[i, j] = cents[i, j, 0] + 50
-
-    return pitch_array, cents_array
-
-
-def get_dev_cat(data, n_quantiles):
-
-    data_reshaped = data.reshape(data.size(0) * data.size(1), 1)
-
-    q = QuantileTransformer(n_quantiles=n_quantiles)
-    q.fit(data_reshaped)
-
-    data_quantile = torch.tensor(q.transform(data_reshaped))
-    data_quantile = data_quantile.reshape(data.shape)
-
 
 ### MODEL INSTANCIATION ###
 
@@ -109,12 +70,12 @@ for epoch in range(num_epochs):
 
         model.train()
 
-        u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
+        u_f0, u_loudness, e_f0, e_loudness, _, _ = batch
         target_frequencies = e_f0[:, 1:]
 
-        e_dev_cat = get_dev_cat(e_f0_stddev, n_quantiles=100)
-        break
-    break
+        e_pitch, e_cents = frequencies_to_pitch_cents(e_f0)
+
+        e_dev_cat, e_f0_fit = get_data_cat(e_f0, n_out=100)
 
 #         u_pitch, u_cents = frequencies_to_pitch_cents(u_f0[:, 1:], 100)
 #         e_pitch, e_cents = frequencies_to_pitch_cents(e_f0[:, :-1], 100)
