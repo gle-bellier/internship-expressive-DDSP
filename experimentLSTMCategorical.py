@@ -118,7 +118,7 @@ for epoch in range(num_epochs):
             e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
 
             model_input = torch.cat([
-                u_pitch_cat[:, 1:], e_cents_cat[:, :-1], u_loudness_cat[:, 1:],
+                u_pitch_cat[:, 1:], u_loudness_cat[:, 1:], e_cents_cat[:, :-1],
                 e_loudness_cat[:, :-1]
             ], -1).float()
 

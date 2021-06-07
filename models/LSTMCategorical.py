@@ -38,7 +38,7 @@ class NormalizedRectifiedLinear(nn.Module):
 
 
 class LSTMCategorical(nn.Module):
-    def __init__(self, input_size=512, hidden_size=512, num_layers=1):
+    def __init__(self, input_size=1024, hidden_size=1024, num_layers=1):
         super(LSTMCategorical, self).__init__()
 
         self.num_layers = num_layers
@@ -46,8 +46,8 @@ class LSTMCategorical(nn.Module):
         self.hidden_size = hidden_size
 
         self.pre_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(201, 256),
-            NormalizedRectifiedLinear(256, input_size),
+            NormalizedRectifiedLinear(400, 512),
+            NormalizedRectifiedLinear(512, input_size),
         )
 
         self.lstm = nn.LSTM(input_size=input_size,
@@ -56,8 +56,8 @@ class LSTMCategorical(nn.Module):
                             batch_first=True)
 
         self.post_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(hidden_size, 256),
-            NormalizedRectifiedLinear(256, 201),
+            NormalizedRectifiedLinear(hidden_size, 512),
+            NormalizedRectifiedLinear(512, 200),
         )
 
     def forward(self, x):
@@ -66,9 +66,9 @@ class LSTMCategorical(nn.Module):
         out = self.lstm(x)[0]
         out = self.post_lstm(out)
 
-        pitch, cents = torch.split(out, [100, 101], dim=-1)
+        cents, loudness = torch.split(out, [100, 100], dim=-1)
 
-        return pitch, cents
+        return cents, loudness
 
     def pitch_cents_to_frequencies(self, pitch, cents):
 
@@ -84,3 +84,29 @@ class LSTMCategorical(nn.Module):
         gen_freq = torch.unsqueeze(gen_freq, -1)
 
         return gen_freq
+
+    def predict(self, pitch, loudness):
+        f0 = torch.zeros_like(pitch)
+        l0 = torch.zeros_like(loudness)
+
+        x_in = torch.cat([pitch, loudness, f0, l0], -1)
+
+        context = None
+
+        for i in range(x_in.size(1) - 1):
+            x = x_in[:, i:i + 1]
+
+            x = self.pre_lstm(x)
+            pred, context = self.lstm(x, context)
+            pred = self.post_lstm(pred)
+
+            e_cents, l0 = torch.split(pred, 1, -1)
+
+            x_in[:, i + 1:i + 2, 2] = e_cents
+            x_in[:, i + 1:i + 2, 3] = l0
+
+        # TODO : sample from distribution
+
+        e_f0, e_loudness = x_in[:, :, 2:].split(1, -1)
+
+        return e_f0, e_loudness
