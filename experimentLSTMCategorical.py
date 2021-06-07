@@ -13,8 +13,6 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
-from sklearn.preprocessing import StandardScaler, QuantileTransformer
-
 import signal
 
 
@@ -25,7 +23,6 @@ def save_model():
 
 
 def keyboardInterruptHandler(signal, frame):
-
     save_model()
     exit(0)
 
@@ -40,11 +37,16 @@ else:
 print('using', device)
 
 writer = SummaryWriter("runs/benchmark/LSTMCategorical")
-train_loader, test_loader = get_datasets(dataset_file="dataset/contours.csv",
-                                         sampling_rate=100,
-                                         sample_duration=20,
-                                         batch_size=16,
-                                         ratio=0.7)
+train_loader, test_loader, fits = get_datasets(
+    dataset_file="dataset/contours.csv",
+    sampling_rate=100,
+    sample_duration=20,
+    batch_size=16,
+    ratio=0.7,
+    pitch_transform="Quantile",
+    loudness_transform="Quantile")
+
+u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_std_fit = fits
 
 
 def frequencies_to_pitch_cents(frequencies, pitch_size):
@@ -82,15 +84,13 @@ def pitch_cents_to_frequencies(pitch, cents):
     return gen_freq
 
 
-def std_transform(v):
-    std = torch.std(v, dim=(1, 2), keepdim=True)
-    m = torch.mean(v, dim=(1, 2), keepdim=True)
-
-    return (v - m) / std, m, std
-
-
-def std_inv_transform(v, m, std):
-    return v * std + m
+def inv_transform(data, transforms):
+    transform_data = []
+    for i in range(len(data)):
+        transform_data.append(
+            torch.tensor(transforms[i].inverse_transform(
+                data[i].squeeze(0))).unsqueeze(0))
+    return transform_data
 
 
 ### MODEL INSTANCIATION ###
@@ -118,16 +118,14 @@ for epoch in range(num_epochs):
         model.train()
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = batch
-
-        u_f0 = torch.Tensor(u_f0.float())
-        e_f0 = torch.Tensor(e_f0.float())
         target_frequencies = e_f0[:, 1:]
 
-        model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1)
-        model_input = std_transform(model_input)[0]
+        u_pitch, u_cents = frequencies_to_pitch_cents(u_f0[:, 1:], 100)
+        e_pitch, e_cents = frequencies_to_pitch_cents(e_f0[:, :-1], 100)
+
+        model_input = torch.cat([u_f0[:, 1:], e_f0[:, :-1]], -1).float()
 
         out_pitch, out_cents = model(model_input.to(device))
-
         optimizer.zero_grad()
 
         ground_truth_pitch, ground_truth_cents = frequencies_to_pitch_cents(
