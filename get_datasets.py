@@ -29,7 +29,7 @@ class Identity(BaseEstimator, TransformerMixin):
         return X
 
     def inverse_transform(self, X, y=None):
-        return X
+        return X.numpy()
 
 
 def get_datasets(dataset_file="dataset/contours.csv",
