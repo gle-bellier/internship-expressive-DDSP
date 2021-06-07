@@ -79,41 +79,23 @@ class ContoursGetter:
 
         return notes_loudness
 
-    def get_freq_mean_stddev(self, frequencies, onsets):
-        freq_stddev = np.zeros_like(frequencies)
+    def get_freq_mean(self, frequencies, onsets):
         freq_mean = np.zeros_like(frequencies)
         previous_i = 0
         for i in range(len(onsets)):
             a, b = onsets[i]
             if previous_i != a:
                 freq_mean[previous_i:a] = np.mean(frequencies[previous_i:a])
-                freq_stddev[previous_i:a] = frequencies[
-                    previous_i:a] - np.mean(frequencies[previous_i:a])
-                d = np.max(np.abs(freq_stddev[previous_i:a]))
-                if d != 0:
-                    freq_stddev[previous_i:a] /= d
-                else:
-                    freq_stddev[previous_i:a] = 1.0
-
             else:
                 freq_mean[previous_i] = frequencies[previous_i]
-                freq_stddev[previous_i] = 0
-
             if a != b:
                 freq_mean[a:b] = np.mean(frequencies[a:b])
-                freq_stddev[a:b] = frequencies[a:b] - np.mean(frequencies[a:b])
-                d = np.max(np.abs(freq_stddev[a:b]))
-                if d != 0:
-                    freq_stddev[a:b] /= d
-                else:
-                    freq_stddev[a:b] = 1.0
             else:
                 freq_mean[a] = frequencies[a]
-                freq_stddev[a] = 0
 
             previous_i = b
 
-        return freq_mean, freq_stddev
+        return freq_mean
 
     def get_onsets(self, midi_file, frame_rate):
         seq = note_seq.midi_file_to_note_sequence(midi_file)
@@ -139,9 +121,6 @@ class ContoursGetter:
         time_wav, frequency_wav, _, loudness_wav = ext.get_time_f0_confidence_loudness(
             dataset_path, wav_file, sampling_rate, block_size, write=True)
 
-        # # loudness mapping : BAD IDEA
-        # loudness_wav = self.dB2midi(loudness_wav)
-
         # From midi file :
         c = Converter()
 
@@ -154,8 +133,7 @@ class ContoursGetter:
                                       sampling_rate // block_size)
         loudness_midi = self.get_notes_loudness(loudness_wav, midi_onsets)
 
-        frequency_wav_means, frequency_wav_stddev = self.get_freq_mean_stddev(
-            frequency_wav, midi_onsets)
+        frequency_wav_means = self.get_freq_mean(frequency_wav, midi_onsets)
 
         threshold = -5.5
         m = np.array([
@@ -175,7 +153,6 @@ class ContoursGetter:
             onsets[idx["off"]] = -1.0
 
         parts_index = self.get_not_silence(indexes, time_wav)
-        # loudness mapping :
 
         diff_f0 = np.abs(frequency_midi - frequency_wav)
         diff_loudness = np.abs(loudness_wav - loudness_midi)
@@ -183,12 +160,12 @@ class ContoursGetter:
         # # compute difference and score:
 
         #score = np.mean(diff_f0) + np.mean(diff_loudness)
+
         frequency_midi_array = np.empty(0)
         loudness_midi_array = np.empty(0)
         frequency_wav_array = np.empty(0)
         loudness_wav_array = np.empty(0)
         frequency_wav_means_array = np.empty(0)
-        frequency_wav_stddev_array = np.empty(0)
 
         silence_duration = 0.5  # duration of silence we keep at each cut.
         silence_length = silence_duration * (sampling_rate // block_size)
@@ -216,8 +193,6 @@ class ContoursGetter:
 
             frequency_wav_means_array = np.concatenate(
                 (frequency_wav_means_array, frequency_wav_means[start:end]))
-            frequency_wav_stddev_array = np.concatenate(
-                (frequency_wav_stddev_array, frequency_wav_stddev[start:end]))
 
         if verbose:
 
@@ -241,7 +216,7 @@ class ContoursGetter:
             # plt.title("Frequency comparison {}".format(wav_file))
             # plt.show()
 
-        return frequency_midi_array, loudness_midi_array, frequency_wav_array, loudness_wav_array, frequency_wav_means, frequency_wav_stddev
+        return frequency_midi_array, loudness_midi_array, frequency_wav_array, loudness_wav_array, frequency_wav_means
 
 
 if __name__ == '__main__':
@@ -265,7 +240,7 @@ if __name__ == '__main__':
             midi_file = filename + ".mid"
             wav_file = filename + ".wav"
             g = ContoursGetter()
-            u_f0_track, u_loudness_track, e_f0_track, e_loudness_track, e_f0_mean_track, e_f0_stddev_track = g.get_contours(
+            u_f0_track, u_loudness_track, e_f0_track, e_loudness_track, e_f0_mean_track = g.get_contours(
                 dataset_path,
                 midi_file,
                 wav_file,
@@ -280,9 +255,9 @@ if __name__ == '__main__':
             e_loudness = np.concatenate((e_loudness, e_loudness_track))
 
             e_f0_mean = np.concatenate((e_f0_mean, e_f0_mean_track))
-            e_f0_stddev = np.concatenate((e_f0_stddev, e_f0_stddev_track))
 
             pbar.update(1)
+        e_f0_stddev = (1200 * np.log2(e_f0 / u_f0)).clip(-50, 50)
 
         print("Writing : \n")
 
