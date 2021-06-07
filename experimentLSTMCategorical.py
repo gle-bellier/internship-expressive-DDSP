@@ -129,6 +129,8 @@ for epoch in range(num_epochs):
             out_cents = out_cents.permute(0, 2, 1).to(device)
             out_loudness = out_loudness.permute(0, 2, 1).to(device)
 
+            # TODO : Convert targets ranges
+
             # obtain the loss function
             test_loss_pitch = criterion(out_cents, target_cents)
             test_loss_cents = criterion(out_loudness, target_loudness)
