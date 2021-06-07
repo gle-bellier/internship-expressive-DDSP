@@ -89,8 +89,11 @@ class ContoursGetter:
                 freq_mean[previous_i:a] = np.mean(frequencies[previous_i:a])
                 freq_stddev[previous_i:a] = frequencies[
                     previous_i:a] - np.mean(frequencies[previous_i:a])
-                freq_stddev[previous_i:a] /= np.max(
-                    np.abs(freq_stddev[previous_i:a]))
+                d = np.max(np.abs(freq_stddev[previous_i:a]))
+                if d != 0:
+                    freq_stddev[previous_i:a] /= d
+                else:
+                    freq_stddev[previous_i:a] = 1.0
 
             else:
                 freq_mean[previous_i] = frequencies[previous_i]
