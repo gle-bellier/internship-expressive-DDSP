@@ -14,7 +14,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
 import signal
 
 
@@ -40,18 +40,20 @@ else:
 print('using', device)
 
 writer = SummaryWriter("runs/benchmark/LSTMCategoricalLighter")
-train_loader, test_loader, fits = get_datasets(
+
+list_transforms = [(StandardScaler, ), (QuantileTransformer, 100),
+                   (MinMaxScaler, ), (QuantileTransformer, 100),
+                   (MinMaxScaler, ), (MinMaxScaler, )]
+
+train_loader, test_loader, scalers = get_datasets(
     dataset_file="dataset/contours.csv",
+    transforms=list_transforms,
     sampling_rate=100,
     sample_duration=20,
     batch_size=16,
-    ratio=0.7,
-    pitch_transform="Quantile",
-    loudness_transform="Quantile",
-    pitch_n_quantiles=100,
-    loudness_n_quantiles=100)
+    ratio=0.7)
 
-u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_dev_fit = fits
+u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_dev_fit = scalers
 
 ### MODEL INSTANCIATION ###
 
