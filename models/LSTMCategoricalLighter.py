@@ -38,7 +38,7 @@ class NormalizedRectifiedLinear(nn.Module):
 
 
 class LSTMCategorical(nn.Module):
-    def __init__(self, input_size=768, hidden_size=768, num_layers=1):
+    def __init__(self, input_size=512, hidden_size=512, num_layers=1):
         super(LSTMCategorical, self).__init__()
 
         self.num_layers = num_layers
