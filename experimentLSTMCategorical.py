@@ -67,88 +67,88 @@ print(model.parameters)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+
+def get_loss(batch):
+    u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_dev = batch
+
+    # CONTINUOUS TO CATEGORICAL
+    u_pitch_cat = get_data_categorical(u_f0, n_out=100)
+    e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
+    u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
+    e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
+
+    # CAT CATEGORICAL INPUT
+    model_input = torch.cat([
+        u_pitch_cat[:, 1:],
+        e_cents_cat[:, :-1],
+        u_loudness_cat[:, 1:],
+        e_loudness_cat[:, :-1],
+    ], -1).float()
+
+    # PREDICTION
+    out_cents, out_loudness = model(model_input.to(device))
+
+    # COMPUTE TARGETS
+    target_cents = get_data_quantified(
+        e_f0_dev[:, 1:],
+        n_out=100,
+    ).squeeze(-1).long().to(device)
+
+    target_loudness = get_data_quantified(
+        e_loudness[:, 1:],
+        n_out=100,
+    ).squeeze(-1).long().to(device)
+
+    # COMPUTE LOSS
+    out_cents = out_cents.permute(0, 2, 1).to(device)
+    out_loudness = out_loudness.permute(0, 2, 1).to(device)
+    train_loss_pitch = criterion(out_cents, target_cents)
+    train_loss_cents = criterion(out_loudness, target_loudness)
+
+    train_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
+
+    return train_loss_CE
+
+
 # Train the model
 for epoch in range(num_epochs):
+    model.train()
+
+    mean_train_loss = 0
+    nel = 0
 
     for batch in train_loader:
 
-        model.train()
+        train_loss_CE = get_loss(batch)
 
-        u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_dev = batch
-
-        u_pitch_cat = get_data_categorical(u_f0, n_out=100)
-        e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
-        u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
-        e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
-
-        model_input = torch.cat([
-            u_pitch_cat[:, 1:], e_cents_cat[:, :-1], u_loudness_cat[:, 1:],
-            e_loudness_cat[:, :-1]
-        ], -1).float()
-
-        out_cents, out_loudness = model(model_input.to(device))
         optimizer.zero_grad()
-
-        target_cents = get_data_quantified(
-            e_f0_dev[:, 1:], n_out=100).squeeze(-1).long().to(device)
-        target_loudness = get_data_quantified(
-            e_loudness[:, 1:], n_out=100).squeeze(-1).long().to(device)
-
-        out_cents = out_cents.permute(0, 2, 1).to(device)
-        out_loudness = out_loudness.permute(0, 2, 1).to(device)
-        # obtain the loss function
-        train_loss_pitch = criterion(out_cents, target_cents)
-        train_loss_cents = criterion(out_loudness, target_loudness)
-        train_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
-
         train_loss_CE.backward()
         optimizer.step()
 
-    # Compute validation losses :
+        nel += 1
+        mean_train_loss += (train_loss_CE.item() - mean_train_loss) / nel
+
+    mean_test_loss = 0
+    nel = 0
 
     model.eval()
     with torch.no_grad():
         for batch in test_loader:
+            test_loss_CE = get_loss(batch)
 
-            u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_dev = batch
+            nel += 1
+            mean_test_loss += (test_loss_CE.item() - mean_test_loss) / nel
 
-            u_pitch_cat = get_data_categorical(u_f0, n_out=100)
-            e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
-            u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
-            e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
+    print("Epoch: %d, training loss: %1.5f" % (epoch + 1, mean_train_loss))
+    print("Epoch: %d, test loss: %1.5f" % (epoch + 1, mean_test_loss))
 
-            model_input = torch.cat([
-                u_pitch_cat[:, 1:], u_loudness_cat[:, 1:], e_cents_cat[:, :-1],
-                e_loudness_cat[:, :-1]
-            ], -1).float()
+    writer.add_scalar('training CEloss', mean_train_loss, epoch + 1)
+    writer.add_scalar('test CEloss', mean_test_loss, epoch + 1)
 
-            out_cents, out_loudness = model(model_input.to(device))
-            optimizer.zero_grad()
-
-            target_cents = get_data_quantified(
-                e_f0_dev[:, 1:], n_out=100).squeeze(-1).long().to(device)
-            target_loudness = get_data_quantified(
-                e_loudness[:, 1:], n_out=100).squeeze(-1).long().to(device)
-
-            out_cents = out_cents.permute(0, 2, 1).to(device)
-            out_loudness = out_loudness.permute(0, 2, 1).to(device)
-
-            # TODO : Convert targets ranges
-
-            # obtain the loss function
-            test_loss_pitch = criterion(out_cents, target_cents)
-            test_loss_cents = criterion(out_loudness, target_loudness)
-            test_loss_CE = test_loss_pitch + test_loss_cents * loss_ratio
-
-    if epoch % 10 == 9:
-        print("Epoch: %d, training loss: %1.5f" % (epoch + 1, train_loss_CE))
-        print("Epoch: %d, test loss: %1.5f" % (epoch + 1, test_loss_CE))
-
-        writer.add_scalar('training  CEloss', train_loss_CE, epoch + 1)
-        writer.add_scalar('test CEloss', test_loss_CE, epoch + 1)
-
-torch.save(model.state_dict(),
-           'results/saved_models/LSTM_Categorical_{}epochs.pt'.format(epoch))
+torch.save(
+    model.state_dict(),
+    'results/saved_models/LSTM_Categorical_{}epochs.pt'.format(epoch),
+)
 
 writer.flush()
 writer.close()
