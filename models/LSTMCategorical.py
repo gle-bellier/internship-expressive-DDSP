@@ -74,16 +74,16 @@ class LSTMCategorical(nn.Module):
 
     def sampling(self, cents, loudness):
 
-        cents_dis = Categorical(cents)
-        loudness_dis = Categorical(loudness)
+        cents_dis = Categorical(logits=cents)
+        loudness_dis = Categorical(logits=loudness)
 
         sampled_cents = cents_dis.sample().unsqueeze(-1)
         sampled_loudness = loudness_dis.sample().unsqueeze(-1)
 
         # need to change the range from [0, 100] -> [0, n_out]
 
-        sampled_cents /= 100
-        sampled_loudness /= 100
+        sampled_cents = sampled_cents.float() / 100.0
+        sampled_loudness = sampled_loudness.float() / 100.0
         return sampled_cents, sampled_loudness
 
     def predict(self, pitch, loudness):
@@ -103,10 +103,10 @@ class LSTMCategorical(nn.Module):
 
             e_cents, l0 = torch.split(pred, 100, -1)
 
-            x_in[:, i + 1:i + 2, 2] = e_cents
-            x_in[:, i + 1:i + 2, 3] = l0
+            x_in[:, i + 1:i + 2, 200:300] = e_cents
+            x_in[:, i + 1:i + 2, 300:] = l0
 
-        out_cents, out_loudness = x_in[:, :, 2:].split(100, -1)
+        out_cents, out_loudness = x_in[:, :, 200:].split(100, -1)
         out_cents, out_loudness = self.sampling(out_cents, out_loudness)
 
         return out_cents, out_loudness

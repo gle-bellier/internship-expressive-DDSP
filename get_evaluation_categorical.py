@@ -1,4 +1,5 @@
 import io as io
+from models.LSTMCategorical import LSTMCategorical
 import scipy.io.wavfile as wav
 
 import torch
@@ -39,12 +40,12 @@ device = torch.device("cpu")
 print('using', device)
 
 save_path = "results/saved_models/"
-model_name = "LSTM_towards_realistic_midi3540epochs.pt"
+model_name = "LSTM_Categorical_1101epochs.pt"
 wav_path = "results/saved_samples/"
 
 makedirs(wav_path, exist_ok=True)
 
-model = LSTMContours().to(device)
+model = LSTMCategorical().to(device)
 model.load_state_dict(
     torch.load(save_path + model_name, map_location=torch.device("cpu")))
 model.eval()
@@ -88,7 +89,7 @@ with torch.no_grad():
         u_loudness_cat = u_loudness_cat[:, 1:].float()
 
         # PREDICTION
-        out_f0, out_loudness = model.predict(u_f0, u_loudness)
+        out_f0, out_loudness = model.predict(u_pitch_cat, u_loudness_cat)
 
         out_f0, out_loudness = inv_transform([out_f0, out_loudness],
                                              [u_f0_fit, u_loudness_fit])
