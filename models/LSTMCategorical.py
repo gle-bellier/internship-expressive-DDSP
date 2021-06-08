@@ -47,7 +47,8 @@ class LSTMCategorical(nn.Module):
 
         self.pre_lstm = nn.Sequential(
             NormalizedRectifiedLinear(400, 512),
-            NormalizedRectifiedLinear(512, input_size),
+            NormalizedRectifiedLinear(512, 768),
+            NormalizedRectifiedLinear(768, input_size),
         )
 
         self.lstm = nn.LSTM(input_size=input_size,
@@ -56,7 +57,8 @@ class LSTMCategorical(nn.Module):
                             batch_first=True)
 
         self.post_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(hidden_size, 512),
+            NormalizedRectifiedLinear(hidden_size, 768),
+            NormalizedRectifiedLinear(768, 512),
             NormalizedRectifiedLinear(512, 200),
         )
 

@@ -38,7 +38,7 @@ else:
 
 print('using', device)
 
-writer = SummaryWriter("runs/benchmark/LSTMCategorical")
+writer = SummaryWriter("runs/benchmark/LSTMCategoricalBigger")
 train_loader, test_loader, fits = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
@@ -148,7 +148,7 @@ for epoch in range(num_epochs):
         writer.add_scalar('test CEloss', test_loss_CE, epoch + 1)
 
 torch.save(model.state_dict(),
-           'results/saved_models/benchmark-CE{}epochs.pt'.format(epoch))
+           'results/saved_models/LSTM_Categorical_{}epochs.pt'.format(epoch))
 
 writer.flush()
 writer.close()
