@@ -56,7 +56,7 @@ u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_dev_fit 
 ### MODEL INSTANCIATION ###
 
 num_epochs = 10000
-learning_rate = 0.00001
+learning_rate = 0.0001
 loss_ratio = 0.1  # ratio between loss for pitches and loss for cents
 pitch_size, cents_size = 100, 101
 
@@ -103,10 +103,10 @@ def get_loss(batch):
     # COMPUTE LOSS
     out_cents = out_cents.permute(0, 2, 1).to(device)
     out_loudness = out_loudness.permute(0, 2, 1).to(device)
-    train_loss_pitch = criterion(out_cents, target_cents)
-    train_loss_cents = criterion(out_loudness, target_loudness)
+    train_loss_cents = criterion(out_cents, target_cents)
+    train_loss_loudness = criterion(out_loudness, target_loudness)
 
-    train_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
+    train_loss_CE = train_loss_cents + train_loss_loudness * loss_ratio
 
     return train_loss_CE
 
