@@ -38,7 +38,7 @@ else:
 
 print('using', device)
 
-writer = SummaryWriter("runs/benchmark/LSTMCategoricalslower")
+writer = SummaryWriter("runs/benchmark/LSTMCategoricalBigger")
 train_loader, test_loader, fits = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
