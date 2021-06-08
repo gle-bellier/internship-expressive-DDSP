@@ -77,8 +77,7 @@ for epoch in range(num_epochs):
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_dev = batch
 
         u_pitch_cat = get_data_categorical(u_f0, n_out=100)
-        e_cents_cat = get_data_categorical(e_f0, n_out=100)
-        # TODO : change for e_f0_dev
+        e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
         u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
         e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
 
@@ -90,14 +89,13 @@ for epoch in range(num_epochs):
         out_cents, out_loudness = model(model_input.to(device))
         optimizer.zero_grad()
 
-        target_cents = e_cents_cat[:, 1:]
-        target_loudness = e_loudness_cat[:, 1:]
+        target_cents = get_data_quantified(
+            e_f0_dev[:, 1:], n_out=100).squeeze(-1).long().to(device)
+        target_loudness = get_data_quantified(
+            e_loudness[:, 1:], n_out=100).squeeze(-1).long().to(device)
 
         out_cents = out_cents.permute(0, 2, 1).to(device)
         out_loudness = out_loudness.permute(0, 2, 1).to(device)
-        target_cents = target_cents.permute(0, 2, 1).to(device)
-        target_loudness = target_loudness.permute(0, 2, 1).to(device)
-
         # obtain the loss function
         train_loss_pitch = criterion(out_cents, target_cents)
         train_loss_cents = criterion(out_loudness, target_loudness)
@@ -127,18 +125,18 @@ for epoch in range(num_epochs):
             out_cents, out_loudness = model(model_input.to(device))
             optimizer.zero_grad()
 
-            target_cents = e_cents_cat[:, 1:]
-            target_loudness = e_loudness_cat[:, 1:]
+            target_cents = e_f0_dev[:, 1:].squeeze(-1).long().to(device)
+            target_loudness = e_loudness[:, 1:].squeeze(-1).long().to(device)
 
             out_cents = out_cents.permute(0, 2, 1).to(device)
             out_loudness = out_loudness.permute(0, 2, 1).to(device)
-            target_cents = target_cents.permute(0, 2, 1).to(device)
-            target_loudness = target_loudness.permute(0, 2, 1).to(device)
+
+            # TODO : Convert targets ranges
 
             # obtain the loss function
             test_loss_pitch = criterion(out_cents, target_cents)
             test_loss_cents = criterion(out_loudness, target_loudness)
-            test_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
+            test_loss_CE = test_loss_pitch + test_loss_cents * loss_ratio
 
     if epoch % 10 == 9:
         print("Epoch: %d, training loss: %1.5f" % (epoch + 1, train_loss_CE))
