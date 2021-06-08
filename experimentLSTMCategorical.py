@@ -55,7 +55,7 @@ u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_dev_fit 
 ### MODEL INSTANCIATION ###
 
 num_epochs = 10000
-learning_rate = 0.00005
+learning_rate = 0.00001
 loss_ratio = 0.1  # ratio between loss for pitches and loss for cents
 pitch_size, cents_size = 100, 101
 
