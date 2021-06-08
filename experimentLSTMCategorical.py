@@ -5,7 +5,7 @@ import numpy as np
 import glob
 
 from get_datasets import get_datasets
-from models.LSTMCategorical import LSTMCategorical
+from models.LSTMCategoricalLighter import LSTMCategorical
 from utils import *
 
 import torch
@@ -21,7 +21,8 @@ import signal
 def save_model():
     torch.save(
         model.state_dict(),
-        'results/saved_models/LSTM_Categorical_{}epochs.pt'.format(epoch))
+        'results/saved_models/LSTM_Categorical_{}LighterEpochs.pt'.format(
+            epoch))
 
 
 def keyboardInterruptHandler(signal, frame):
@@ -38,7 +39,7 @@ else:
 
 print('using', device)
 
-writer = SummaryWriter("runs/benchmark/LSTMCategoricalslower")
+writer = SummaryWriter("runs/benchmark/LSTMCategoricalLighter")
 train_loader, test_loader, fits = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
@@ -147,7 +148,7 @@ for epoch in range(num_epochs):
 
 torch.save(
     model.state_dict(),
-    'results/saved_models/LSTM_Categorical_{}epochs.pt'.format(epoch),
+    'results/saved_models/LSTM_Categorical_{}LighterEpochs.pt'.format(epoch),
 )
 
 writer.flush()
