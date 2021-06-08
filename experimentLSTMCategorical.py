@@ -5,7 +5,7 @@ import numpy as np
 import glob
 
 from get_datasets import get_datasets
-from models.LSTMCategorical import LSTMCategorical
+from models.LSTMCategoricalLighter import LSTMCategorical
 from utils import *
 
 import torch
@@ -21,7 +21,8 @@ import signal
 def save_model():
     torch.save(
         model.state_dict(),
-        'results/saved_models/LSTM_Categorical_{}epochs.pt'.format(epoch))
+        'results/saved_models/LSTM_Categorical_{}LighterEpochs.pt'.format(
+            epoch))
 
 
 def keyboardInterruptHandler(signal, frame):
@@ -38,7 +39,7 @@ else:
 
 print('using', device)
 
-writer = SummaryWriter("runs/benchmark/LSTMCategoricalslower")
+writer = SummaryWriter("runs/benchmark/LSTMCategoricalLighter")
 train_loader, test_loader, fits = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
@@ -55,7 +56,7 @@ u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit, e_f0_mean_fit, e_f0_dev_fit 
 ### MODEL INSTANCIATION ###
 
 num_epochs = 10000
-learning_rate = 0.00001
+learning_rate = 0.0001
 loss_ratio = 0.1  # ratio between loss for pitches and loss for cents
 pitch_size, cents_size = 100, 101
 
@@ -102,10 +103,10 @@ def get_loss(batch):
     # COMPUTE LOSS
     out_cents = out_cents.permute(0, 2, 1).to(device)
     out_loudness = out_loudness.permute(0, 2, 1).to(device)
-    train_loss_pitch = criterion(out_cents, target_cents)
-    train_loss_cents = criterion(out_loudness, target_loudness)
+    train_loss_cents = criterion(out_cents, target_cents)
+    train_loss_loudness = criterion(out_loudness, target_loudness)
 
-    train_loss_CE = train_loss_pitch + train_loss_cents * loss_ratio
+    train_loss_CE = train_loss_cents + train_loss_loudness * loss_ratio
 
     return train_loss_CE
 
@@ -147,7 +148,7 @@ for epoch in range(num_epochs):
 
 torch.save(
     model.state_dict(),
-    'results/saved_models/LSTM_Categorical_{}epochs.pt'.format(epoch),
+    'results/saved_models/LSTM_Categorical_{}LighterEpochs.pt'.format(epoch),
 )
 
 writer.flush()
