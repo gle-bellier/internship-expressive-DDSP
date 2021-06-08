@@ -125,8 +125,10 @@ for epoch in range(num_epochs):
             out_cents, out_loudness = model(model_input.to(device))
             optimizer.zero_grad()
 
-            target_cents = e_f0_dev[:, 1:].squeeze(-1).long().to(device)
-            target_loudness = e_loudness[:, 1:].squeeze(-1).long().to(device)
+            target_cents = get_data_quantified(
+                e_f0_dev[:, 1:], n_out=100).squeeze(-1).long().to(device)
+            target_loudness = get_data_quantified(
+                e_loudness[:, 1:], n_out=100).squeeze(-1).long().to(device)
 
             out_cents = out_cents.permute(0, 2, 1).to(device)
             out_loudness = out_loudness.permute(0, 2, 1).to(device)

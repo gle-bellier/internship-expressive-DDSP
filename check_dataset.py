@@ -37,13 +37,11 @@ ax2.plot(u_loudness.squeeze()[8000:10000], label="u_loudness")
 ax2.plot(e_loudness.squeeze()[8000:10000], label="e_loudness")
 ax2.legend()
 
-cents = (1200 * np.log2(e_f0 / u_f0)).clip(-50, 50)
 
 ax3.plot(
     (e_f0_mean.squeeze()[8000:10000] / np.max(e_f0_mean[8000:10000])) * 50,
     label="e_mean ")
 ax3.plot(e_f0_stddev.squeeze()[8000:10000].clip(-50, 50), label="e_std")
-ax3.plot(cents.squeeze()[8000:10000], label="e_dev")
 ax3.legend()
 
 plt.legend()
