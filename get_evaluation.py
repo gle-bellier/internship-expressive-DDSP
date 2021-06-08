@@ -60,8 +60,10 @@ _, test_loader, fits = get_datasets(dataset_file="dataset/contours.csv",
                                     sample_duration=20,
                                     batch_size=1,
                                     ratio=0.7,
-                                    pitch_transform="Standardise",
-                                    loudness_transform="Standardise")
+                                    pitch_transform="Quantile",
+                                    loudness_transform="Quantile",
+                                    pitch_n_quantiles=100,
+                                    loudness_n_quantiles=100)
 
 test_data = iter(test_loader)
 
