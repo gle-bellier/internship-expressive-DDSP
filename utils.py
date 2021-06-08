@@ -14,6 +14,7 @@ def get_data_categorical(data, n_out):
 
 
 def get_data_quantified(data, n_out):
+    """takes tensor of elt in range  [0, 1] and convert into int [0, n_out]"""
 
     data_idx = torch.round(data * (n_out - 1)).to(torch.int64)
     return data_idx
