@@ -21,7 +21,6 @@ from evaluation import Evaluator
 
 from models.benchmark_models import *
 from models.LSTM_towards_realistic_midi import LSTMContours
-from utils import *
 
 from os import makedirs
 
@@ -77,23 +76,6 @@ with torch.no_grad():
 
         u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(
             test_data)
-
-        # CONTINUOUS TO CATEGORICAL
-        u_pitch_cat = get_data_categorical(u_f0, n_out=100)
-        e_cents_cat = get_data_categorical(e_f0_dev, n_out=100)
-        u_loudness_cat = get_data_categorical(u_loudness, n_out=100)
-        e_loudness_cat = get_data_categorical(e_loudness, n_out=100)
-
-        # CAT CATEGORICAL INPUT
-        model_input = torch.cat([
-            u_pitch_cat[:, 1:],
-            e_cents_cat[:, :-1],
-            u_loudness_cat[:, 1:],
-            e_loudness_cat[:, :-1],
-        ], -1).float()
-
-        # PREDICTION
-        out_cents, out_loudness = model(model_input.to(device))
 
         u_f0 = u_f0[:, 1:].float()
         u_loudness = u_loudness[:, 1:].float()
