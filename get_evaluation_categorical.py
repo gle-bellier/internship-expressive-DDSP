@@ -89,13 +89,21 @@ with torch.no_grad():
         u_loudness_cat = u_loudness_cat[:, 1:].float()
 
         # PREDICTION
-        out_f0, out_loudness = model.predict(u_pitch_cat, u_loudness_cat)
+        out_f0_dev, out_loudness = model.predict(u_pitch_cat, u_loudness_cat)
 
-        out_f0, out_loudness = inv_transform([out_f0, out_loudness],
-                                             [u_f0_fit, u_loudness_fit])
+        dumb_target = torch.cat([e_f0_dev[:, 1:], e_loudness[:, 1:]], -1)
+        dumb_out = torch.cat([out_f0_dev, out_loudness], -1)
+        e = Evaluator()
+        score = e.evaluate(dumb_out, dumb_target, PLOT=True)
 
-        e_f0, e_loudness = inv_transform([e_f0, e_loudness],
-                                         [e_f0_fit, e_loudness_fit])
+        out_f0_dev, out_loudness = inv_transform(
+            [out_f0_dev, out_loudness], [e_f0_std_fit, u_loudness_fit])
+
+        u_f0, u_loudness, e_f0, e_loudness = inv_transform(
+            [u_f0, u_loudness, e_f0, e_loudness],
+            [u_f0_fit, u_loudness_fit, e_f0_fit, e_loudness_fit])
+
+        out_f0 = pitch_cents_to_frequencies(u_f0[:, 1:], out_f0_dev)
 
         target = torch.cat([e_f0[:, 1:], e_loudness[:, 1:]], -1)
         model_out = torch.cat([out_f0, out_loudness], -1)
