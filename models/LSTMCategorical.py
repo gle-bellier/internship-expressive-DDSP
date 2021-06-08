@@ -72,20 +72,19 @@ class LSTMCategorical(nn.Module):
 
         return cents, loudness
 
-    def pitch_cents_to_frequencies(self, pitch, cents):
+    def sampling(self, cents, loudness):
 
-        pitch_dis = Categorical(pitch)
         cents_dis = Categorical(cents)
+        loudness_dis = Categorical(loudness)
 
-        sampled_pitch = pitch_dis.sample().unsqueeze(-1)
         sampled_cents = cents_dis.sample().unsqueeze(-1)
+        sampled_loudness = loudness_dis.sample().unsqueeze(-1)
 
-        gen_freq = torch.tensor(li.midi_to_hz(
-            sampled_pitch.detach().numpy())) * torch.pow(
-                2, (sampled_cents.detach().numpy() - 50) / 1200)
-        gen_freq = torch.unsqueeze(gen_freq, -1)
+        # need to change the range from [0, 100] -> [0, n_out]
 
-        return gen_freq
+        sampled_cents /= 100
+        sampled_loudness /= 100
+        return sampled_cents, sampled_loudness
 
     def predict(self, pitch, loudness):
         f0 = torch.zeros_like(pitch)
@@ -102,13 +101,12 @@ class LSTMCategorical(nn.Module):
             pred, context = self.lstm(x, context)
             pred = self.post_lstm(pred)
 
-            e_cents, l0 = torch.split(pred, 1, -1)
+            e_cents, l0 = torch.split(pred, 100, -1)
 
             x_in[:, i + 1:i + 2, 2] = e_cents
             x_in[:, i + 1:i + 2, 3] = l0
 
-        # TODO : sample from distribution
+        out_cents, out_loudness = x_in[:, :, 2:].split(100, -1)
+        out_cents, out_loudness = self.sampling(out_cents, out_loudness)
 
-        e_f0, e_loudness = x_in[:, :, 2:].split(1, -1)
-
-        return e_f0, e_loudness
+        return out_cents, out_loudness
