@@ -4,14 +4,23 @@ import pickle
 
 
 def mtof(m):
+    """
+    converts midi note to frequency
+    """
     return 440 * 2**((m - 69) / 12)
 
 
 def ftom(f):
+    """
+    converts frequency to midi note
+    """
     return 12 * (np.log(f) - np.log(440)) / np.log(2) + 69
 
 
 def norm_array(x):
+    """
+    min max scaler
+    """
     minimum = np.min(x)
     maximum = np.max(x)
     x = (x - minimum) / (maximum - minimum)
@@ -19,6 +28,9 @@ def norm_array(x):
 
 
 def ftopc(f):
+    """
+    converts frequency to pitch / cent
+    """
     m_float = ftom(f)
     m_int = np.round(m_float).astype(int)
     c_float = m_float - m_int
@@ -26,6 +38,9 @@ def ftopc(f):
 
 
 def pctof(p, c):
+    """
+    convert pitch / cent to frequency
+    """
     m = p + c
     return mtof(m)
 
