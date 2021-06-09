@@ -2,7 +2,7 @@ import torch
 
 torch.set_grad_enabled(False)
 from newLSTMCat import FullModel, ExpressiveDataset
-from csv_to_numpy import pctof
+from newLSTMpreprocess import pctof
 from effortless_config import Config
 from random import randint
 import soundfile as sf
@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 class args(Config):
     CKPT = None
 
-args.parse_args()
 
+args.parse_args()
 
 ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
 
