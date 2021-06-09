@@ -106,6 +106,41 @@ class FullModel(pl.LightningModule):
 
         return loss_f0 + loss_cents + loss_loudness
 
+    def sample_one_hot(self, x):
+        n_bin = x.shape[-1]
+        sample = torch.distributions.Categorical(logits=x).sample()
+        sample = nn.functional.one_hot(sample, n_bin)
+        return sample
+
+    @torch.no_grad()
+    def generation_loop(self, x):
+        context = None
+
+        for i in range(x.shape[1] - 1):
+            x_in = x[:, i:i + 1]
+
+            x_out = self.pre_lstm(x_in)
+            x_out, context = self.lstm(x_out, context)
+            x_out = self.post_lstm(x_out)
+            pred_f0, pred_cents, pred_loudness = self.split_predictions(x_out)
+
+            f0 = self.sample_one_hot(pred_f0)
+            cents = self.sample_one_hot(pred_cents)
+            loudness = self.sample_one_hot(pred_loudness)
+
+            cat = torch.cat([f0, cents, loudness], -1)
+            ndim = cat.shape[-1]
+
+            x[:, i + 1:i + 2, -ndim:] = cat
+
+        pred = x[..., -ndim:]
+        pred_f0, pred_cents, pred_loudness = self.split_predictions(pred)
+
+        out = map(lambda x: torch.argmax(x, -1),
+                  [pred_f0, pred_cents, pred_loudness])
+
+        return list(out)
+
     def validation_step(self, batch, batch_idx):
         model_input, target = batch
         prediction = self.forward(model_input.float())
@@ -193,6 +228,7 @@ class ExpressiveDataset(Dataset):
 
 
 if __name__ == "__main__":
+
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
@@ -205,6 +241,7 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     model = FullModel(360, 256, 230)
+
 
     trainer.fit(
         model,
