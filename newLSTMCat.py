@@ -136,6 +136,10 @@ class FullModel(pl.LightningModule):
         pred = x[..., -ndim:]
         pred_f0, pred_cents, pred_loudness = self.split_predictions(pred)
 
+        pred_f0 = pred_f0[:, 1:]
+        pred_loudness = pred_loudness[:, 1:]
+        pred_cents = pred_cents[:, :-1]
+
         out = map(lambda x: torch.argmax(x, -1),
                   [pred_f0, pred_cents, pred_loudness])
 
@@ -172,6 +176,11 @@ class ExpressiveDataset(Dataset):
         self.N = len(dataset["u_f0"])
         self.n_sample = n_sample
         self.n_loudness = n_loudness
+
+    def unnormalize_loudness(self, x):
+        min_lo, max_lo = self.dataset["e_loudness"][1:]
+        x = x * (max_lo - min_lo) + min_lo
+        return x
 
     def __len__(self):
         return self.N // self.n_sample
@@ -241,7 +250,6 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     model = FullModel(360, 256, 230)
-
 
     trainer.fit(
         model,

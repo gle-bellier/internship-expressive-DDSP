@@ -25,6 +25,11 @@ def ftopc(f):
     return m_int, c_float
 
 
+def pctof(p, c):
+    m = p + c
+    return mtof(m)
+
+
 if __name__ == "__main__":
 
     u_f0 = []
