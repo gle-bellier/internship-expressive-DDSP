@@ -59,16 +59,14 @@ class FullModel(pl.LightningModule):
         x = self.post_lstm(x)
         return x
 
-    def training_step(self, batch, batch_idx):
-        model_input, target = batch
-        prediction = self.forward(model_input.float())
-
+    def split_predictions(self, prediction):
         pred_f0 = prediction[..., :100]
         pred_cents = prediction[..., 100:200]
         pred_loudness = prediction[..., 200:]
+        return pred_f0, pred_cents, pred_loudness
 
-        target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
-
+    def cross_entropy(self, pred_f0, pred_cents, pred_loudness, target_f0,
+                      target_cents, target_loudness):
         pred_f0 = pred_f0.permute(0, 2, 1)
         pred_cents = pred_cents.permute(0, 2, 1)
         pred_loudness = pred_loudness.permute(0, 2, 1)
@@ -84,6 +82,24 @@ class FullModel(pl.LightningModule):
             target_loudness,
         )
 
+        return loss_f0, loss_cents, loss_loudness
+
+    def training_step(self, batch, batch_idx):
+        model_input, target = batch
+        prediction = self.forward(model_input.float())
+
+        pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
+        target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
+
+        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
+            pred_f0,
+            pred_cents,
+            pred_loudness,
+            target_f0,
+            target_cents,
+            target_loudness,
+        )
+
         self.log("loss_f0", loss_f0)
         self.log("loss_cents", loss_cents)
         self.log("loss_loudness", loss_loudness)
@@ -94,24 +110,15 @@ class FullModel(pl.LightningModule):
         model_input, target = batch
         prediction = self.forward(model_input.float())
 
-        pred_f0 = prediction[..., :100]
-        pred_cents = prediction[..., 100:200]
-        pred_loudness = prediction[..., 200:]
-
+        pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
         target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
 
-        pred_f0 = pred_f0.permute(0, 2, 1)
-        pred_cents = pred_cents.permute(0, 2, 1)
-        pred_loudness = pred_loudness.permute(0, 2, 1)
-
-        target_f0 = target_f0.squeeze(-1)
-        target_cents = target_cents.squeeze(-1)
-        target_loudness = target_loudness.squeeze(-1)
-
-        loss_f0 = nn.functional.cross_entropy(pred_f0, target_f0)
-        loss_cents = nn.functional.cross_entropy(pred_cents, target_cents)
-        loss_loudness = nn.functional.cross_entropy(
+        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
+            pred_f0,
+            pred_cents,
             pred_loudness,
+            target_f0,
+            target_cents,
             target_loudness,
         )
 
