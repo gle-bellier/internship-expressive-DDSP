@@ -12,13 +12,13 @@ class ContoursTrainDataset(Dataset):
                  e_loudness,
                  e_f0_mean,
                  e_f0_stddev,
-                 fits,
+                 scalers,
                  sample_length=2000,
                  overlap=0.3):
 
         self.sample_length = sample_length
         self.overlap = overlap
-        self.fits = fits
+        self.fits = scalers
 
         self.u_f0 = u_f0.reshape(-1, 1)
         self.u_loudness = u_loudness.reshape(-1, 1)
@@ -54,12 +54,12 @@ class ContoursTrainDataset(Dataset):
             start:end]
 
         # apply transforms :
-        u_f0 = self.fits[0].transform(u_f0)
-        u_loudness = self.fits[1].transform(u_loudness)
-        e_f0 = self.fits[2].transform(e_f0)
-        e_loudness = self.fits[3].transform(e_loudness)
-        e_f0_mean = self.fits[4].transform(e_f0_mean)
-        e_f0_stddev = self.fits[5].transform(e_f0_stddev)
+        u_f0 = self.scalers[0].transform(u_f0)
+        u_loudness = self.scalers[1].transform(u_loudness)
+        e_f0 = self.scalers[2].transform(e_f0)
+        e_loudness = self.scalers[3].transform(e_loudness)
+        e_f0_mean = self.scalers[4].transform(e_f0_mean)
+        e_f0_stddev = self.scalers[5].transform(e_f0_stddev)
 
         return u_f0.astype(float), u_loudness.astype(float), e_f0.astype(
             float), e_loudness.astype(float), e_f0_mean.astype(
@@ -75,13 +75,13 @@ class ContoursTestDataset(Dataset):
                  e_loudness,
                  e_f0_mean,
                  e_f0_stddev,
-                 fits,
+                 scalers,
                  sample_length=2000,
                  overlap=0.3):
 
         self.sample_length = sample_length
         self.overlap = overlap
-        self.fits = fits
+        self.scalers = scalers
 
         self.u_f0 = u_f0.reshape(-1, 1)
         self.u_loudness = u_loudness.reshape(-1, 1)
@@ -109,12 +109,12 @@ class ContoursTestDataset(Dataset):
             start:end]
 
         # apply transforms :
-        u_f0 = self.fits[0].transform(u_f0)
-        u_loudness = self.fits[1].transform(u_loudness)
-        e_f0 = self.fits[2].transform(e_f0)
-        e_loudness = self.fits[3].transform(e_loudness)
-        e_f0_mean = self.fits[4].transform(e_f0_mean)
-        e_f0_stddev = self.fits[5].transform(e_f0_stddev)
+        u_f0 = self.scalers[0].transform(u_f0)
+        u_loudness = self.scalers[1].transform(u_loudness)
+        e_f0 = self.scalers[2].transform(e_f0)
+        e_loudness = self.scalers[3].transform(e_loudness)
+        e_f0_mean = self.scalers[4].transform(e_f0_mean)
+        e_f0_stddev = self.scalers[5].transform(e_f0_stddev)
 
         return u_f0.astype(float), u_loudness.astype(float), e_f0.astype(
             float), e_loudness.astype(float), e_f0_mean.astype(

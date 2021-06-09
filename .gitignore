@@ -4,3 +4,5 @@
 /runs
 *pycache*
 /results/saved_samples
+*.pickle
+lightning_logs
