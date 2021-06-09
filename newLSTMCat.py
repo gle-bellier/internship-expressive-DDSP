@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, random_split
 import pytorch_lightning as pl
 import pickle
 from random import randint
@@ -20,6 +20,7 @@ class LinearBlock(nn.Module):
             x = self.norm(x)
         if self.act:
             x = nn.functional.leaky_relu(x)
+        return x
 
 
 class FullModel(pl.LightningModule):
@@ -31,7 +32,12 @@ class FullModel(pl.LightningModule):
             LinearBlock(hidden_size, hidden_size),
         )
 
-        self.lstm = nn.LSTM(hidden_size, batch_first=True)
+        self.lstm = nn.LSTM(
+            hidden_size,
+            hidden_size,
+            1,
+            batch_first=True,
+        )
 
         self.post_lstm = nn.Sequential(
             LinearBlock(hidden_size, hidden_size),
@@ -43,6 +49,9 @@ class FullModel(pl.LightningModule):
             ),
         )
 
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=1e-4)
+
     def forward(self, x):
         x = self.pre_lstm(x)
         x = self.lstm(x)[0]
@@ -51,7 +60,7 @@ class FullModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         model_input, target = batch
-        prediction = self.forward(model_input)
+        prediction = self.forward(model_input.float())
 
         pred_f0 = prediction[..., :100]
         pred_cents = prediction[..., 100:200]
@@ -79,6 +88,36 @@ class FullModel(pl.LightningModule):
         self.log("loss_loudness", loss_loudness)
 
         return loss_f0 + loss_cents + loss_loudness
+
+    def validation_step(self, batch, batch_idx):
+        model_input, target = batch
+        prediction = self.forward(model_input.float())
+
+        pred_f0 = prediction[..., :100]
+        pred_cents = prediction[..., 100:200]
+        pred_loudness = prediction[..., 200:]
+
+        target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
+
+        pred_f0 = pred_f0.permute(0, 2, 1)
+        pred_cents = pred_cents.permute(0, 2, 1)
+        pred_loudness = pred_loudness.permute(0, 2, 1)
+
+        target_f0 = target_f0.squeeze(-1)
+        target_cents = target_cents.squeeze(-1)
+        target_loudness = target_loudness.squeeze(-1)
+
+        loss_f0 = nn.functional.cross_entropy(pred_f0, target_f0)
+        loss_cents = nn.functional.cross_entropy(pred_cents, target_cents)
+        loss_loudness = nn.functional.cross_entropy(
+            pred_loudness,
+            target_loudness,
+        )
+
+        self.log("val_loss_f0", loss_f0)
+        self.log("val_loss_cents", loss_cents)
+        self.log("val_loss_loudness", loss_loudness)
+        self.log("val_total", loss_f0 + loss_cents + loss_loudness)
 
 
 class ExpressiveDataset(Dataset):
@@ -126,13 +165,15 @@ class ExpressiveDataset(Dataset):
         e_loudness = ((self.n_loudness - 1) * e_loudness).long()
         e_loudness = nn.functional.one_hot(e_loudness, self.n_loudness)
 
-        model_input = torch.cat([
-            u_f0[2:],
-            u_loudness[2:],
-            e_f0[1:-1],
-            e_cents[:-2],
-            e_loudness[1:-1],
-        ], -1)
+        model_input = torch.cat(
+            [
+                u_f0[2:],
+                u_loudness[2:],
+                e_f0[1:-1],  # one step behind
+                e_cents[:-2],  # two steps behind
+                e_loudness[1:-1],  # one step behind
+            ],
+            -1)
 
         target = torch.cat([
             torch.argmax(e_f0[2:], -1, keepdim=True),
@@ -144,4 +185,21 @@ class ExpressiveDataset(Dataset):
 
 
 if __name__ == "__main__":
-    pass
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+    )
+
+    dataset = ExpressiveDataset()
+    val_len = len(dataset) // 20
+    train_len = len(dataset) - val_len
+
+    train, val = random_split(dataset, [train_len, val_len])
+
+    model = FullModel(360, 256, 230)
+
+    trainer.fit(
+        model,
+        DataLoader(train, 32, True),
+        DataLoader(val, 32),
+    )
