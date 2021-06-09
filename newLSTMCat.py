@@ -26,6 +26,7 @@ class LinearBlock(nn.Module):
 class FullModel(pl.LightningModule):
     def __init__(self, in_size, hidden_size, out_size):
         super().__init__()
+        self.save_hyperparameters()
 
         self.pre_lstm = nn.Sequential(
             LinearBlock(in_size, hidden_size),
