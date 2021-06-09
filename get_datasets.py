@@ -14,33 +14,15 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
-class Identity(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        pass
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X, y=None):
-        return X
-
-    def inverse_transform(self, X, y=None):
-        return X.numpy()
-
-
-def get_datasets(dataset_file="dataset/contours.csv",
+def get_datasets(dataset_file,
+                 transforms,
                  sampling_rate=100,
                  sample_duration=20,
                  batch_size=16,
-                 ratio=0.7,
-                 pitch_transform=None,
-                 loudness_transform=None,
-                 pitch_n_quantiles=None,
-                 loudness_n_quantiles=None):
+                 ratio=0.7):
 
     sample_length = sample_duration * sampling_rate
 
@@ -68,10 +50,9 @@ def get_datasets(dataset_file="dataset/contours.csv",
     e_f0_mean = np.array(e_f0_mean)
     e_f0_stddev = np.array(e_f0_stddev)
 
-    fits = preprocessing(
+    scalers = preprocessing(
         [u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev],
-        pitch_transform, loudness_transform, pitch_n_quantiles,
-        loudness_n_quantiles)
+        transforms)
 
     full_length = len(u_f0)
     # we need to split the dataset between training and testing
@@ -99,15 +80,13 @@ def get_datasets(dataset_file="dataset/contours.csv",
     print("Training size : {}s".format(train_length / sampling_rate))
     print("Test size : {}s".format(test_length / sampling_rate))
 
-    sc = MinMaxScaler()
-
     train_dataset = ContoursTrainDataset(train_u_f0,
                                          train_u_loudness,
                                          train_e_f0,
                                          train_e_loudness,
                                          train_e_f0_mean,
                                          train_e_f0_stddev,
-                                         fits=fits,
+                                         scalers=scalers,
                                          sample_length=sample_length)
 
     test_dataset = ContoursTestDataset(
@@ -117,7 +96,7 @@ def get_datasets(dataset_file="dataset/contours.csv",
         test_e_loudness,
         test_e_f0_mean,
         test_e_f0_stddev,
-        fits=fits,
+        scalers=scalers,
         sample_length=sample_length,
     )
 
@@ -126,45 +105,21 @@ def get_datasets(dataset_file="dataset/contours.csv",
     test_loader = torch.utils.data.DataLoader(test_dataset,
                                               batch_size=batch_size)
 
-    return train_loader, test_loader, fits
+    return train_loader, test_loader, scalers
 
 
-def preprocessing(data, pitch_transform, loudness_transform, pitch_n_quantiles,
-                  loudness_n_quantiles):
-    list_fits = []
+def preprocessing(data, transforms):
+    list_scalers = []
     for i in range(len(data)):
-
         contour = data[i].reshape(-1, 1)
-        if i in [1, 3]:  # correspond to loudness indexes
-            if loudness_transform == "Standardise":
-                sc = StandardScaler()
-                sc.fit(contour)
-                list_fits.append(sc)
+        transform = transforms[i]
+        list_scalers.append(fit_transform(contour, transform))
 
-            elif loudness_transform == "Quantile":
-                q = QuantileTransformer(n_quantiles=loudness_n_quantiles)
-                q.fit(contour)
-                list_fits.append(q)
+    return list_scalers
 
-            else:
-                id = Identity()
-                id.fit(contour)
-                list_fits.append(id)
 
-        else:
-            if pitch_transform == "Standardise":
-                sc = StandardScaler()
-                sc.fit(contour)
-                list_fits.append(sc)
-
-            elif pitch_transform == "Quantile":
-                q = QuantileTransformer(n_quantiles=pitch_n_quantiles)
-                q.fit(contour)
-                list_fits.append(q)
-
-            else:
-                id = Identity()
-                id.fit(contour)
-                list_fits.append(id)
-
-    return list_fits
+def fit_transform(contour, transform):
+    scaler = transform[0]
+    scaler = scaler(*transform[1:])
+    scaler.fit(contour)
+    return scaler
