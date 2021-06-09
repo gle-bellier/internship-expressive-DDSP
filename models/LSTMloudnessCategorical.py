@@ -37,91 +37,19 @@ class NormalizedRectifiedLinear(nn.Module):
         return x
 
 
-class LSTMCategorical(nn.Module):
-    def __init__(self, input_size=1024, hidden_size=1024, num_layers=1):
-        super(LSTMCategorical, self).__init__()
-
-        self.num_layers = num_layers
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-
-        self.pre_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(400, 512),
-            NormalizedRectifiedLinear(512, 768),
-            NormalizedRectifiedLinear(768, input_size),
-        )
-
-        self.lstm = nn.LSTM(input_size=input_size,
-                            hidden_size=hidden_size,
-                            num_layers=num_layers,
-                            batch_first=True)
-
-        self.post_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(hidden_size, 768),
-            NormalizedRectifiedLinear(768, 512),
-            NormalizedRectifiedLinear(512, 200),
-        )
-
-    def forward(self, x):
-
-        x = self.pre_lstm(x)
-        out = self.lstm(x)[0]
-        out = self.post_lstm(out)
-
-        cents, loudness = torch.split(out, [100, 100], dim=-1)
-
-        return cents, loudness
-
-    def sampling(self, cents, loudness):
-
-        cents_dis = Categorical(logits=cents)
-        loudness_dis = Categorical(logits=loudness)
-
-        sampled_cents = cents_dis.sample().unsqueeze(-1)
-        sampled_loudness = loudness_dis.sample().unsqueeze(-1)
-
-        # need to change the range from [0, 100] -> [0, n_out]
-
-        sampled_cents = sampled_cents.float() / 100.0
-        sampled_loudness = sampled_loudness.float() / 100.0
-        return sampled_cents, sampled_loudness
-
-    def predict(self, pitch, loudness):
-        f0 = torch.zeros_like(pitch)
-        l0 = torch.zeros_like(loudness)
-
-        x_in = torch.cat([pitch, loudness, f0, l0], -1)
-
-        context = None
-
-        for i in range(x_in.size(1) - 1):
-            x = x_in[:, i:i + 1]
-
-            x = self.pre_lstm(x)
-            pred, context = self.lstm(x, context)
-            pred = self.post_lstm(pred)
-
-            e_cents, l0 = torch.split(pred, 100, -1)
-
-            x_in[:, i + 1:i + 2, 200:300] = e_cents
-            x_in[:, i + 1:i + 2, 300:] = l0
-
-        out_cents, out_loudness = x_in[:, :, 200:].split(100, -1)
-        out_cents, out_loudness = self.sampling(out_cents, out_loudness)
-
-        return out_cents, out_loudness
-
-
-class LSTMCategoricalBottleneck(nn.Module):
+class LSTMSemiCategorical(nn.Module):
     def __init__(self, input_size=512, hidden_size=512, num_layers=1):
-        super(LSTMCategoricalBottleneck, self).__init__()
+        super(LSTMSemiCategorical, self).__init__()
 
         self.num_layers = num_layers
         self.input_size = input_size
         self.hidden_size = hidden_size
 
         self.pre_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(400, input_size))
+            NormalizedRectifiedLinear(64, 128),
+            NormalizedRectifiedLinear(168, 256),
+            NormalizedRectifiedLinear(256, input_size),
+        )
 
         self.lstm = nn.LSTM(input_size=input_size,
                             hidden_size=hidden_size,
@@ -129,7 +57,10 @@ class LSTMCategoricalBottleneck(nn.Module):
                             batch_first=True)
 
         self.post_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(hidden_size, 200))
+            NormalizedRectifiedLinear(hidden_size, 256),
+            NormalizedRectifiedLinear(256, 128),
+            NormalizedRectifiedLinear(128, 32),
+        )
 
     def forward(self, x):
 

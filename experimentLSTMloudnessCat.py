@@ -5,7 +5,7 @@ import numpy as np
 import glob
 
 from get_datasets import get_datasets
-from models.LSTMCategorical import LSTMCategoricalBottleneck
+from models.LSTMCategoricalLighter import LSTMCategorical
 from utils import *
 
 import torch
@@ -21,7 +21,8 @@ import signal
 def save_model():
     torch.save(
         model.state_dict(),
-        'results/saved_models/LSTM_Categorical_{}Bootleneck.pt'.format(epoch))
+        'results/saved_models/LSTM_Categorical_{}LighterEpochs.pt'.format(
+            epoch))
 
 
 def keyboardInterruptHandler(signal, frame):
@@ -38,7 +39,7 @@ else:
 
 print('using', device)
 
-writer = SummaryWriter("runs/benchmark/LSTMCategoricalBottleneck")
+writer = SummaryWriter("runs/benchmark/LSTMCategoricalLighter")
 train_loader, test_loader, fits = get_datasets(
     dataset_file="dataset/contours.csv",
     sampling_rate=100,
@@ -59,7 +60,7 @@ learning_rate = 0.0001
 loss_ratio = 0.1  # ratio between loss for pitches and loss for cents
 pitch_size, cents_size = 100, 101
 
-model = LSTMCategoricalBottleneck().to(device)
+model = LSTMCategorical().to(device)
 print("Model Classification : ")
 print(model.parameters)
 
@@ -105,7 +106,9 @@ def get_loss(batch):
     train_loss_cents = criterion(out_cents, target_cents)
     train_loss_loudness = criterion(out_loudness, target_loudness)
 
-    return train_loss_cents, train_loss_loudness
+    train_loss_CE = train_loss_cents + train_loss_loudness
+
+    return train_loss_CE
 
 
 # Train the model
@@ -113,44 +116,29 @@ for epoch in range(num_epochs):
     model.train()
 
     mean_train_loss = 0
-    mean_train_loss_cents = 0
-    mean_train_loss_loudness = 0
     nel = 0
 
     for batch in train_loader:
 
-        train_loss_cents, train_loss_loudness = get_loss(batch)
+        train_loss_CE = get_loss(batch)
 
-        train_loss_CE = train_loss_cents + train_loss_loudness
         optimizer.zero_grad()
         train_loss_CE.backward()
         optimizer.step()
 
         nel += 1
         mean_train_loss += (train_loss_CE.item() - mean_train_loss) / nel
-        mean_train_loss_cents += (train_loss_cents.item() -
-                                  mean_train_loss_cents) / nel
-        mean_train_loss_loudness += (train_loss_loudness.item() -
-                                     mean_train_loss_loudness) / nel
 
     mean_test_loss = 0
-    mean_test_loss_cents = 0
-    mean_test_loss_loudness = 0
     nel = 0
 
     model.eval()
     with torch.no_grad():
         for batch in test_loader:
-            test_loss_cents, test_loss_loudness = get_loss(batch)
-
-            test_loss_CE = test_loss_cents + test_loss_loudness
+            test_loss_CE = get_loss(batch)
 
             nel += 1
             mean_test_loss += (test_loss_CE.item() - mean_test_loss) / nel
-            mean_train_loss_cents += (test_loss_cents.item() -
-                                      mean_test_loss_cents) / nel
-            mean_train_loss_loudness += (test_loss_loudness.item() -
-                                         mean_test_loss_loudness) / nel
 
     print("Epoch: %d, training loss: %1.5f" % (epoch + 1, mean_train_loss))
     print("Epoch: %d, test loss: %1.5f" % (epoch + 1, mean_test_loss))
@@ -158,15 +146,9 @@ for epoch in range(num_epochs):
     writer.add_scalar('training CEloss', mean_train_loss, epoch + 1)
     writer.add_scalar('test CEloss', mean_test_loss, epoch + 1)
 
-    writer.add_scalar('training loss cents', mean_train_loss_cents, epoch + 1)
-    writer.add_scalar('training loss loudness', mean_train_loss_loudness,
-                      epoch + 1)
-    writer.add_scalar('test loss cents', mean_test_loss_cents, epoch + 1)
-    writer.add_scalar('test loss loudness', mean_test_loss_loudness, epoch + 1)
-
 torch.save(
     model.state_dict(),
-    'results/saved_models/LSTM_Categorical_{}Bootleneck.pt'.format(epoch),
+    'results/saved_models/LSTM_Categorical_{}LighterEpochs.pt'.format(epoch),
 )
 
 writer.flush()
