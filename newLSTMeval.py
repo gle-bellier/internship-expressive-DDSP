@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 class args(Config):
     CKPT = None
+    INFER_PITCH = True
 
 
 args.parse_args()
@@ -24,7 +25,7 @@ dataset = ExpressiveDataset()
 model_input, target = dataset[randint(0, len(dataset))]
 model_input = model_input.unsqueeze(0).float()
 
-f0, cents, loudness = model.generation_loop(model_input)
+f0, cents, loudness = model.generation_loop(model_input, args.INFER_PITCH)
 cents = cents / 100 - .5
 
 f0 = pctof(f0, cents)

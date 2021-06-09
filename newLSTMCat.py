@@ -33,7 +33,7 @@ class FullModel(pl.LightningModule):
             LinearBlock(hidden_size, hidden_size),
         )
 
-        self.lstm = nn.LSTM(
+        self.lstm = nn.GRU(
             hidden_size,
             hidden_size,
             1,
@@ -51,7 +51,11 @@ class FullModel(pl.LightningModule):
         )
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-4)
+        return torch.optim.Adam(
+            self.parameters(),
+            lr=1e-4,
+            weight_decay=.1,
+        )
 
     def forward(self, x):
         x = self.pre_lstm(x)
@@ -113,7 +117,7 @@ class FullModel(pl.LightningModule):
         return sample
 
     @torch.no_grad()
-    def generation_loop(self, x):
+    def generation_loop(self, x, infer_pitch=True):
         context = None
 
         for i in range(x.shape[1] - 1):
@@ -124,7 +128,11 @@ class FullModel(pl.LightningModule):
             x_out = self.post_lstm(x_out)
             pred_f0, pred_cents, pred_loudness = self.split_predictions(x_out)
 
-            f0 = self.sample_one_hot(pred_f0)
+            if infer_pitch:
+                f0 = self.sample_one_hot(pred_f0)
+            else:
+                f0 = x[:, i + 1:i + 2, :100].float()
+
             cents = self.sample_one_hot(pred_cents)
             loudness = self.sample_one_hot(pred_loudness)
 
@@ -252,7 +260,7 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    model = FullModel(360, 256, 230)
+    model = FullModel(360, 1024, 230)
 
     trainer.fit(
         model,
