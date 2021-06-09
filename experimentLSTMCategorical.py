@@ -40,9 +40,11 @@ print('using', device)
 
 writer = SummaryWriter("runs/benchmark/LSTMCategoricalLighter")
 
-list_transforms = [(StandardScaler, ), (QuantileTransformer, 100),
-                   (MinMaxScaler, ), (QuantileTransformer, 100),
-                   (MinMaxScaler, ), (MinMaxScaler, )]
+### LIST OF TRANSFORMS : for (in order) u_f0, u_loudness, e_f0, e_loudness, e_f0_mean_ e_f0_dev
+
+list_transforms = [(MinMaxScaler, ),
+                   (QuantileTransformer, 31), (MinMaxScaler, ),
+                   (QuantileTransformer, 31), (MinMaxScaler, ), (Identity, )]
 
 train_loader, test_loader, scalers = get_datasets(
     dataset_file="dataset/contours.csv",
