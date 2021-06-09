@@ -30,7 +30,7 @@ cents = cents / 100 - .5
 
 f0 = pctof(f0, cents)
 
-loudness = loudness / dataset.n_loudness
+loudness = loudness / (dataset.n_loudness - 1)
 loudness = dataset.unnormalize_loudness(loudness)
 
 y = ddsp(f0.unsqueeze(-1), loudness.unsqueeze(-1))
