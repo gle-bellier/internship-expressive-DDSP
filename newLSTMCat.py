@@ -188,7 +188,7 @@ class ExpressiveDataset(Dataset):
     def __getitem__(self, idx):
         N = self.n_sample
         idx *= N
-        
+
         jitter = randint(0, N // 10)
         idx += jitter
         idx = max(idx, 0)
@@ -243,6 +243,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+        max_epochs=10000,
     )
 
     dataset = ExpressiveDataset()
