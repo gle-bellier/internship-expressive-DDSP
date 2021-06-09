@@ -187,6 +187,8 @@ class ExpressiveDataset(Dataset):
 
     def __getitem__(self, idx):
         N = self.n_sample
+        idx *= N
+        
         jitter = randint(0, N // 10)
         idx += jitter
         idx = max(idx, 0)
