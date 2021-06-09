@@ -54,7 +54,7 @@ class FullModel(pl.LightningModule):
         return torch.optim.Adam(
             self.parameters(),
             lr=1e-4,
-            weight_decay=.1,
+            weight_decay=.01,
         )
 
     def forward(self, x):
