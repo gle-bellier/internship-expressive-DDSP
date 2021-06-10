@@ -41,7 +41,8 @@ class FullModel(pl.LightningModule):
         self.lstm = nn.GRU(
             hidden_size,
             hidden_size,
-            1,
+            num_layers=2,
+            dropout=0.2,
             batch_first=True,
         )
 
