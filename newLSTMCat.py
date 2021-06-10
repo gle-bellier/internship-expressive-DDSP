@@ -289,10 +289,10 @@ if __name__ == "__main__":
     )
     list_transforms = [
         (MinMaxScaler, ),  # u_f0 
-        (QuantileTransformer, 31),  # u_loudness
-        (MinMaxScaler, ),  # e_f0
+        (QuantileTransformer, 30),  # u_loudness
+        (Identity, ),  # e_f0
         (Identity, ),  # e_cents
-        (QuantileTransformer, 31),  # e_loudness
+        (QuantileTransformer, 30),  # e_loudness
     ]
 
     dataset = ExpressiveDataset(list_transforms=list_transforms)
