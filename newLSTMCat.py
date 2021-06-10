@@ -180,7 +180,7 @@ class FullModel(pl.LightningModule):
 
 class ExpressiveDataset(Dataset):
     def __init__(self, list_transforms, n_sample=2050, n_loudness=30):
-        with open("dataset-unormed.pickle", "rb") as dataset:
+        with open("dataset-augmented.pickle", "rb") as dataset:
             dataset = pickle.load(dataset)
 
         self.dataset = dataset
@@ -288,11 +288,11 @@ if __name__ == "__main__":
         max_epochs=10000,
     )
     list_transforms = [
-        (MinMaxScaler, ),  # u_f0 
-        (QuantileTransformer, 30),  # u_loudness
+        (Identity, ),  # u_f0 
+        (MinMaxScaler, ),  # u_loudness
         (Identity, ),  # e_f0
         (Identity, ),  # e_cents
-        (QuantileTransformer, 30),  # e_loudness
+        (MinMaxScaler, ),  # e_loudness
     ]
 
     dataset = ExpressiveDataset(list_transforms=list_transforms)
