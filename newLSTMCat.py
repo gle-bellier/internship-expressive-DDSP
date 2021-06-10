@@ -2,9 +2,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader, Dataset, random_split
+from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
 import pytorch_lightning as pl
 import pickle
 from random import randint
+from utils import *
 
 
 class LinearBlock(nn.Module):
@@ -24,9 +26,10 @@ class LinearBlock(nn.Module):
 
 
 class FullModel(pl.LightningModule):
-    def __init__(self, in_size, hidden_size, out_size):
+    def __init__(self, in_size, hidden_size, out_size, scalers):
         super().__init__()
         self.save_hyperparameters()
+        self.scalers = scalers
 
         self.pre_lstm = nn.Sequential(
             LinearBlock(in_size, hidden_size),
@@ -176,19 +179,42 @@ class FullModel(pl.LightningModule):
 
 
 class ExpressiveDataset(Dataset):
-    def __init__(self, n_sample=2050, n_loudness=30):
-        with open("dataset.pickle", "rb") as dataset:
+    def __init__(self, list_transforms, n_sample=2050, n_loudness=30):
+        with open("dataset-unormed.pickle", "rb") as dataset:
             dataset = pickle.load(dataset)
 
         self.dataset = dataset
         self.N = len(dataset["u_f0"])
+        self.list_transforms = list_transforms
         self.n_sample = n_sample
         self.n_loudness = n_loudness
+        self.scalers = self.fit_transforms()
 
-    def unnormalize_loudness(self, x):
-        min_lo, max_lo = self.dataset["e_loudness"][1:]
-        x = x * (max_lo - min_lo) + min_lo
-        return x
+    def fit_transforms(self):
+        data = [
+            self.dataset["u_f0"], self.dataset["u_loudness"],
+            self.dataset["e_f0"], self.dataset["e_cents"],
+            self.dataset["e_loudness"]
+        ]
+
+        scalers = []
+        for i in range(len(data)):
+            contour = data[i].reshape(-1, 1)
+            transform = self.list_transforms[i]
+            sc = transform[0]
+            sc = sc(*transform[1:]).fit(contour)
+            scalers.append(sc)
+        return scalers
+
+    def apply_transform(self, x, scaler):
+        out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
+        return out
+
+    def apply_inverse_transform(self, x, idx):
+        scaler = self.scalers[idx]
+        out = torch.from_numpy(scaler.inverse_transform(x.reshape(
+            -1, 1))).unsqueeze(0)
+        return out.float()
 
     def __len__(self):
         return self.N // self.n_sample
@@ -203,10 +229,18 @@ class ExpressiveDataset(Dataset):
         idx = min(idx, len(self) * self.n_sample - self.n_sample)
 
         u_f0 = self.dataset["u_f0"][idx:idx + self.n_sample]
-        u_loudness = self.dataset["u_loudness"][0][idx:idx + self.n_sample]
+        u_loudness = self.dataset["u_loudness"][idx:idx + self.n_sample]
         e_f0 = self.dataset["e_f0"][idx:idx + self.n_sample]
         e_cents = self.dataset["e_cents"][idx:idx + self.n_sample]
-        e_loudness = self.dataset["e_loudness"][0][idx:idx + self.n_sample]
+        e_loudness = self.dataset["e_loudness"][idx:idx + self.n_sample]
+
+        # Apply transforms :
+
+        u_f0 = self.apply_transform(u_f0, self.scalers[0])
+        u_loudness = self.apply_transform(u_loudness, self.scalers[1])
+        e_f0 = self.apply_transform(e_f0, self.scalers[2])
+        e_cents = self.apply_transform(e_cents, self.scalers[3])
+        e_loudness = self.apply_transform(e_loudness, self.scalers[4])
 
         u_f0 = torch.from_numpy(u_f0).long()
         u_loudness = torch.from_numpy(u_loudness).float()
@@ -253,14 +287,21 @@ if __name__ == "__main__":
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
         max_epochs=10000,
     )
+    list_transforms = [
+        (MinMaxScaler, ),  # u_f0 
+        (QuantileTransformer, 31),  # u_loudness
+        (MinMaxScaler, ),  # e_f0
+        (Identity, ),  # e_cents
+        (QuantileTransformer, 31),  # e_loudness
+    ]
 
-    dataset = ExpressiveDataset()
+    dataset = ExpressiveDataset(list_transforms=list_transforms)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    model = FullModel(360, 1024, 230)
+    model = FullModel(360, 1024, 230, scalers=dataset.scalers)
 
     trainer.fit(
         model,

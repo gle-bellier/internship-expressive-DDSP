@@ -71,11 +71,11 @@ if __name__ == "__main__":
 
     out = {
         "u_f0": u_f0,  # 0 - 127
-        "u_loudness": norm_array(u_loudness),  # 0 - 1
+        "u_loudness": u_loudness,  # 0 - 1
         "e_f0": e_f0,  # 0 - 127
         "e_cents": e_cents + .5,  # 0 - 1
-        "e_loudness": norm_array(e_loudness),  # 0 - 1
+        "e_loudness": e_loudness,  # 0 - 1
     }
 
-    with open("dataset.pickle", "wb") as file_out:
+    with open("dataset-unormed.pickle", "wb") as file_out:
         pickle.dump(out, file_out)
