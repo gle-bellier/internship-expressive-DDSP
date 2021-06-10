@@ -28,14 +28,25 @@ r_e_l0 = q_e.inverse_transform(t_e_l0)
 u_l0, t_u_l0, r_u_l0 = u_l0.reshape(-1), t_u_l0.reshape(-1), r_u_l0.reshape(-1)
 e_l0, t_e_l0, r_e_l0 = e_l0.reshape(-1), t_e_l0.reshape(-1), r_e_l0.reshape(-1)
 
-sns.histplot(np.stack((u_l0, t_u_l0), axis=-1))
-plt.show()
+# sns.histplot(np.stack((u_l0, t_u_l0), axis=-1))
+# plt.show()
 
-sns.histplot(np.stack((t_u_l0, r_u_l0), axis=-1))
-plt.show()
+# sns.histplot(np.stack((t_u_l0, r_u_l0), axis=-1))
+# plt.show()
 
-sns.histplot(np.stack((e_l0, t_e_l0), axis=-1))
-plt.show()
+# sns.histplot(np.stack((e_l0, t_e_l0), axis=-1))
+# plt.show()
 
-sns.histplot(np.stack((t_e_l0, r_e_l0), axis=-1))
-plt.show()
+# sns.histplot(np.stack((t_e_l0, r_e_l0), axis=-1))
+# plt.show()
+
+fig, axes = plt.subplots(2, 2, figsize=(18, 10))
+
+fig.suptitle('Quantile')
+
+sns.histplot(ax=axes[0, 0], data=np.stack((u_l0, t_u_l0), axis=-1))
+sns.histplot(ax=axes[1, 0], data=np.stack((r_u_l0, t_u_l0), axis=-1))
+sns.histplot(ax=axes[1, 0], data=np.stack((e_l0, t_e_l0), axis=-1))
+sns.histplot(ax=axes[1, 1], data=np.stack((r_e_l0, t_e_l0), axis=-1))
+
+plt.plot()
