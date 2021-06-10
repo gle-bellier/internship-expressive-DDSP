@@ -53,7 +53,7 @@ class Evaluator:
         if reduction == "mean":
             return torch.mean(d_cents).numpy()
         elif reduction == "median":
-            return torch.media(d_cents).numpy()
+            return torch.median(d_cents).numpy()
         elif reduction == "sum":
             return torch.sum(d_cents).numpy()
         else:
