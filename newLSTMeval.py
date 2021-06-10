@@ -22,11 +22,11 @@ args.parse_args()
 ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
 
 list_transforms = [
-    (MinMaxScaler, ),  # u_f0 
-    (QuantileTransformer, 31),  # u_loudness
-    (MinMaxScaler, ),  # e_f0
+    (Identity, ),  # u_f0 
+    (MinMaxScaler, ),  # u_loudness
+    (Identity, ),  # e_f0
     (Identity, ),  # e_cents
-    (QuantileTransformer, 31),  # e_loudness
+    (MinMaxScaler, ),  # e_loudness
 ]
 
 dataset = ExpressiveDataset(list_transforms=list_transforms)
