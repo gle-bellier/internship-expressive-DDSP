@@ -64,4 +64,5 @@ e.listen(f0,
          target_loudness,
          ddsp,
          "results/saved_samples/essai.wav",
+         reduction="sum",
          resynth=True)
