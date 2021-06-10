@@ -52,3 +52,18 @@ def frequencies_to_pitch_cents(frequencies):
 def pitch_cents_to_frequencies(pitch, cents):
 
     return pitch * torch.pow(2, cents / 1200)
+
+
+def pctof(p, c):
+    """
+    convert pitch / cent to frequency
+    """
+    m = p + c
+    return mtof(m)
+
+
+def mtof(m):
+    """
+    converts midi note to frequency
+    """
+    return 440 * 2**((m - 69) / 12)
