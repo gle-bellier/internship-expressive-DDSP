@@ -175,7 +175,7 @@ class FullModel(pl.LightningModule):
         f0 = pctof(f0, cents)
 
         loudness = loudness / (dataset.n_loudness - 1)
-        f0 = self.apply_inverse_transform(f0.squeeze(0), 1)
+        f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
         return y
