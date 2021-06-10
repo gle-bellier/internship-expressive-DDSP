@@ -7,20 +7,25 @@ class Evaluator:
     def __init__(self, sr=100):
         self.sr = sr
 
-    def evaluate(self, out, target, PLOT=False, SCORE=True, reduction="mean"):
+    def evaluate(self,
+                 out_f0,
+                 out_loudness,
+                 target_f0,
+                 target_loudness,
+                 PLOT=False,
+                 SCORE=True,
+                 reduction="mean"):
 
         if PLOT:
-            self.plot(out, target)
+            self.plot(out_f0, out_loudness, target_f0, target_loudness)
 
         if SCORE:
-            return self.score(out, target, reduction)
+            return self.score(out_f0, out_loudness, target_f0, target_loudness,
+                              reduction)
 
-    def plot(self, out, target):
+    def plot(self, out_f0, out_loudness, target_f0, target_loudness):
 
-        t = torch.arange(0, out.size(1), 1) / self.sr
-
-        out_f0, out_loudness = out.split(1, -1)
-        target_f0, target_loudness = target.split(1, -1)
+        t = torch.arange(0, out_f0.size(1), 1) / self.sr
 
         fig, (ax1, ax2) = plt.subplots(2)
         fig.suptitle("Model predictions")
@@ -38,13 +43,11 @@ class Evaluator:
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.show()
 
-    def score(self, out, target, reduction):
-
-        out_f0, out_loudness = out.split(1, -1)
-        target_f0, target_loudness = target.split(1, -1)
+    def score(self, out_f0, out_loudness, target_f0, target_loudness,
+              reduction):
 
         d_cents = 1200 * torch.log2(
-            torch.abs(out_f0.squeeze()) / target_f0.squeeze())
+            torch.abs(out_f0.squeeze()) / target_f0.squeeze()[1:])
 
         d_cents = torch.abs(d_cents)
         if reduction == "mean":
@@ -57,20 +60,23 @@ class Evaluator:
             print("ERROR reduction type")
             return None
 
-    def listen(self, out, target, ddsp, saving_path=None, resynth=False):
+    def listen(self,
+               out_f0,
+               out_loudness,
+               target_f0,
+               target_loudness,
+               ddsp,
+               saving_path=None,
+               resynth=False):
 
-        out_f0, out_loudness = out.float().split(1, -1)
-        target_f0, target_loudness = target.float().split(1, -1)
-
-        model_audio = ddsp(out_f0, out_loudness).detach().squeeze().numpy()
-        target_audio = ddsp(target_f0,
-                            target_loudness).detach().squeeze().numpy()
+        model_audio = ddsp(out_f0, out_loudness)
+        target_audio = ddsp(target_f0, target_loudness)
 
         if saving_path is not None:
-            write(saving_path, 16000, model_audio)
+            write(saving_path, 16000, model_audio.reshape(-1).numpy())
 
         if resynth is not None:
             filename = saving_path[:-4] + "-resynth.wav"
-            write(filename, 16000, target_audio)
+            write(filename, 16000, target_audio.reshape(-1).numpy())
 
         return model_audio
