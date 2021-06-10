@@ -47,4 +47,4 @@ loudness = dataset.apply_inverse_transform(loudness.squeeze(0), 1)
 
 y = ddsp(f0, loudness)
 
-# sf.write("eval.wav", y.reshape(-1).numpy(), 16000)
+sf.write("eval.wav", y.reshape(-1).numpy(), 16000)
