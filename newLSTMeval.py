@@ -42,7 +42,7 @@ f0 = pctof(f0, cents)
 
 loudness = loudness / (dataset.n_loudness - 1)
 
-f0 = dataset.apply_inverse_transform(f0.squeeze(0), 1)
+f0 = dataset.apply_inverse_transform(f0.squeeze(0), 0)
 loudness = dataset.apply_inverse_transform(loudness.squeeze(0), 1)
 
 y = ddsp(f0, loudness)
