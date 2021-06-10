@@ -2,6 +2,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import QuantileTransformer
+import seaborn as sns
 
 with open("dataset-augmented.pickle", "rb") as dataset:
     dataset = pickle.load(dataset)
@@ -9,8 +10,8 @@ with open("dataset-augmented.pickle", "rb") as dataset:
 u_l0 = dataset["u_loudness"].reshape(-1, 1)
 e_l0 = dataset["e_loudness"].reshape(-1, 1)
 
-d_u_l0 = np.histogram(u_l0, bin=30)
-d_e_l0 = np.histogram(e_l0, bin=30)
+# d_u_l0, _ = np.histogram(u_l0.reshape(-1), bins=30)
+# d_e_l0, _ = np.histogram(e_l0.reshape(-1), bins=30)
 
 q_u = QuantileTransformer(n_quantiles=30)
 q_e = QuantileTransformer(n_quantiles=30)
@@ -18,21 +19,23 @@ q_e = QuantileTransformer(n_quantiles=30)
 fit_u = q_u.fit(u_l0)
 fit_e = q_e.fit(e_l0)
 
-t_u_l0 = q_u.transform(u_l0, fit_u)
-t_e_l0 = q_e.transform(e_l0, fit_e)
+t_u_l0 = q_u.transform(u_l0)
+t_e_l0 = q_e.transform(e_l0)
 
-d_t_u_l0 = np.histogram(t_u_l0, bin=30)
-d_t_e_l0 = np.histogram(t_e_l0, bin=30)
+r_u_l0 = q_u.inverse_transform(t_u_l0)
+r_e_l0 = q_e.inverse_transform(t_e_l0)
 
-fig, (ax1, ax2, ax3, ax4) = plt.subplot(2, 2)
+u_l0, t_u_l0, r_u_l0 = u_l0.reshape(-1), t_u_l0.reshape(-1), r_u_l0.reshape(-1)
+e_l0, t_e_l0, r_e_l0 = e_l0.reshape(-1), t_e_l0.reshape(-1), r_e_l0.reshape(-1)
 
-ax1.hist(d_u_l0)
-ax1.subtitle("u_f0")
-ax2.hist(d_t_u_l0)
-ax2.subtitle("t_u_f0")
-ax3.hist(d_e_l0)
-ax3.subtitle("e_f0")
-ax4.hist(d_t_e_l0)
-ax4.subtitle("t_e_f0")
+sns.histplot(np.stack((u_l0, t_u_l0), axis=-1))
+plt.show()
 
+sns.histplot(np.stack((t_u_l0, r_u_l0), axis=-1))
+plt.show()
+
+sns.histplot(np.stack((e_l0, t_e_l0), axis=-1))
+plt.show()
+
+sns.histplot(np.stack((t_e_l0, r_e_l0), axis=-1))
 plt.show()
