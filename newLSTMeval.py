@@ -1,5 +1,6 @@
 import torch
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
+from torch.utils import data
 
 torch.set_grad_enabled(False)
 from newLSTMCat import FullModel, ExpressiveDataset
@@ -40,9 +41,12 @@ f0, cents, loudness = model.generation_loop(model_input, args.INFER_PITCH)
 target_f0, target_cents, target_loudness = target.split(1, -1)
 
 d_cents = cents / 100 - .5
-
 f0 = pctof(f0, d_cents)
 loudness = loudness / (dataset.n_loudness - 1)
+
+target_cents = target_cents / 100 - .5
+target_f0 = pctof(target_f0, target_cents)
+target_loudness = target_loudness / (dataset.n_loudness - 1)
 
 f0 = dataset.apply_inverse_transform(f0.squeeze(0), 0)
 loudness = dataset.apply_inverse_transform(loudness.squeeze(0), 1)
@@ -55,14 +59,19 @@ target_loudness = dataset.apply_inverse_transform(target_loudness, 4)
 
 # sf.write("eval.wav", y.reshape(-1).numpy(), 16000)
 
+name = str(args.CKPT).split("checkpoints/")[1][:-5]
+
 e = Evaluator()
-score = e.evaluate(f0, loudness, target_f0, target_loudness)
+score = e.evaluate(f0,
+                   loudness,
+                   target_f0,
+                   target_loudness,
+                   reduction="median")
 print(score)
 e.listen(f0,
          loudness,
          target_f0,
          target_loudness,
          ddsp,
-         "results/saved_samples/essai.wav",
-         reduction="sum",
+         "results/saved_samples/{}.wav".format(name),
          resynth=True)
