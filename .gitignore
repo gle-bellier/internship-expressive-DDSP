@@ -1,4 +1,5 @@
 /dataset-midi-wav
+/dataset-article
 /f0-confidence-loudness-files
 *.pyc
 /runs
