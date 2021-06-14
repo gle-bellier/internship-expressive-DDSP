@@ -217,7 +217,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
-        max_epochs=10000,
+        max_epochs=50000,
     )
     list_transforms = [
         (Identity, ),  # u_f0 

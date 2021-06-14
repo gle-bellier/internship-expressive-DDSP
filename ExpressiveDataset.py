@@ -11,7 +11,7 @@ from utils import *
 
 class ExpressiveDataset(Dataset):
     def __init__(self, list_transforms, n_sample=2050, n_loudness=30):
-        with open("dataset-augmented.pickle", "rb") as dataset:
+        with open("dataset-article.pickle", "rb") as dataset:
             dataset = pickle.load(dataset)
 
         self.dataset = dataset
