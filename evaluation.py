@@ -74,9 +74,28 @@ class Evaluator:
 
         if saving_path is not None:
             write(saving_path, 16000, model_audio.reshape(-1).numpy())
+            return model_audio
 
         if resynth is not None:
             filename = saving_path[:-4] + "-resynth.wav"
             write(filename, 16000, target_audio.reshape(-1).numpy())
+            return model_audio, target_audio
 
-        return model_audio
+    def plot_spectrogram(self, out, resynth):
+
+        out = out.squeeze().numpy()
+        resynth = resynth.squeeze().numpy()
+
+        fig, (ax1, ax2) = plt.subplots(2)
+        fig.suptitle("Spectrograms")
+
+        ax1.specgram(out, Fs=self.sr)
+        ax1.set_title("Model Spectrogram")
+        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        ax2.specgram(resynth, Fs=self.sr)
+        ax2.set_title("Original Spectrogram")
+        ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.show()
