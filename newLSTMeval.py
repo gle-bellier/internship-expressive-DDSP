@@ -51,16 +51,17 @@ target_loudness = target_loudness / (dataset.n_loudness - 1)
 f0 = dataset.apply_inverse_transform(f0.squeeze(0), 0)
 loudness = dataset.apply_inverse_transform(loudness.squeeze(0), 1)
 
-target_f0 = dataset.apply_inverse_transform(target_f0, 2)
-target_loudness = dataset.apply_inverse_transform(target_loudness, 4)
+target_f0 = dataset.apply_inverse_transform(target_f0[1:], 2)
+target_loudness = dataset.apply_inverse_transform(target_loudness[1:], 4)
 
 # y = ddsp(f0, loudness)
 # target_y = ddsp(target_f0, target_loudness)
 
 # sf.write("eval.wav", y.reshape(-1).numpy(), 16000)
 
-name = str(args.CKPT).split("checkpoints/")[1][:-5]
+# name = str(args.CKPT).split("checkpoints/")[1][:-5]
 
+name = "Essai"
 e = Evaluator()
 score = e.evaluate(f0,
                    loudness,
@@ -68,10 +69,12 @@ score = e.evaluate(f0,
                    target_loudness,
                    reduction="median")
 print(score)
-e.listen(f0,
-         loudness,
-         target_f0,
-         target_loudness,
-         ddsp,
-         "results/saved_samples/{}.wav".format(name),
-         resynth=True)
+out, target = e.listen(f0,
+                       loudness,
+                       target_f0,
+                       target_loudness,
+                       ddsp,
+                       "results/saved_samples/{}.wav".format(name),
+                       resynth=True)
+
+e.plot_diff_spectrogram(out, target)

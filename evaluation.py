@@ -47,7 +47,7 @@ class Evaluator:
               reduction):
 
         d_cents = 1200 * torch.log2(
-            torch.abs(out_f0.squeeze()) / target_f0.squeeze()[1:])
+            torch.abs(out_f0.squeeze()) / target_f0.squeeze())
 
         d_cents = torch.abs(d_cents)
         if reduction == "mean":
@@ -72,30 +72,36 @@ class Evaluator:
         model_audio = ddsp(out_f0, out_loudness)
         target_audio = ddsp(target_f0, target_loudness)
 
-        if saving_path is not None:
-            write(saving_path, 16000, model_audio.reshape(-1).numpy())
-            return model_audio
-
         if resynth is not None:
             filename = saving_path[:-4] + "-resynth.wav"
             write(filename, 16000, target_audio.reshape(-1).numpy())
             return model_audio, target_audio
 
-    def plot_spectrogram(self, out, resynth):
+        if saving_path is not None:
+            write(saving_path, 16000, model_audio.reshape(-1).numpy())
+            return model_audio
+
+    def plot_diff_spectrogram(self, out, resynth, scale="dB"):
 
         out = out.squeeze().numpy()
         resynth = resynth.squeeze().numpy()
 
-        fig, (ax1, ax2) = plt.subplots(2)
+        diff = out - resynth
+
+        fig, (ax1, ax2, ax3) = plt.subplots(3)
         fig.suptitle("Spectrograms")
 
-        ax1.specgram(out, Fs=self.sr)
+        ax1.specgram(out, Fs=self.sr, scale=scale, label="dB spectrogram")
         ax1.set_title("Model Spectrogram")
         ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        ax2.specgram(resynth, Fs=self.sr)
+        ax2.specgram(resynth, Fs=self.sr, scale=scale, label="dB spectrogram")
         ax2.set_title("Original Spectrogram")
         ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        ax3.specgram(diff, Fs=self.sr, scale=scale, label="dB spectrogram")
+        ax3.set_title("Diff Spectrogram")
+        ax3.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.show()
