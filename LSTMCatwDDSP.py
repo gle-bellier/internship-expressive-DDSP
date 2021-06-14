@@ -41,8 +41,7 @@ class FullModel(pl.LightningModule):
         self.lstm = nn.GRU(
             hidden_size,
             hidden_size,
-            num_layers=2,
-            dropout=0.2,
+            num_layers=1,
             batch_first=True,
         )
 
@@ -204,7 +203,7 @@ class FullModel(pl.LightningModule):
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 100 == 0:
+        if self.current_epoch % 200 == 0:
 
             audio = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard

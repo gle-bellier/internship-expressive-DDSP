@@ -52,7 +52,7 @@ if __name__ == "__main__":
     e_f0 = []
     e_loudness = []
 
-    with open("dataset/contours.csv", "r") as contour:
+    with open("dataset/contours-article.csv", "r") as contour:
         contour = csv.DictReader(contour)
 
         for row in contour:
@@ -69,35 +69,25 @@ if __name__ == "__main__":
     e_f0, e_cents = ftopc(e_f0)
     u_f0, _ = ftopc(u_f0)
 
-    print(
-        "Shapes BEFORE : \n u_f0 {}\n u_l0 {}\n e_f0 {}\n e_cents {}\n e_loudness {}\n"
-        .format(u_f0.shape, u_loudness.shape, e_f0.shape, e_cents.shape,
-                e_loudness.shape))
+    # # # data augmentation
 
-    # # data augmentation
+    # # 1 step above
+    # e_f0_a = np.minimum(127 * np.ones_like(e_f0), e_f0 + 1)
+    # u_f0_a = np.minimum(127 * np.ones_like(u_f0), u_f0 + 1)
 
-    # 1 step above
-    e_f0_a = np.minimum(127 * np.ones_like(e_f0), e_f0 + 1)
-    u_f0_a = np.minimum(127 * np.ones_like(u_f0), u_f0 + 1)
+    # # 1 step below
+    # e_f0_b = np.maximum(np.zeros_like(e_f0), e_f0 - 1)
+    # u_f0_b = np.maximum(np.zeros_like(u_f0), u_f0 - 1)
 
-    # 1 step below
-    e_f0_b = np.maximum(np.zeros_like(e_f0), e_f0 - 1)
-    u_f0_b = np.maximum(np.zeros_like(u_f0), u_f0 - 1)
+    # e_f0 = np.concatenate((e_f0, e_f0_a))
+    # u_f0 = np.concatenate((u_f0, u_f0_a))
 
-    e_f0 = np.concatenate((e_f0, e_f0_a))
-    u_f0 = np.concatenate((u_f0, u_f0_a))
+    # e_f0 = np.concatenate((e_f0, e_f0_b))
+    # u_f0 = np.concatenate((u_f0, u_f0_b))
 
-    e_f0 = np.concatenate((e_f0, e_f0_b))
-    u_f0 = np.concatenate((u_f0, u_f0_b))
-
-    u_loudness = np.tile(u_loudness, 3)  # replicates 3x
-    e_loudness = np.tile(e_loudness, 3)
-    e_cents = np.tile(e_cents, 3)
-
-    print(
-        "Shapes AFTER : \n u_f0 {}\n u_l0 {}\n e_f0 {}\n e_cents {}\n e_loudness {}\n"
-        .format(u_f0.shape, u_loudness.shape, e_f0.shape, e_cents.shape,
-                e_loudness.shape))
+    # u_loudness = np.tile(u_loudness, 3)  # replicates 3x
+    # e_loudness = np.tile(e_loudness, 3)
+    # e_cents = np.tile(e_cents, 3)
 
     out = {
         "u_f0": u_f0,  # 0 - 127
@@ -107,5 +97,5 @@ if __name__ == "__main__":
         "e_loudness": e_loudness,
     }
 
-    with open("dataset-augmented.pickle", "wb") as file_out:
+    with open("dataset-article.pickle", "wb") as file_out:
         pickle.dump(out, file_out)
