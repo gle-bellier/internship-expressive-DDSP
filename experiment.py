@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     dataset = ExpressiveDataset(list_transforms=list_transforms,
                                 path=dataset_PATH,
-                                n_sample=512)
+                                n_sample=sample_length)
 
     train_len = int(train_val_ratio * len(dataset))
     val_len = len(dataset) - train_len
@@ -88,6 +88,6 @@ if __name__ == "__main__":
 
     trainer.fit(
         model,
-        DataLoader(train, 32, True),
-        DataLoader(val, 32),
+        DataLoader(train, batch_size, True),
+        DataLoader(val, batch_size),
     )
