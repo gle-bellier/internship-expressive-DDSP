@@ -227,7 +227,7 @@ if __name__ == "__main__":
         (MinMaxScaler, ),  # e_loudness
     ]
 
-    dataset = ExpressiveDataset(list_transforms=list_transforms)
+    dataset = ExpressiveDataset(n_sample=512, list_transforms=list_transforms)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 

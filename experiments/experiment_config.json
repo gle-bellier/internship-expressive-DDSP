@@ -1,0 +1,31 @@
+{
+    "config": {
+        "name": "first",
+        "logdir": "logs/",
+        "n_epochs": 50000,
+        "dataset": {
+            "dataset_PATH": "dataset-article.pickle",
+            "sample_length": 2050,
+            "batch_size": 16,
+            "train_val_ratio": 0.8
+        },
+        "model": {
+            "in_size": 360,
+            "hidden_size": 1024,
+            "out_size": 230
+        },
+        "transforms": {
+            "types": [
+                "Identity",
+                "MinMaxScaler",
+                "Identity",
+                "Identity",
+                "MinMaxScaler"
+            ],
+            "n_bins": {
+                "loudness": null,
+                "pitch": null
+            }
+        }
+    }
+}
