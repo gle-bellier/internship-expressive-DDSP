@@ -10,6 +10,7 @@
             "train_val_ratio": 0.8
         },
         "model": {
+            "type": "Categorical",
             "in_size": 360,
             "hidden_size": 1024,
             "out_size": 230

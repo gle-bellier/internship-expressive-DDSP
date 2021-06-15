@@ -43,6 +43,7 @@ if __name__ == "__main__":
     train_val_ratio = float(dataset_config["train_val_ratio"])
 
     model_config = config["model"]
+    model_type = model_config["type"]
     in_size = int(model_config["in_size"])
     hidden_size = int(model_config["hidden_size"])
     out_size = int(model_config["out_size"])
@@ -82,7 +83,11 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    model = FullModel(in_size, hidden_size, out_size, scalers=dataset.scalers)
+    if model_type == "Categorical":
+        model = FullModel(in_size,
+                          hidden_size,
+                          out_size,
+                          scalers=dataset.scalers)
 
     trainer.fit(
         model,

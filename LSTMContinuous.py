@@ -93,7 +93,7 @@ class ModelContinuous(pl.LightningModule):
         pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
         target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
+        loss_f0, loss_cents, loss_loudness = self.mean_square_error(
             pred_f0,
             pred_cents,
             pred_loudness,
@@ -107,12 +107,6 @@ class ModelContinuous(pl.LightningModule):
         self.log("loss_loudness", loss_loudness)
 
         return loss_f0 + loss_cents + loss_loudness
-
-    def sample_one_hot(self, x):
-        n_bin = x.shape[-1]
-        sample = torch.distributions.Categorical(logits=x).sample()
-        sample = nn.functional.one_hot(sample, n_bin)
-        return sample
 
     @torch.no_grad()
     def generation_loop(self, x, infer_pitch=True):
@@ -167,7 +161,6 @@ class ModelContinuous(pl.LightningModule):
 
         f0 = pctof(f0, cents)
 
-        loudness = loudness / (self.loudness_nbins - 1)
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
@@ -180,7 +173,7 @@ class ModelContinuous(pl.LightningModule):
         pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
         target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
+        loss_f0, loss_cents, loss_loudness = self.mean_square_error(
             pred_f0,
             pred_cents,
             pred_loudness,
