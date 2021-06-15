@@ -39,7 +39,7 @@ if __name__ == "__main__":
     n_epochs = config["n_epochs"]
 
     dataset_config = config["dataset"]
-    dataset_PATH = dataset_config["dataset_PATH"]
+    dataset_PATH = "dataset/" + dataset_config["dataset_PATH"]
     sample_length = int(dataset_config["sample_length"])
     batch_size = int(dataset_config["batch_size"])
     train_val_ratio = float(dataset_config["train_val_ratio"])
