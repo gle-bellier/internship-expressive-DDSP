@@ -7,3 +7,4 @@
 /results/saved_samples
 *.pickle
 lightning_logs
+logs
