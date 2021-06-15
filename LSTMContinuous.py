@@ -26,7 +26,7 @@ class LinearBlock(nn.Module):
         return x
 
 
-class FullModel(pl.LightningModule):
+class ModelContinuous(pl.LightningModule):
     def __init__(self, in_size, hidden_size, out_size, scalers):
         super().__init__()
         self.save_hyperparameters()
@@ -69,23 +69,16 @@ class FullModel(pl.LightningModule):
         return x
 
     def split_predictions(self, prediction):
-        pred_f0 = prediction[..., :100]
-        pred_cents = prediction[..., 100:200]
-        pred_loudness = prediction[..., 200:]
+        pred_f0 = prediction[..., :1]
+        pred_cents = prediction[..., 1:2]
+        pred_loudness = prediction[..., 2:]
         return pred_f0, pred_cents, pred_loudness
 
-    def cross_entropy(self, pred_f0, pred_cents, pred_loudness, target_f0,
-                      target_cents, target_loudness):
-        pred_f0 = pred_f0.permute(0, 2, 1)
-        pred_cents = pred_cents.permute(0, 2, 1)
-        pred_loudness = pred_loudness.permute(0, 2, 1)
+    def mean_square_error(self, pred_f0, pred_cents, pred_loudness, target_f0,
+                          target_cents, target_loudness):
 
-        target_f0 = target_f0.squeeze(-1)
-        target_cents = target_cents.squeeze(-1)
-        target_loudness = target_loudness.squeeze(-1)
-
-        loss_f0 = nn.functional.cross_entropy(pred_f0, target_f0)
-        loss_cents = nn.functional.cross_entropy(pred_cents, target_cents)
+        loss_f0 = nn.functional.mse_loss(pred_f0, target_f0)
+        loss_cents = nn.functional.mse_loss(pred_cents, target_cents)
         loss_loudness = nn.functional.cross_entropy(
             pred_loudness,
             target_loudness,
@@ -169,12 +162,12 @@ class FullModel(pl.LightningModule):
     def get_audio(self, model_input, target):
 
         model_input = model_input.unsqueeze(0).float()
-        f0, cents, loudness = model.generation_loop(model_input)
+        f0, cents, loudness = self.generation_loop(model_input)
         cents = cents / 100 - .5
 
         f0 = pctof(f0, cents)
 
-        loudness = loudness / (dataset.n_loudness - 1)
+        loudness = loudness / (self.loudness_nbins - 1)
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
