@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 
 torch.set_grad_enabled(False)
 
-from newLSTMCat import FullModel
+from LSTMCatwDDSP import FullModel
 from ExpressiveDataset import ExpressiveDataset
 from newLSTMpreprocess import pctof
 from effortless_config import Config
@@ -17,8 +17,6 @@ import json
 
 from utils import Identity
 from evaluation import Evaluator
-
-import matplotlib.pyplot as plt
 
 
 class args(Config):

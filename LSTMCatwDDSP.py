@@ -31,6 +31,7 @@ class FullModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.scalers = scalers
+        self.loudness_nbins = 30
         self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
 
         self.pre_lstm = nn.Sequential(
@@ -169,12 +170,12 @@ class FullModel(pl.LightningModule):
     def get_audio(self, model_input, target):
 
         model_input = model_input.unsqueeze(0).float()
-        f0, cents, loudness = model.generation_loop(model_input)
+        f0, cents, loudness = self.generation_loop(model_input)
         cents = cents / 100 - .5
 
         f0 = pctof(f0, cents)
 
-        loudness = loudness / (dataset.n_loudness - 1)
+        loudness = loudness / (self.loudness_nbins - 1)
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
