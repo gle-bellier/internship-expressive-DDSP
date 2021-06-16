@@ -26,7 +26,7 @@ class LinearBlock(nn.Module):
         return x
 
 
-class FullModel(pl.LightningModule):
+class ModelCategorical(pl.LightningModule):
     def __init__(self, in_size, hidden_size, out_size, scalers):
         super().__init__()
         self.save_hyperparameters()
@@ -123,7 +123,7 @@ class FullModel(pl.LightningModule):
         return sample
 
     @torch.no_grad()
-    def generation_loop(self, x, infer_pitch=True):
+    def generation_loop(self, x, infer_pitch=False):
         context = None
 
         for i in range(x.shape[1] - 1):
@@ -234,7 +234,7 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    model = FullModel(360, 1024, 230, scalers=dataset.scalers)
+    model = ModelCategorical(360, 1024, 230, scalers=dataset.scalers)
 
     trainer.fit(
         model,
