@@ -204,6 +204,15 @@ class ModelContinuousPitch(pl.LightningModule):
             tb = self.logger.experiment
             n = "Epoch={}".format(self.current_epoch)
             tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
+            for i in range(model_input.shape[1]):
+                tb.add_scalars("f0", {
+                    "model": model_input[0, i, 0],
+                    "target": target[0, i, 0],
+                })
+                tb.add_scalars("cents", {
+                    "model": model_input[0, i, 1],
+                    "target": target[0, i, 1]
+                })
 
 
 if __name__ == "__main__":
