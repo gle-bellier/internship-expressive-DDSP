@@ -6,7 +6,7 @@ from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxSca
 import pytorch_lightning as pl
 import pickle
 from random import randint, sample
-from ExpressiveDataset import ExpressiveDataset
+from ExpressiveDataset import ExpressiveDatasetPitchContinuous
 from utils import *
 
 
@@ -79,19 +79,16 @@ class ModelContinuousPitch(pl.LightningModule):
                    target_cents, target_loudness):
 
         pred_loudness = pred_loudness.permute(0, 2, 1)
-
-        target_f0 = target_f0.squeeze(-1)
-        target_cents = target_cents.squeeze(-1)
         target_loudness = target_loudness.squeeze(-1)
 
         loss_f0 = nn.functional.mse_loss(pred_f0, target_f0)
         loss_cents = nn.functional.mse_loss(pred_cents, target_cents)
         loss_loudness = nn.functional.cross_entropy(
             pred_loudness,
-            target_loudness,
+            target_loudness.long(),
         )
 
-        return loss_f0, loss_cents, loss_loudness
+        return loss_f0 * 100, loss_cents * 100, loss_loudness
 
     def training_step(self, batch, batch_idx):
         model_input, target = batch
@@ -99,7 +96,6 @@ class ModelContinuousPitch(pl.LightningModule):
 
         pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
         target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
-
         loss_f0, loss_cents, loss_loudness = self.mse_and_ce(
             pred_f0,
             pred_cents,
@@ -153,8 +149,7 @@ class ModelContinuousPitch(pl.LightningModule):
         pred_loudness = pred_loudness[:, 1:]
         pred_cents = pred_cents[:, :-1]
 
-        out = map(lambda x: torch.argmax(x, -1),
-                  [pred_f0, pred_cents, pred_loudness])
+        out = [pred_f0, pred_cents, torch.argmax(pred_loudness, -1)]
 
         return list(out)
 
@@ -170,7 +165,7 @@ class ModelContinuousPitch(pl.LightningModule):
 
         model_input = model_input.unsqueeze(0).float()
         f0, cents, loudness = self.generation_loop(model_input)
-        cents = cents / 100 - .5
+        cents = cents - .5
 
         f0 = pctof(f0, cents)
 
@@ -187,7 +182,7 @@ class ModelContinuousPitch(pl.LightningModule):
         pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
         target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
+        loss_f0, loss_cents, loss_loudness = self.mse_and_ce(
             pred_f0,
             pred_cents,
             pred_loudness,
@@ -203,7 +198,7 @@ class ModelContinuousPitch(pl.LightningModule):
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 200 == 0:
+        if self.current_epoch % 20 == 0:
 
             audio = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard
@@ -220,20 +215,21 @@ if __name__ == "__main__":
         max_epochs=50000,
     )
     list_transforms = [
-        (Identity, ),  # u_f0 
+        (MinMaxScaler, ),  # u_f0 
         (MinMaxScaler, ),  # u_loudness
-        (Identity, ),  # e_f0
+        (MinMaxScaler, ),  # e_f0
         (Identity, ),  # e_cents
         (MinMaxScaler, ),  # e_loudness
     ]
 
-    dataset = ExpressiveDataset(n_sample=512, list_transforms=list_transforms)
+    dataset = ExpressiveDatasetPitchContinuous(n_sample=512,
+                                               list_transforms=list_transforms)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    model = FullModel(360, 1024, 230, scalers=dataset.scalers)
+    model = ModelContinuousPitch(63, 1024, 32, scalers=dataset.scalers)
 
     trainer.fit(
         model,
