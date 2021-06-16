@@ -26,11 +26,12 @@ class LinearBlock(nn.Module):
         return x
 
 
-class ModelContinuous(pl.LightningModule):
+class ModelContinuousPitch(pl.LightningModule):
     def __init__(self, in_size, hidden_size, out_size, scalers):
         super().__init__()
         self.save_hyperparameters()
         self.scalers = scalers
+        self.loudness_nbins = 30
         self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
 
         self.pre_lstm = nn.Sequential(
@@ -74,8 +75,14 @@ class ModelContinuous(pl.LightningModule):
         pred_loudness = prediction[..., 2:]
         return pred_f0, pred_cents, pred_loudness
 
-    def mean_square_error(self, pred_f0, pred_cents, pred_loudness, target_f0,
-                          target_cents, target_loudness):
+    def mse_and_ce(self, pred_f0, pred_cents, pred_loudness, target_f0,
+                   target_cents, target_loudness):
+
+        pred_loudness = pred_loudness.permute(0, 2, 1)
+
+        target_f0 = target_f0.squeeze(-1)
+        target_cents = target_cents.squeeze(-1)
+        target_loudness = target_loudness.squeeze(-1)
 
         loss_f0 = nn.functional.mse_loss(pred_f0, target_f0)
         loss_cents = nn.functional.mse_loss(pred_cents, target_cents)
@@ -93,7 +100,7 @@ class ModelContinuous(pl.LightningModule):
         pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
         target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_loudness = self.mean_square_error(
+        loss_f0, loss_cents, loss_loudness = self.mse_and_ce(
             pred_f0,
             pred_cents,
             pred_loudness,
@@ -108,8 +115,14 @@ class ModelContinuous(pl.LightningModule):
 
         return loss_f0 + loss_cents + loss_loudness
 
+    def sample_one_hot(self, x):
+        n_bin = x.shape[-1]
+        sample = torch.distributions.Categorical(logits=x).sample()
+        sample = nn.functional.one_hot(sample, n_bin)
+        return sample
+
     @torch.no_grad()
-    def generation_loop(self, x, infer_pitch=True):
+    def generation_loop(self, x, infer_pitch=False):
         context = None
 
         for i in range(x.shape[1] - 1):
@@ -121,11 +134,11 @@ class ModelContinuous(pl.LightningModule):
             pred_f0, pred_cents, pred_loudness = self.split_predictions(x_out)
 
             if infer_pitch:
-                f0 = self.sample_one_hot(pred_f0)
+                f0 = pred_f0
             else:
-                f0 = x[:, i + 1:i + 2, :100].float()
+                f0 = x[:, i + 1:i + 2, :1].float()
 
-            cents = self.sample_one_hot(pred_cents)
+            cents = pred_cents
             loudness = self.sample_one_hot(pred_loudness)
 
             cat = torch.cat([f0, cents, loudness], -1)
@@ -161,6 +174,7 @@ class ModelContinuous(pl.LightningModule):
 
         f0 = pctof(f0, cents)
 
+        loudness = loudness / (self.loudness_nbins - 1)
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
@@ -173,7 +187,7 @@ class ModelContinuous(pl.LightningModule):
         pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
         target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_loudness = self.mean_square_error(
+        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
             pred_f0,
             pred_cents,
             pred_loudness,
