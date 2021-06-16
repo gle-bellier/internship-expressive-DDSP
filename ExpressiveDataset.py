@@ -12,7 +12,7 @@ from utils import *
 class ExpressiveDataset(Dataset):
     def __init__(self,
                  list_transforms,
-                 path="dataset-augmented.pickle",
+                 path="dataset/dataset-augmented.pickle",
                  n_sample=2050,
                  n_loudness=30):
         with open(path, "rb") as dataset:
@@ -118,7 +118,7 @@ class ExpressiveDataset(Dataset):
 class ExpressiveDatasetPitchContinuous(Dataset):
     def __init__(self,
                  list_transforms,
-                 path="dataset-augmented.pickle",
+                 path="dataset/dataset-augmented.pickle",
                  n_sample=2050,
                  n_loudness=30):
         with open(path, "rb") as dataset:
@@ -191,17 +191,17 @@ class ExpressiveDatasetPitchContinuous(Dataset):
 
         model_input = torch.cat(
             [
-                u_f0[2:],
+                u_f0[2:].unsqueeze(-1),
                 u_loudness[2:],
-                e_f0[1:-1],  # one step behind
-                e_cents[:-2],  # two steps behind
+                e_f0[1:-1].unsqueeze(-1),  # one step behind
+                e_cents[:-2].unsqueeze(-1),  # two steps behind
                 e_loudness[1:-1],  # one step behind
             ],
             -1)
 
         target = torch.cat([
-            e_f0[2:],
-            e_cents[1:-1],
+            e_f0[2:].unsqueeze(-1),
+            e_cents[1:-1].unsqueeze(-1),
             torch.argmax(e_loudness[2:], -1, keepdim=True),
         ], -1)
 
