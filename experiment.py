@@ -89,7 +89,7 @@ if __name__ == "__main__":
                                  out_size,
                                  scalers=dataset.scalers)
 
-    if model_type == "PitchContinuous":
+    if model_type == "ContinuousPitch":
         dataset = ExpressiveDatasetPitchContinuous(
             list_transforms=list_transforms,
             path=dataset_PATH,

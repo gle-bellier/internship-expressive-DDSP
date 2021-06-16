@@ -134,10 +134,9 @@ class ModelContinuousPitch(pl.LightningModule):
             else:
                 f0 = x[:, i + 1:i + 2, :1].float()
 
-            cents = pred_cents
             loudness = self.sample_one_hot(pred_loudness)
 
-            cat = torch.cat([f0, cents, loudness], -1)
+            cat = torch.cat([f0, pred_cents, loudness], -1)
             ndim = cat.shape[-1]
 
             x[:, i + 1:i + 2, -ndim:] = cat
