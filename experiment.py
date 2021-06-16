@@ -5,8 +5,9 @@ from torch.utils.data import DataLoader, Dataset, random_split
 
 torch.set_grad_enabled(False)
 
-from LSTMCatwDDSP import FullModel
-from ExpressiveDataset import ExpressiveDataset
+from LSTMCategorical import ModelCategorical
+from LSTMContinuous import ModelContinuousPitch
+from ExpressiveDataset import ExpressiveDataset, ExpressiveDatasetPitchContinuous
 from newLSTMpreprocess import pctof
 from effortless_config import Config
 import pytorch_lightning as pl
@@ -74,20 +75,34 @@ if __name__ == "__main__":
         logger=tb_logger,
     )
 
-    dataset = ExpressiveDataset(list_transforms=list_transforms,
-                                path=dataset_PATH,
-                                n_sample=sample_length)
-
-    train_len = int(train_val_ratio * len(dataset))
-    val_len = len(dataset) - train_len
-
-    train, val = random_split(dataset, [train_len, val_len])
-
     if model_type == "Categorical":
-        model = FullModel(in_size,
-                          hidden_size,
-                          out_size,
-                          scalers=dataset.scalers)
+        dataset = ExpressiveDataset(list_transforms=list_transforms,
+                                    path=dataset_PATH,
+                                    n_sample=sample_length)
+
+        train_len = int(train_val_ratio * len(dataset))
+        val_len = len(dataset) - train_len
+        train, val = random_split(dataset, [train_len, val_len])
+
+        model = ModelCategorical(in_size,
+                                 hidden_size,
+                                 out_size,
+                                 scalers=dataset.scalers)
+
+    if model_type == "PitchContinuous":
+        dataset = ExpressiveDatasetPitchContinuous(
+            list_transforms=list_transforms,
+            path=dataset_PATH,
+            n_sample=sample_length)
+
+        train_len = int(train_val_ratio * len(dataset))
+        val_len = len(dataset) - train_len
+        train, val = random_split(dataset, [train_len, val_len])
+
+        model = ModelContinuousPitch(in_size,
+                                     hidden_size,
+                                     out_size,
+                                     scalers=dataset.scalers)
 
     trainer.fit(
         model,
