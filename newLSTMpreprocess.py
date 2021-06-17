@@ -97,5 +97,5 @@ if __name__ == "__main__":
         "e_loudness": e_loudness,
     }
 
-    with open("dataset-article.pickle", "wb") as file_out:
+    with open("dataset/dataset-article.pickle", "wb") as file_out:
         pickle.dump(out, file_out)
