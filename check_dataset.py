@@ -2,7 +2,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
-PATH = "dataset/contours.csv"
+PATH = "dataset/contours-article.csv"
 
 u_f0 = []
 u_loudness = []
@@ -33,10 +33,9 @@ ax1.plot(u_f0.squeeze()[8000:10000], label="u_f0")
 ax1.plot(e_f0.squeeze()[8000:10000], label="e_f0")
 ax1.legend()
 
-ax2.plot(u_loudness.squeeze()[8000:10000], label="u_loudness")
-ax2.plot(e_loudness.squeeze()[8000:10000], label="e_loudness")
+ax2.plot(u_loudness.squeeze()[8000:14000], label="u_loudness")
+ax2.plot(e_loudness.squeeze()[8000:14000], label="e_loudness")
 ax2.legend()
-
 
 ax3.plot(
     (e_f0_mean.squeeze()[8000:10000] / np.max(e_f0_mean[8000:10000])) * 50,
