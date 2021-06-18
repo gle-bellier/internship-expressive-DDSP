@@ -51,8 +51,10 @@ if __name__ == "__main__":
     u_loudness = []
     e_f0 = []
     e_loudness = []
+    f0_conf = []
+    events = []
 
-    with open("dataset/contours-article.csv", "r") as contour:
+    with open("dataset/contours.csv", "r") as contour:
         contour = csv.DictReader(contour)
 
         for row in contour:
@@ -60,11 +62,15 @@ if __name__ == "__main__":
             u_loudness.append(row["u_loudness"])
             e_f0.append(row["e_f0"])
             e_loudness.append(row["e_loudness"])
+            f0_conf.append(row["f0_conf"])
+            events.append(row["events"])
 
     u_f0 = np.asarray(u_f0).astype(float)
     u_loudness = np.asarray(u_loudness).astype(float)
     e_f0 = np.asarray(e_f0).astype(float)
     e_loudness = np.asarray(e_loudness).astype(float)
+    f0_conf = np.asarray(f0_conf).astype(float)
+    events = np.asarray(events).astype(float)
 
     e_f0, e_cents = ftopc(e_f0)
     u_f0, _ = ftopc(u_f0)
@@ -95,7 +101,9 @@ if __name__ == "__main__":
         "e_f0": e_f0,  # 0 - 127
         "e_cents": e_cents + .5,  # 0 - 1
         "e_loudness": e_loudness,
+        "f0_conf": f0_conf,
+        "events": events
     }
 
-    with open("dataset/dataset-article.pickle", "wb") as file_out:
+    with open("dataset/dataset.pickle", "wb") as file_out:
         pickle.dump(out, file_out)
