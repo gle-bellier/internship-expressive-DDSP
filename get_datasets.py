@@ -3,10 +3,9 @@ from tqdm import tqdm
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
-import glob
 
 #from get_contours import ContoursGetter
-from customDataset import ContoursTrainDataset, ContoursTestDataset
+from custom_dataset import ContoursTrainDataset, ContoursTestDataset
 
 import torch
 import torch.utils.data
