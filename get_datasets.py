@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 
-from get_contours import ContoursGetter
+#from get_contours import ContoursGetter
 from customDataset import ContoursTrainDataset, ContoursTestDataset
 
 import torch

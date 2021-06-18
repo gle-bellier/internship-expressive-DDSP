@@ -1,181 +1,243 @@
 import torch
-from torch.functional import norm
-import torch.utils.data
-from torch import nn, optim
-from torch.nn import functional as F
-from torchvision import datasets, transforms
-from torch.distributions.categorical import Categorical
-
+import torch.nn as nn
 import numpy as np
-import librosa as li
+from torch.utils.data import DataLoader, Dataset, random_split
+from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
+import pytorch_lightning as pl
+import pickle
+from random import randint, sample
+from ExpressiveDataset import ExpressiveDataset
+from utils import *
 
 
-class NormalizedRectifiedLinear(nn.Module):
-    """
-    Fused normalization / activation / linear unit
-    """
-    def __init__(self, input_size, output_size, activation=True, norm=True):
+class LinearBlock(nn.Module):
+    def __init__(self, in_size, out_size, norm=True, act=True):
         super().__init__()
-        self.linear = nn.Linear(input_size, output_size)
-
-        if norm:
-            self.norm = nn.LayerNorm(output_size)
-        else:
-            self.norm = None
-
-        self.activation = activation
+        self.linear = nn.Linear(in_size, out_size)
+        self.norm = nn.LayerNorm(out_size) if norm else None
+        self.act = act
 
     def forward(self, x):
         x = self.linear(x)
-        if self.activation:
-            x = nn.functional.leaky_relu(x)
         if self.norm is not None:
-            # x = x.transpose(1, 2)
             x = self.norm(x)
-            # x = x.transpose(1, 2)
-
+        if self.act:
+            x = nn.functional.leaky_relu(x)
         return x
 
 
-class LSTMCategorical(nn.Module):
-    def __init__(self, input_size=1024, hidden_size=1024, num_layers=1):
-        super(LSTMCategorical, self).__init__()
-
-        self.num_layers = num_layers
-        self.input_size = input_size
-        self.hidden_size = hidden_size
+class ModelCategorical(pl.LightningModule):
+    def __init__(self, in_size, hidden_size, out_size, scalers):
+        super().__init__()
+        self.save_hyperparameters()
+        self.scalers = scalers
+        self.loudness_nbins = 30
+        self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
 
         self.pre_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(400, 512),
-            NormalizedRectifiedLinear(512, 768),
-            NormalizedRectifiedLinear(768, input_size),
+            LinearBlock(in_size, hidden_size),
+            LinearBlock(hidden_size, hidden_size),
         )
 
-        self.lstm = nn.LSTM(input_size=input_size,
-                            hidden_size=hidden_size,
-                            num_layers=num_layers,
-                            batch_first=True)
+        self.lstm = nn.GRU(
+            hidden_size,
+            hidden_size,
+            num_layers=1,
+            batch_first=True,
+        )
 
         self.post_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(hidden_size, 768),
-            NormalizedRectifiedLinear(768, 512),
-            NormalizedRectifiedLinear(512, 200),
+            LinearBlock(hidden_size, hidden_size),
+            LinearBlock(
+                hidden_size,
+                out_size,
+                norm=False,
+                act=False,
+            ),
+        )
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(
+            self.parameters(),
+            lr=1e-4,
+            weight_decay=.01,
         )
 
     def forward(self, x):
-
         x = self.pre_lstm(x)
-        out = self.lstm(x)[0]
-        out = self.post_lstm(out)
+        x = self.lstm(x)[0]
+        x = self.post_lstm(x)
+        return x
 
-        cents, loudness = torch.split(out, [100, 100], dim=-1)
+    def split_predictions(self, prediction):
+        pred_f0 = prediction[..., :100]
+        pred_cents = prediction[..., 100:200]
+        pred_loudness = prediction[..., 200:]
+        return pred_f0, pred_cents, pred_loudness
 
-        return cents, loudness
+    def cross_entropy(self, pred_f0, pred_cents, pred_loudness, target_f0,
+                      target_cents, target_loudness):
+        pred_f0 = pred_f0.permute(0, 2, 1)
+        pred_cents = pred_cents.permute(0, 2, 1)
+        pred_loudness = pred_loudness.permute(0, 2, 1)
 
-    def sampling(self, cents, loudness):
+        target_f0 = target_f0.squeeze(-1)
+        target_cents = target_cents.squeeze(-1)
+        target_loudness = target_loudness.squeeze(-1)
 
-        cents_dis = Categorical(logits=cents)
-        loudness_dis = Categorical(logits=loudness)
+        loss_f0 = nn.functional.cross_entropy(pred_f0, target_f0)
+        loss_cents = nn.functional.cross_entropy(pred_cents, target_cents)
+        loss_loudness = nn.functional.cross_entropy(
+            pred_loudness,
+            target_loudness,
+        )
 
-        sampled_cents = cents_dis.sample().unsqueeze(-1)
-        sampled_loudness = loudness_dis.sample().unsqueeze(-1)
+        return loss_f0, loss_cents, loss_loudness
 
-        # need to change the range from [0, 100] -> [0, n_out]
+    def training_step(self, batch, batch_idx):
+        model_input, target = batch
+        prediction = self.forward(model_input.float())
 
-        sampled_cents = sampled_cents.float() / 100.0
-        sampled_loudness = sampled_loudness.float() / 100.0
-        return sampled_cents, sampled_loudness
+        pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
+        target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
 
-    def predict(self, pitch, loudness):
-        f0 = torch.zeros_like(pitch)
-        l0 = torch.zeros_like(loudness)
+        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
+            pred_f0,
+            pred_cents,
+            pred_loudness,
+            target_f0,
+            target_cents,
+            target_loudness,
+        )
 
-        x_in = torch.cat([pitch, loudness, f0, l0], -1)
+        self.log("loss_f0", loss_f0)
+        self.log("loss_cents", loss_cents)
+        self.log("loss_loudness", loss_loudness)
 
+        return loss_f0 + loss_cents + loss_loudness
+
+    def sample_one_hot(self, x):
+        n_bin = x.shape[-1]
+        sample = torch.distributions.Categorical(logits=x).sample()
+        sample = nn.functional.one_hot(sample, n_bin)
+        return sample
+
+    @torch.no_grad()
+    def generation_loop(self, x, infer_pitch=False):
         context = None
 
-        for i in range(x_in.size(1) - 1):
-            x = x_in[:, i:i + 1]
+        for i in range(x.shape[1] - 1):
+            x_in = x[:, i:i + 1]
 
-            x = self.pre_lstm(x)
-            pred, context = self.lstm(x, context)
-            pred = self.post_lstm(pred)
+            x_out = self.pre_lstm(x_in)
+            x_out, context = self.lstm(x_out, context)
+            x_out = self.post_lstm(x_out)
+            pred_f0, pred_cents, pred_loudness = self.split_predictions(x_out)
 
-            e_cents, l0 = torch.split(pred, 100, -1)
+            if infer_pitch:
+                f0 = self.sample_one_hot(pred_f0)
+            else:
+                f0 = x[:, i + 1:i + 2, :100].float()
 
-            x_in[:, i + 1:i + 2, 200:300] = e_cents
-            x_in[:, i + 1:i + 2, 300:] = l0
+            cents = self.sample_one_hot(pred_cents)
+            loudness = self.sample_one_hot(pred_loudness)
 
-        out_cents, out_loudness = x_in[:, :, 200:].split(100, -1)
-        out_cents, out_loudness = self.sampling(out_cents, out_loudness)
+            cat = torch.cat([f0, cents, loudness], -1)
+            ndim = cat.shape[-1]
 
-        return out_cents, out_loudness
+            x[:, i + 1:i + 2, -ndim:] = cat
+
+        pred = x[..., -ndim:]
+        pred_f0, pred_cents, pred_loudness = self.split_predictions(pred)
+
+        pred_f0 = pred_f0[:, 1:]
+        pred_loudness = pred_loudness[:, 1:]
+        pred_cents = pred_cents[:, :-1]
+
+        out = map(lambda x: torch.argmax(x, -1),
+                  [pred_f0, pred_cents, pred_loudness])
+
+        return list(out)
+
+    def apply_inverse_transform(self, x, idx):
+        scaler = self.scalers[idx]
+        x = x.cpu()
+        out = scaler.inverse_transform(x.reshape(-1, 1))
+        out = torch.from_numpy(out).to("cuda")
+        out = out.unsqueeze(0)
+        return out.float()
+
+    def get_audio(self, model_input, target):
+
+        model_input = model_input.unsqueeze(0).float()
+        f0, cents, loudness = self.generation_loop(model_input)
+        cents = cents / 100 - .5
+
+        f0 = pctof(f0, cents)
+
+        loudness = loudness / (self.loudness_nbins - 1)
+        f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
+        loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
+        y = self.ddsp(f0, loudness)
+        return y
+
+    def validation_step(self, batch, batch_idx):
+        model_input, target = batch
+        prediction = self.forward(model_input.float())
+
+        pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
+        target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
+
+        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
+            pred_f0,
+            pred_cents,
+            pred_loudness,
+            target_f0,
+            target_cents,
+            target_loudness,
+        )
+
+        self.log("val_loss_f0", loss_f0)
+        self.log("val_loss_cents", loss_cents)
+        self.log("val_loss_loudness", loss_loudness)
+        self.log("val_total", loss_f0 + loss_cents + loss_loudness)
+
+        ## Every 100 epochs : produce audio
+
+        if self.current_epoch % 200 == 0:
+
+            audio = self.get_audio(model_input[0], target[0])
+            # output audio in Tensorboard
+            tb = self.logger.experiment
+            n = "Epoch={}".format(self.current_epoch)
+            tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
 
 
-class LSTMCategoricalBottleneck(nn.Module):
-    def __init__(self, input_size=512, hidden_size=512, num_layers=1):
-        super(LSTMCategoricalBottleneck, self).__init__()
+if __name__ == "__main__":
 
-        self.num_layers = num_layers
-        self.input_size = input_size
-        self.hidden_size = hidden_size
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+        max_epochs=50000,
+    )
+    list_transforms = [
+        (Identity, ),  # u_f0 
+        (MinMaxScaler, ),  # u_loudness
+        (Identity, ),  # e_f0
+        (Identity, ),  # e_cents
+        (MinMaxScaler, ),  # e_loudness
+    ]
 
-        self.pre_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(400, input_size))
+    dataset = ExpressiveDataset(n_sample=512, list_transforms=list_transforms)
+    val_len = len(dataset) // 20
+    train_len = len(dataset) - val_len
 
-        self.lstm = nn.LSTM(input_size=input_size,
-                            hidden_size=hidden_size,
-                            num_layers=num_layers,
-                            batch_first=True)
+    train, val = random_split(dataset, [train_len, val_len])
 
-        self.post_lstm = nn.Sequential(
-            NormalizedRectifiedLinear(hidden_size, 200))
+    model = ModelCategorical(360, 1024, 230, scalers=dataset.scalers)
 
-    def forward(self, x):
-
-        x = self.pre_lstm(x)
-        out = self.lstm(x)[0]
-        out = self.post_lstm(out)
-
-        cents, loudness = torch.split(out, [100, 100], dim=-1)
-
-        return cents, loudness
-
-    def sampling(self, cents, loudness):
-
-        cents_dis = Categorical(logits=cents)
-        loudness_dis = Categorical(logits=loudness)
-
-        sampled_cents = cents_dis.sample().unsqueeze(-1)
-        sampled_loudness = loudness_dis.sample().unsqueeze(-1)
-
-        # need to change the range from [0, 100] -> [0, n_out]
-
-        sampled_cents = sampled_cents.float() / 100.0
-        sampled_loudness = sampled_loudness.float() / 100.0
-        return sampled_cents, sampled_loudness
-
-    def predict(self, pitch, loudness):
-        f0 = torch.zeros_like(pitch)
-        l0 = torch.zeros_like(loudness)
-
-        x_in = torch.cat([pitch, loudness, f0, l0], -1)
-
-        context = None
-
-        for i in range(x_in.size(1) - 1):
-            x = x_in[:, i:i + 1]
-
-            x = self.pre_lstm(x)
-            pred, context = self.lstm(x, context)
-            pred = self.post_lstm(pred)
-
-            e_cents, l0 = torch.split(pred, 100, -1)
-
-            x_in[:, i + 1:i + 2, 200:300] = e_cents
-            x_in[:, i + 1:i + 2, 300:] = l0
-
-        out_cents, out_loudness = x_in[:, :, 200:].split(100, -1)
-        out_cents, out_loudness = self.sampling(out_cents, out_loudness)
-
-        return out_cents, out_loudness
+    trainer.fit(
+        model,
+        DataLoader(train, 32, True),
+        DataLoader(val, 32),
+    )
