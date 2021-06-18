@@ -1,0 +1,26 @@
+data:
+  data_location: /slow-2/georges/dataset-urmp-wav
+  extension: wav
+  mean_loudness: -4.521168691461735
+  std_loudness: 1.5148987661708486
+model:
+  block_size: 160
+  hidden_size: 512
+  n_bands: 65
+  n_harmonic: 101
+  sampling_rate: 16000
+preprocess:
+  block_size: 160
+  oneshot: false
+  out_dir: ./preprocessed/
+  sampling_rate: 16000
+  signal_length: 64000
+train:
+  overlap: 0.75
+  scales:
+  - 4096
+  - 2048
+  - 1024
+  - 512
+  - 256
+  - 128

@@ -1,0 +1,32 @@
+{
+    "config": {
+        "name": "continuouspitch",
+        "logdir": "logs/",
+        "n_epochs": 50000,
+        "dataset": {
+            "dataset_PATH": "dataset-augmented.pickle",
+            "sample_length": 2050,
+            "batch_size": 16,
+            "train_val_ratio": 0.8
+        },
+        "model": {
+            "type": "ContinuousPitch",
+            "in_size": 63,
+            "hidden_size": 1024,
+            "out_size": 32
+        },
+        "transforms": {
+            "types": [
+                "MinMaxScaler",
+                "MinMaxScaler",
+                "MinMaxScaler",
+                "MinMaxScaler",
+                "MinMaxScaler"
+            ],
+            "n_bins": {
+                "loudness": null,
+                "pitch": null
+            }
+        }
+    }
+}

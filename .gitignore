@@ -1,5 +1,10 @@
 /dataset-midi-wav
+/dataset-article
 /f0-confidence-loudness-files
 *.pyc
 /runs
-/__pycache__
+*pycache*
+/results/saved_samples
+*.pickle
+lightning_logs
+logs

@@ -1,102 +1,107 @@
 import torch
-import torch.utils.data
-from torch import nn, optim
-from torch.nn import functional as F
-from torch.autograd import Variable
-from torchvision import datasets, transforms
-
-import numpy as np
 import matplotlib.pyplot as plt
+from scipy.io.wavfile import write
 
 
-from sklearn.preprocessing import StandardScaler
+class Evaluator:
+    def __init__(self, sr=100):
+        self.sr = sr
 
-from get_datasets import get_datasets
+    def evaluate(self,
+                 out_f0,
+                 out_loudness,
+                 target_f0,
+                 target_loudness,
+                 PLOT=False,
+                 SCORE=True,
+                 reduction="mean"):
 
+        if PLOT:
+            self.plot(out_f0, out_loudness, target_f0, target_loudness)
 
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")
-else:
-    device = torch.device("cpu")
-print('using', device)
+        if SCORE:
+            return self.score(out_f0, out_loudness, target_f0, target_loudness,
+                              reduction)
 
+    def plot(self, out_f0, out_loudness, target_f0, target_loudness):
 
+        t = torch.arange(0, out_f0.size(1), 1) / self.sr
 
+        fig, (ax1, ax2) = plt.subplots(2)
+        fig.suptitle("Model predictions")
 
-save_path = "models/saved_models/"
-model_name = "LSTM_towards_realistic_midi.pth"
+        ax1.plot(t, out_f0.squeeze(), label="Model")
+        ax1.plot(t, target_f0.squeeze(), label="Target")
+        ax1.set_title("Frequency")
+        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
+        ax2.plot(t, out_loudness.squeeze(), label="Model")
+        ax2.plot(t, target_loudness.squeeze(), label="Target")
+        ax2.set_title("Loudness")
+        ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-PATH = save_path + model_name 
-model = torch.load(PATH, map_location=device)
-print(model.parameters)
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.show()
 
+    def score(self, out_f0, out_loudness, target_f0, target_loudness,
+              reduction):
 
-sc = StandardScaler()
-sampling_rate = 100
+        d_cents = 1200 * torch.log2(
+            torch.abs(out_f0.squeeze()) / target_f0.squeeze())
 
-_, test_loader = get_datasets(dataset_file = "dataset/contours.csv", sampling_rate = sampling_rate, sample_duration = 20, batch_size = 1, ratio = 0.7, transform=sc.fit_transform)
-test_data = iter(test_loader)
+        d_cents = torch.abs(d_cents)
+        if reduction == "mean":
+            return torch.mean(d_cents).numpy()
+        elif reduction == "median":
+            return torch.median(d_cents).numpy()
+        elif reduction == "sum":
+            return torch.sum(d_cents).numpy()
+        else:
+            print("ERROR reduction type")
+            return None
 
-number_of_examples = 50
+    def listen(self,
+               out_f0,
+               out_loudness,
+               target_f0,
+               target_loudness,
+               ddsp,
+               saving_path=None,
+               resynth=False):
 
+        model_audio = ddsp(out_f0, out_loudness)
+        target_audio = ddsp(target_f0, target_loudness)
 
+        if resynth is not None:
+            filename = saving_path[:-4] + "-resynth.wav"
+            write(filename, 16000, target_audio.reshape(-1).numpy())
+            return model_audio, target_audio
 
-def get_model_next_step(model, u_f0, u_loudness, e_f0, e_loudness):
+        if saving_path is not None:
+            write(saving_path, 16000, model_audio.reshape(-1).numpy())
+            return model_audio
 
-        model_input = torch.cat([u_f0, u_loudness, e_f0, e_loudness], -1)
-        output = model(model_input.to(device))
-        out_f0, out_loudness = torch.split(output, 1, -1)
+    def plot_diff_spectrogram(self, out, resynth, scale="dB"):
 
-        out_f0 = torch.cat([e_f0[:,1:], out_f0[:,-1:]], 1)
-        out_loudness = torch.cat([e_loudness[:,1:], out_loudness[:,-1:]], 1)
+        out = out.squeeze().numpy()
+        resynth = resynth.squeeze().numpy()
 
-        return out_f0, out_loudness
-    
+        diff = out - resynth
 
+        fig, (ax1, ax2, ax3) = plt.subplots(3)
+        fig.suptitle("Spectrograms")
 
-model.eval()
-with torch.no_grad():
-    with open("results.npy", "wb") as f:
+        ax1.specgram(out, Fs=self.sr, scale=scale, label="dB spectrogram")
+        ax1.set_title("Model Spectrogram")
+        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        for i in range(number_of_examples):
-            print("Sample {} reconstruction".format(i))
+        ax2.specgram(resynth, Fs=self.sr, scale=scale, label="dB spectrogram")
+        ax2.set_title("Original Spectrogram")
+        ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-            init_u_f0, init_u_loudness, init_e_f0, init_e_loudness, init_e_f0_mean, init_e_f0_stddev = next(test_data)
-            u_f0, u_loudness, e_f0, e_loudness, e_f0_mean, e_f0_stddev = next(test_data)
+        ax3.specgram(diff, Fs=self.sr, scale=scale, label="dB spectrogram")
+        ax3.set_title("Diff Spectrogram")
+        ax3.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-
-
-
-            u_f0 = torch.cat([torch.Tensor(init_u_f0.float()), torch.Tensor(u_f0.float())], 1) 
-            u_loudness = torch.cat([torch.Tensor(init_u_loudness.float()), torch.Tensor(u_loudness.float())], 1)
-            
-            e_f0 = torch.Tensor(e_f0.float())
-            e_loudness = torch.Tensor(e_loudness.float())
-
-
-
-            out_f0 = e_f0[:, 1:]
-            out_loudness = e_loudness[:, 1:]
-
-
-            n_step = 2000
-            for j in range(n_step):
-                out_f0, out_loudness = get_model_next_step(model, u_f0[:, j:1999+j].to(device), u_loudness[:, j:1999+j].to(device), out_f0.to(device), out_loudness.to(device))
-
-
-            out_f0, out_loudness = out_f0.squeeze().detach(), out_loudness.squeeze().detach()
-            e_f0, e_loudness = e_f0[:,1:].squeeze().detach(), e_loudness[:,1:].squeeze().detach()
-            u_f0, u_loudness = u_f0.squeeze().detach()[-1999:], u_loudness.squeeze().detach()[-1999:]
-
-            t = np.array([i/sampling_rate for i in range(out_f0.shape[0])])
-            
-            np.save(f, t)
-            np.save(f, u_f0.cpu())
-            np.save(f, e_f0.cpu())
-            np.save(f, out_f0.cpu())
-            np.save(f, u_loudness.cpu())
-            np.save(f, e_loudness.cpu())
-            np.save(f, out_loudness.cpu())
-            
-
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.show()
