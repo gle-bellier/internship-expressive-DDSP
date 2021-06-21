@@ -17,12 +17,15 @@ class UBlock(nn.Module):
 
 class DBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
+
+        self.lr = nn.LeakyReLU()
         self.conv1D = nn.Conv1D(in_channels=in_channels,
                                 out_channels=out_channels)
         pass
 
     def forward(self, x):
 
+        x = self.lr(x)
         x = torch.permute(0, 2, 1)
         x = self.Conv1D(x)
         pass
