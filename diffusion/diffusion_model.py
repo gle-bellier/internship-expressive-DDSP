@@ -1,20 +1,30 @@
 import torch
 import pytorch_lightning as pl
+from torch import nn
 
 
 class UBlock(nn.Module):
-    def __init__(self):
-        pass
+    def __init__(self, in_channels, out_channels):
+        self.conv1D = nn.Conv1D(in_channels=in_channels,
+                                out_channels=out_channels)
 
-    def forward(self):
+    def forward(self, x):
+        x = torch.permute(0, 2, 1)
+        x = self.Conv1D(x)
+
         pass
 
 
 class DBlock(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels, out_channels):
+        self.conv1D = nn.Conv1D(in_channels=in_channels,
+                                out_channels=out_channels)
         pass
 
-    def forward(self):
+    def forward(self, x):
+
+        x = torch.permute(0, 2, 1)
+        x = self.Conv1D(x)
         pass
 
 
