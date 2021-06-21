@@ -9,10 +9,11 @@ from random import randint
 
 class DiffusionDataset(Dataset):
     def __init__(self,
-                 path="dataset/dataset-diffusion.pickle",
+                 path="dataset-diffusion.pickle",
                  n_sample=2050,
                  n_loudness=30,
                  list_transforms=None):
+
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
 
