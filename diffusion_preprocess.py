@@ -84,12 +84,12 @@ if __name__ == "__main__":
     events = np.tile(events, 3)
 
     # 1 step above
-    e_f0_a = np.minimum(127 * np.ones_like(e_f0_pitch), e_f0_pitch + 1)
-    u_f0_a = np.minimum(127 * np.ones_like(u_f0), u_f0 + 1)
+    e_f0_a = e_f0_pitch + 1
+    u_f0_a = u_f0 + 1
 
     # 1 step below
-    e_f0_b = np.maximum(np.zeros_like(e_f0_pitch), e_f0_pitch - 1)
-    u_f0_b = np.maximum(np.zeros_like(u_f0), u_f0 - 1)
+    e_f0_b = e_f0_pitch - 1
+    u_f0_b = u_f0 - 1
 
     # add cents to quantized contours :
 
@@ -103,13 +103,13 @@ if __name__ == "__main__":
     u_f0 = np.concatenate((u_f0, u_f0_b))
 
     out = {
-        "u_f0": u_f0,  # 0 - 127
+        "u_f0": u_f0,
         "u_loudness": u_loudness,
-        "e_f0": e_f0,  # 0 - 127
+        "e_f0": e_f0,
         "e_loudness": e_loudness,
         "f0_conf": f0_conf,
         "events": events
     }
 
-    with open("dataset/diffusion-dataset.pickle", "wb") as file_out:
+    with open("dataset/dataset-diffusion.pickle", "wb") as file_out:
         pickle.dump(out, file_out)

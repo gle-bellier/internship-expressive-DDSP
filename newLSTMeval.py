@@ -3,8 +3,8 @@ from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxSca
 from torch.utils import data
 
 torch.set_grad_enabled(False)
-from ExpressiveDataset import ExpressiveDataset
-from LSTMCategorical import FullModel
+from expressive_dataset import ExpressiveDataset
+from models.LSTMCategorical import FullModel
 from newLSTMpreprocess import pctof
 from effortless_config import Config
 from random import randint

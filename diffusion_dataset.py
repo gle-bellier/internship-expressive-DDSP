@@ -60,6 +60,9 @@ class DiffusionDataset(Dataset):
         start, end = torch.tensor([0]), torch.tensor([e_l0.shape[0] - 1])
         indexes = torch.cat([start, indexes, end], -1)
 
+        for i in range(len(indexes) - 1):
+            u_l0[indexes[i]:indexes[i + 1]] = torch.mean(
+                e_l0[indexes[i]:indexes[i + 1]])
         return u_l0
 
     def __len__(self):
@@ -83,13 +86,14 @@ class DiffusionDataset(Dataset):
 
         u_f0 = self.apply_transform(u_f0, self.scalers[0])
         e_f0 = self.apply_transform(e_f0, self.scalers[2])
-        e_l0 = self.apply_transform(e_l0, self.scalers[4])
+        e_l0 = self.apply_transform(e_l0, self.scalers[3])
+
+        u_f0 = torch.from_numpy(u_f0).float()
+        e_f0 = torch.from_numpy(e_f0).float()
+        e_l0 = torch.from_numpy(e_l0).float()
+        events = torch.from_numpy(events).float()
 
         u_l0 = self.get_quantized_loudness(e_l0, events)
-
-        u_f0 = torch.from_numpy(u_f0).long()
-        e_f0 = torch.from_numpy(e_f0).long()
-        e_l0 = torch.from_numpy(e_l0).float()
 
         model_input = torch.cat(
             [
