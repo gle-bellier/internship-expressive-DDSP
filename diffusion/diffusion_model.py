@@ -8,7 +8,9 @@ class UBlock(nn.Module):
         super().__init__()
         self.conv1d = nn.Conv1d(in_channels=in_channels,
                                 out_channels=out_channels,
-                                kernel_size=3)
+                                kernel_size=3,
+                                stride=1,
+                                padding=1)
 
         self.up_sampling = nn.Upsample(scale_factor=2)
 
