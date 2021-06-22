@@ -5,30 +5,52 @@ from torch import nn
 
 class UBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
-        self.conv1D = nn.Conv1D(in_channels=in_channels,
-                                out_channels=out_channels)
+        super().__init__()
+        self.conv1d = nn.Conv1d(in_channels=in_channels,
+                                out_channels=out_channels,
+                                kernel_size=3)
+
+        self.up_sampling = nn.Upsample(scale_factor=2)
+
+        self.blck = nn.Sequential(
+            nn.Conv1d(in_channels=out_channels,
+                      out_channels=out_channels,
+                      kernel_size=2), nn.LeakyReLU())
 
     def forward(self, x):
-        x = torch.permute(0, 2, 1)
-        x = self.Conv1D(x)
+        print(x.shape)
+        x = self.up_sampling(x)
+        print(x.shape)
+        x = self.conv1d(x)
+        print(x.shape)
+        x = self.blck(x)
+        print(x.shape)
+        x = self.blck(x)
+        print(x.shape)
 
-        pass
+        return x
 
 
 class DBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
-
+        super().__init__()
         self.lr = nn.LeakyReLU()
-        self.conv1D = nn.Conv1D(in_channels=in_channels,
-                                out_channels=out_channels)
+        self.conv1d = nn.Conv1d(in_channels=in_channels,
+                                out_channels=out_channels,
+                                kernel_size=3)
+        self.mp = nn.MaxPool1d(kernel_size=2)
         pass
 
     def forward(self, x):
-
+        print(x.shape)
+        x = self.conv1d(x)
+        print(x.shape)
         x = self.lr(x)
-        x = torch.permute(0, 2, 1)
-        x = self.Conv1D(x)
-        pass
+        print(x.shape)
+        x = self.mp(x)
+        print(x.shape)
+
+        return x
 
 
 class UNET(pl.LightningModule):
@@ -45,9 +67,7 @@ class UNET(pl.LightningModule):
         )
 
     def forward(self, x):
-        x = self.pre_lstm(x)
-        x = self.lstm(x)[0]
-        x = self.post_lstm(x)
+        x = torch.permute(0, 2, 1)
         return x
 
     def get_losses(self, pred_f0, pred_cents, pred_loudness, target_f0,
