@@ -19,7 +19,8 @@ class UBlock(nn.Module):
                       out_channels=out_channels,
                       kernel_size=2), nn.LeakyReLU())
 
-    def forward(self, x):
+    def forward(self, x, ctx):
+
         print(x.shape)
         x = self.up_sampling(x)
         print(x.shape)
@@ -39,7 +40,10 @@ class DBlock(nn.Module):
         self.lr = nn.LeakyReLU()
         self.conv1d = nn.Conv1d(in_channels=in_channels,
                                 out_channels=out_channels,
-                                kernel_size=3)
+                                kernel_size=3,
+                                stride=1,
+                                padding=1)
+
         self.mp = nn.MaxPool1d(kernel_size=2)
         pass
 

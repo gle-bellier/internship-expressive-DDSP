@@ -2,6 +2,10 @@ import torch
 from torch import nn
 from diffusion_model import DBlock, UBlock
 
+import sys
+
+print(sys.version)
+
 t = torch.randn(16, 2, 2000)
 
 print("Down 1")
