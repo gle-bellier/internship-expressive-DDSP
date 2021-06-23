@@ -17,18 +17,25 @@ if __name__ == "__main__":
         (QuantileTransformer, 30),
     ]
 
-    dataset = DiffusionDataset()
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
+    dataset = DiffusionDataset(list_transforms=list_transforms)
+    dataset_sc = DiffusionDataset()
+    # val_len = len(dataset) // 20
+    # train_len = len(dataset) - val_len
 
-    train, val = random_split(dataset, [train_len, val_len])
+    # train, val = random_split(dataset, [train_len, val_len])
     for i in range(20):
-        model_input, target = train[i]
+        model_input, target = dataset[i]
+        model_input_sc, target_sc = dataset_sc[i]
 
         u_f0 = model_input[:, 0].squeeze()
         u_l0 = model_input[:, 1].squeeze()
         e_f0 = model_input[:, 2].squeeze()
         e_l0 = model_input[:, 3].squeeze()
+
+        u_f0_sc = model_input_sc[:, 0].squeeze()
+        u_l0_sc = model_input_sc[:, 1].squeeze()
+        e_f0_sc = model_input_sc[:, 2].squeeze()
+        e_l0_sc = model_input_sc[:, 3].squeeze()
 
         fig, (ax1, ax2) = plt.subplots(2)
         fig.suptitle("Dataset")
@@ -38,10 +45,15 @@ if __name__ == "__main__":
         ax1.set_title("Frequency")
         ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        ax2.plot(u_l0, label="Midi")
-        ax2.plot(e_l0, label="Target")
-        ax2.set_title("Loudness")
+        ax2.plot(u_f0_sc, label="Midi")
+        ax2.plot(e_f0_sc, label="Target")
+        ax2.set_title("Frequency")
         ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        # ax2.plot(u_l0, label="Midi")
+        # ax2.plot(e_l0, label="Target")
+        # ax2.set_title("Loudness")
+        # ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.show()
