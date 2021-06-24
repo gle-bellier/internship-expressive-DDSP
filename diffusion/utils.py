@@ -32,3 +32,36 @@ class PositionalEncoding(nn.Module):
         encoding = torch.stack([encoding.sin(), encoding.cos()], -1)
         encoding = encoding.reshape(*encoding.shape[:1], -1)
         return encoding.unsqueeze(-1)
+
+
+class FiLM(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.in_conv = nn.Conv1d(in_channels,
+                                 out_channels,
+                                 kernel=3,
+                                 stride=1,
+                                 padding=1)
+        self.lr = nn.LeakyReLU()
+        self.pe = PositionalEncoding(in_channels)
+        self.shift_conv = nn.Conv1d(in_channels,
+                                    out_channels,
+                                    kernel=3,
+                                    stride=1,
+                                    padding=1)
+        self.scale_conv = nn.Conv1d(in_channels,
+                                    out_channels,
+                                    kernel=3,
+                                    stride=1,
+                                    padding=1)
+
+    def forward(self, x, noise_level):
+
+        out = self.in_conv(x)
+        out = self.lr(out)
+
+        pe = self.pe(noise_level)
+        out = out + pe
+        scale = self.scale_conv(out)
+        shift = self.shift_conv(out)
+        return scale, shift
