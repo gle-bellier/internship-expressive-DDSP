@@ -28,8 +28,8 @@ class ConvBlock(nn.Module):
         self.lr = nn.LeakyReLU()
 
     def forward(self, x):
-        out = self.lr(x)
-        x = self.conv(x)
+        x = self.lr(x)
+        out = self.conv(x)
         return out
 
 
