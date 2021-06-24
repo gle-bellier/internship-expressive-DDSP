@@ -38,7 +38,7 @@ class FiLM(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.in_conv = nn.Conv1d(in_channels,
-                                 out_channels,
+                                 in_channels,
                                  kernel=3,
                                  stride=1,
                                  padding=1)
@@ -65,3 +65,12 @@ class FiLM(nn.Module):
         scale = self.scale_conv(out)
         shift = self.shift_conv(out)
         return scale, shift
+
+
+class FeatureWiseAffine(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, scale, shift):
+        out = scale * x + shift
+        return out
