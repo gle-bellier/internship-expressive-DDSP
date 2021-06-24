@@ -23,7 +23,7 @@ class DiffusionModel(pl.LightningModule):
         return l_out
 
     def up_sampling(self, l_film_pitch, l_film_noisy):
-        reverse = self.channels[::-1]  # reverse without the bottleneck channel
+        reverse = self.channels[::-1]  # reverse channels
         for i in range(len(reverse) - 1):
             print("UpBlock {} : {} -> {}".format(i, reverse[i],
                                                  reverse[i + 1]))
@@ -32,17 +32,26 @@ class DiffusionModel(pl.LightningModule):
                                                     l_film_noisy[i])
         return x
 
-    def forward(self, pitch, noisy):
+    def film(self, l_out, noise_level):
+        reverse = self.channels[::-1]  # reverse channels
+        l_film = []
+        for i in range(len(reverse) - 1):
+            print("FiLM {} : {} -> {}".format(i, reverse[i], reverse[i + 1]))
+            f = FiLM(in_channels=reverse[i],
+                     out_channels=reverse[i + 1])(l_out[i], noise_level)
+            l_film += [f]
+        return l_film
+
+    def forward(self, pitch, noisy, noise_level):
 
         l_out_pitch = self.down_sampling(pitch)
         l_out_noisy = self.down_sampling(noisy)
 
-        print(len(l_out_pitch))
-        # l_film_pitch = 0.0
-        # l_film_noisy = 0.0
+        l_film_pitch = self.film(l_out_pitch, noise_level)
+        l_film_noisy = self.film(l_out_noisy, noise_level)
 
-        # out = self.up_sampling(l_film_pitch, l_film_noisy)
-        # return out
+        out = self.up_sampling(l_film_pitch, l_film_noisy)
+        return out
 
 
 if __name__ == "__main__":
@@ -50,6 +59,8 @@ if __name__ == "__main__":
     noisy = torch.randn(1, 2, 20)  # B x C x T
     pitch = torch.randn(1, 2, 20)
 
+    noise_level = torch.tensor(0.3)
+
     channels = [2, 4, 8, 126]
     model = DiffusionModel(channels)
-    model(pitch, noisy)
+    model(pitch, noisy, noise_level)

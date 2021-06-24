@@ -23,10 +23,6 @@ class DBlock(nn.Module):
         )
 
     def forward(self, x):
-        print(x.shape)
         out1 = self.b1(x)
-        print(out1.shape)
-        print(x.shape)
         out2 = self.b2(x)
-        print(out2.shape)
         return out1 + out2

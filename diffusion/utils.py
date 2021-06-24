@@ -55,19 +55,19 @@ class FiLM(nn.Module):
         super().__init__()
         self.in_conv = nn.Conv1d(in_channels,
                                  in_channels,
-                                 kernel=3,
+                                 kernel_size=3,
                                  stride=1,
                                  padding=1)
         self.lr = nn.LeakyReLU()
         self.pe = PositionalEncoding(in_channels)
         self.shift_conv = nn.Conv1d(in_channels,
                                     out_channels,
-                                    kernel=3,
+                                    kernel_size=3,
                                     stride=1,
                                     padding=1)
         self.scale_conv = nn.Conv1d(in_channels,
                                     out_channels,
-                                    kernel=3,
+                                    kernel_size=3,
                                     stride=1,
                                     padding=1)
 
