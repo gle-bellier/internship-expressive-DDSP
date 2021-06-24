@@ -17,6 +17,22 @@ class Identity(BaseEstimator, TransformerMixin):
         return X.numpy()
 
 
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv = nn.Conv1d(in_channels=in_channels,
+                              out_channels=out_channels,
+                              kernel_size=3,
+                              stride=1,
+                              padding=1)
+        self.lr = nn.LeakyReLU()
+
+    def forward(self, x):
+        out = self.lr(x)
+        x = self.conv(x)
+        return out
+
+
 class PositionalEncoding(nn.Module):
     def __init__(self, n_dim, multiplier=30):
         super().__init__()
@@ -71,6 +87,7 @@ class FeatureWiseAffine(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, x, scale, shift):
+    def forward(self, x, film_out):
+        scale, shift = film_out
         out = scale * x + shift
         return out
