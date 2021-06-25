@@ -71,8 +71,8 @@ class DiffusionModel(pl.LightningModule):
         return l_film
 
     def cat_hiddens(self, h_pitch, h_noisy):
-        hiddens = torch.cat((h_pitch, h_noisy), dim=-1)
-        out = nn.Conv1d(in_channels=self.down_channels_out[-1],
+        hiddens = torch.cat((h_pitch, h_noisy), dim=1)
+        out = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
                         out_channels=self.up_channels_in[0],
                         kernel_size=3,
                         stride=1,
