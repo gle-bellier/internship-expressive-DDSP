@@ -13,9 +13,9 @@ class UBlock_B(nn.Module):
                                out_channels=out_channels)
 
     def forward(self, x, film_out):
-        x = FeatureWiseAffine(x, film_out)
+        x = FeatureWiseAffine()(x, film_out)
         x = self.conv1(x)
-        x = FeatureWiseAffine(x, film_out)
+        x = FeatureWiseAffine()(x, film_out)
         out = self.conv2(x)
         return out
 
@@ -35,7 +35,7 @@ class UBlock_A(nn.Module):
 
     def forward(self, x, film_out):
         x = self.pre(x)
-        x = FeatureWiseAffine(x, film_out)
+        x = FeatureWiseAffine()(x, film_out)
         out = self.conv(x)
         return out
 

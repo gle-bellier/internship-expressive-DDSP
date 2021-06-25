@@ -72,7 +72,6 @@ class FiLM(nn.Module):
                                     padding=1)
 
     def forward(self, x, noise_level):
-
         out = self.in_conv(x)
         out = self.lr(out)
 
@@ -89,5 +88,8 @@ class FeatureWiseAffine(nn.Module):
 
     def forward(self, x, film_out):
         scale, shift = film_out
+        print("x {}, scale {}, shift {}".format(x.shape, scale.shape,
+                                                shift.shape))
+
         out = scale * x + shift
         return out
