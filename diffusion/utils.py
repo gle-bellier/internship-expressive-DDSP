@@ -88,5 +88,6 @@ class FeatureWiseAffine(nn.Module):
 
     def forward(self, x, film_out):
         scale, shift = film_out
+
         out = scale * x + shift
         return out

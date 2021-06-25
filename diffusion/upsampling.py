@@ -16,11 +16,11 @@ class Residual(nn.Module):
                                out_channels=out_channels)
 
     def forward(self, x, film_out_pitch, film_out_noisy):
-        x = self.up(x)
         x = FeatureWiseAffine()(x, film_out_pitch)
-        x = self.conv1
+        x = self.conv1(x)
         x = FeatureWiseAffine()(x, film_out_noisy)
         out = self.conv2(x)
+        out = self.up(out)
         return out
 
 
@@ -52,4 +52,4 @@ class UBlock(nn.Module):
     def forward(self, x, film_out_pitch, film_out_noisy):
         out = self.main(x)
         out_residual = self.residual(x, film_out_pitch, film_out_noisy)
-        return out
+        return out + out_residual

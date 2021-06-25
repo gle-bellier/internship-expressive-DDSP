@@ -84,16 +84,8 @@ class DiffusionModel(pl.LightningModule):
         l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
         l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
 
-        print("Pitch out")
-        for elt in l_out_pitch:
-            print(elt.shape)
-
         l_film_pitch = self.film(self.films_pitch, l_out_pitch, None)
         l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
-
-        print("FILM out")
-        for elt in l_film_pitch:
-            print(elt[0].shape)
 
         hiddens = self.cat_hiddens(l_out_pitch[-1], l_out_noisy[-1])
         out = self.up_sampling(hiddens, l_film_pitch, l_film_noisy)
@@ -108,8 +100,9 @@ if __name__ == "__main__":
 
     noise_level = torch.tensor(0.3)
 
-    down_channels = [2, 4, 8, 16]
-    up_channels = [16, 8, 4, 2]
+    down_channels = [2, 4, 8, 24]
+    up_channels = [56, 8, 4, 2]
 
     model = DiffusionModel(down_channels, up_channels)
-    model(pitch, noisy, noise_level)
+    out = model(pitch, noisy, noise_level)
+    print(out.shape)
