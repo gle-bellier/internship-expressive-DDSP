@@ -31,13 +31,13 @@ class DiffusionModel(pl.LightningModule):
         self.films_pitch = nn.ModuleList([
             FiLM(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_out)
+                                                 self.up_channels_in[::-1])
         ])
 
         self.films_noisy = nn.ModuleList([
             FiLM(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_out)
+                                                 self.up_channels_in[::-1])
         ])
 
         self.up_blocks = nn.ModuleList([
@@ -67,7 +67,7 @@ class DiffusionModel(pl.LightningModule):
         l_film = []
         for i in range(len(list_films)):
             f = list_films[i](l_out[i], noise_level)
-            l_film = [f] + l_film
+            l_film = l_film + [f]
         return l_film
 
     def cat_hiddens(self, h_pitch, h_noisy):

@@ -54,18 +54,18 @@ class FiLM(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.in_conv = nn.Conv1d(in_channels,
-                                 in_channels,
+                                 out_channels,
                                  kernel_size=3,
                                  stride=1,
                                  padding=1)
         self.lr = nn.LeakyReLU()
-        self.pe = PositionalEncoding(in_channels)
-        self.shift_conv = nn.Conv1d(in_channels,
+        self.pe = PositionalEncoding(out_channels)
+        self.shift_conv = nn.Conv1d(out_channels,
                                     out_channels,
                                     kernel_size=3,
                                     stride=1,
                                     padding=1)
-        self.scale_conv = nn.Conv1d(in_channels,
+        self.scale_conv = nn.Conv1d(out_channels,
                                     out_channels,
                                     kernel_size=3,
                                     stride=1,
@@ -88,7 +88,5 @@ class FeatureWiseAffine(nn.Module):
 
     def forward(self, x, film_out):
         scale, shift = film_out
-        # print("x {}, scale {}, shift {}".format(x.shape, scale.shape,
-        #                                         shift.shape))
         out = scale * x + shift
         return out

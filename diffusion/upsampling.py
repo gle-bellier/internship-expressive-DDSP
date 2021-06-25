@@ -50,9 +50,6 @@ class UBlock(nn.Module):
                                  out_channels=out_channels)
 
     def forward(self, x, film_out_pitch, film_out_noisy):
-        print("Input ", x.shape)
         out = self.main(x)
-        print("Out main  :", out.shape)
-        #out_residual = self.residual(x, film_out_pitch, film_out_noisy)
-        #print("Out residual :", out_residual)
+        out_residual = self.residual(x, film_out_pitch, film_out_noisy)
         return out
