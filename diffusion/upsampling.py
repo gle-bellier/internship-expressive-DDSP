@@ -8,8 +8,8 @@ class UBlock_B(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv1 = ConvBlock(in_channels=in_channels,
-                               out_channels=out_channels)
-        self.conv2 = ConvBlock(in_channels=out_channels,
+                               out_channels=in_channels)
+        self.conv2 = ConvBlock(in_channels=in_channels,
                                out_channels=out_channels)
 
     def forward(self, x, film_out):
@@ -59,13 +59,12 @@ class UBlock_Mid(nn.Module):
 class UBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.A1 = UBlock_A(in_channels=in_channels, out_channels=out_channels)
-        self.A2 = UBlock_Mid(in_channels=in_channels,
-                             out_channels=out_channels)
-        self.A3 = UBlock_A(in_channels=in_channels, out_channels=out_channels)
+        self.A1 = UBlock_A(in_channels=in_channels, out_channels=in_channels)
+        self.A2 = UBlock_Mid(in_channels=in_channels, out_channels=in_channels)
+        self.A3 = UBlock_A(in_channels=in_channels, out_channels=in_channels)
 
-        self.B1 = UBlock_B(in_channels=out_channels, out_channels=out_channels)
-        self.B2 = UBlock_B(in_channels=out_channels, out_channels=out_channels)
+        self.B1 = UBlock_B(in_channels=in_channels, out_channels=out_channels)
+        self.B2 = UBlock_B(in_channels=in_channels, out_channels=out_channels)
 
     def forward(self, x, film_out_pitch, film_out_noisy):
         out = self.A1(x, film_out_pitch) + self.A2(x) + self.A3(

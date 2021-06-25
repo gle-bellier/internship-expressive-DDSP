@@ -16,10 +16,28 @@ class DiffusionModel(pl.LightningModule):
         self.up_channels_in = up_channels[:-1]
         self.up_channels_out = up_channels[1:]
 
-        self.down_blocks = nn.ModuleList([
+        self.down_blocks_pitch = nn.ModuleList([
             DBlock(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_in,
                                                  self.down_channels_out)
+        ])
+
+        self.down_blocks_noisy = nn.ModuleList([
+            DBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_in,
+                                                 self.down_channels_out)
+        ])
+
+        self.films_pitch = nn.ModuleList([
+            FiLM(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_out,
+                                                 self.up_channels_in)
+        ])
+
+        self.films_noisy = nn.ModuleList([
+            FiLM(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_out,
+                                                 self.up_channels_in)
         ])
 
         self.up_blocks = nn.ModuleList([
@@ -28,16 +46,10 @@ class DiffusionModel(pl.LightningModule):
                                                  self.up_channels_out)
         ])
 
-        self.films = nn.ModuleList([
-            FiLM(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_in)
-        ])
-
-    def down_sampling(self, x):
+    def down_sampling(self, list_blocks, x):
         l_out = []
-        for i in range(len(self.down_blocks)):
-            x = self.down_blocks[i](x)
+        for i in range(len(list_blocks)):
+            x = list_blocks[i](x)
             l_out = l_out + [x]
         return l_out
 
@@ -45,17 +57,15 @@ class DiffusionModel(pl.LightningModule):
         l_film_pitch = l_film_pitch[::-1]
         l_film_noisy = l_film_noisy[::-1]
 
-        print(self.up_blocks)
         for i in range(len(self.up_blocks)):
+            print(" ROund ", l_film_noisy[i][0].shape)
             x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
         return x
 
-    def film(self, l_out, noise_level):
+    def film(self, list_films, l_out, noise_level):
         l_film = []
-        for i in range(len(self.films)):
-            # print("FiLM {} : {} -> {}".format(i, self.down_channels[i + 1],
-            #                                   self.up_channels[i + 1]))
-            f = self.films[i](l_out[i], noise_level)
+        for i in range(len(list_films)):
+            f = list_films[i](l_out[i], noise_level)
             l_film = [f] + l_film
         return l_film
 
@@ -70,15 +80,15 @@ class DiffusionModel(pl.LightningModule):
 
     def forward(self, pitch, noisy, noise_level):
 
-        l_out_pitch = self.down_sampling(pitch)
-        l_out_noisy = self.down_sampling(noisy)
+        l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
+        l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
 
         print("Pitch out")
         for elt in l_out_pitch:
             print(elt.shape)
 
-        l_film_pitch = self.film(l_out_pitch, noise_level)
-        l_film_noisy = self.film(l_out_noisy, noise_level)
+        l_film_pitch = self.film(self.films_pitch, l_out_pitch, None)
+        l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
 
         print("FILM out")
         for elt in l_film_pitch:
