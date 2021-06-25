@@ -31,13 +31,13 @@ class DiffusionModel(pl.LightningModule):
         self.films_pitch = nn.ModuleList([
             FiLM(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_in)
+                                                 self.up_channels_out)
         ])
 
         self.films_noisy = nn.ModuleList([
             FiLM(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_in)
+                                                 self.up_channels_out)
         ])
 
         self.up_blocks = nn.ModuleList([
@@ -58,7 +58,8 @@ class DiffusionModel(pl.LightningModule):
         l_film_noisy = l_film_noisy[::-1]
 
         for i in range(len(self.up_blocks)):
-            print(" ROund ", l_film_noisy[i][0].shape)
+            print(" ROund {} -> {}".format(self.up_channels_in[i],
+                                           self.up_channels_out[i]))
             x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
         return x
 
