@@ -8,10 +8,11 @@ from diffusion import DiffusionModel
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from diffusion_dataset import DiffusionDataset
+import matplotlib.pyplot as plt
 
 
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
-    def __init__(self, down_channels, up_channels, scalers):
+    def __init__(self, down_channels, up_channels, scalers, ddsp):
         super().__init__()
         self.save_hyperparameters()
         self.down_channels_in = down_channels[:-1]
@@ -21,6 +22,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         self.up_channels_out = up_channels[1:]
 
         self.scalers = scalers
+        self.ddsp = ddsp
 
         self.down_blocks_pitch = nn.ModuleList([
             DBlock(in_channels=channels_in, out_channels=channels_out)
@@ -133,6 +135,42 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
 
         return f0, l0
+
+    def validation_epoch_end(self, out):
+        self.val_idx += 1
+
+        if self.val_idx % 100:
+            return
+
+        device = next(iter(self.parameters())).device
+        x = torch.zeros(16, 2, 256).to(device)
+        x = self.sample(x)
+        f0, lo = self.post_process(x)
+
+        plt.plot(f0)
+        self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
+        plt.plot(lo)
+        self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
+
+        if self.ddsp is not None:
+            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
+            lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+            signal = self.ddsp(f0, lo)
+            signal = signal.reshape(-1).numpy()
+
+            self.logger.experiment.add_audio(
+                "generation",
+                signal,
+                self.val_idx,
+                16000,
+            )
+
+    @torch.no_grad()
+    def sample(self, x):
+        x = torch.randn_like(x)
+        for i in range(self.n_step)[::-1]:
+            x = self.inverse_dynamics(x, None, i)
+        return x
 
 
 if __name__ == "__main__":
