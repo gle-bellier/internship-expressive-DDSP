@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
     def __init__(self, down_channels, up_channels, scalers, ddsp):
         super().__init__()
-        self.save_hyperparameters()
+        #self.save_hyperparameters()
         self.down_channels_in = down_channels[:-1]
         self.down_channels_out = down_channels[1:]
 
@@ -112,12 +112,15 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         return torch.optim.Adam(self.parameters(), 1e-4)
 
     def training_step(self, batch, batch_idx):
-        loss = self.compute_loss(batch, None)
+        loss = self.compute_loss(batch[1], None)
         self.log("loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss = self.compute_loss(batch, batch_idx)
+        print("PRINT")
+        print(len(batch))
+
+        loss = self.compute_loss(batch[1], batch_idx)
         self.log("val_loss", loss)
 
     def post_process(self, out):
@@ -193,8 +196,12 @@ if __name__ == "__main__":
 
     down_channels = [2, 16, 64, 256]
     up_channels = [256, 64, 16, 2]
+    ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-    model = UNet_Diffusion(scalers=dataset.scalers)
+    model = UNet_Diffusion(scalers=dataset.scalers,
+                           down_channels=down_channels,
+                           up_channels=up_channels,
+                           ddsp=ddsp)
 
     trainer.fit(
         model,
