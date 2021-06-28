@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, QuantileTransformer
 import pytorch_lightning as pl
 import pickle
+import numpy as np
 from random import randint
 
 
@@ -22,12 +23,8 @@ class DiffusionDataset(Dataset):
         self.n_sample = n_sample
         self.n_loudness = n_loudness
         if list_transforms is None:
-            self.list_transforms = [
-                (StandardScaler, ),
-                (QuantileTransformer, 30),
-                (StandardScaler, ),
-                (QuantileTransformer, 30),
-            ]
+            self.list_transforms = [(StandardScaler, ),
+                                    (QuantileTransformer, 30)]
         else:
             self.list_transforms = list_transforms
 
@@ -40,12 +37,24 @@ class DiffusionDataset(Dataset):
         ]  # e_loudness twice because u_loudness is computed from e_loudness
 
         scalers = []
-        for i in range(len(data)):
-            contour = data[i].reshape(-1, 1)
-            transform = self.list_transforms[i]
-            sc = transform[0]
-            sc = sc(*transform[1:]).fit(contour)
-            scalers.append(sc)
+
+        # pitch :
+
+        cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
+        contour = cat.reshape(-1, 1)
+        transform = self.list_transforms[0]
+        sc = transform[0]
+        sc = sc(*transform[1:]).fit(contour)
+        scalers.append(sc)
+
+        # loudness
+
+        contour = cat.reshape(-1, 1)
+        transform = self.list_transforms[1]
+        sc = transform[0]
+        sc = sc(*transform[1:]).fit(contour)
+        scalers.append(sc)
+
         return scalers
 
     def apply_transform(self, x, scaler):
@@ -86,8 +95,8 @@ class DiffusionDataset(Dataset):
         # Apply transforms :
 
         u_f0 = self.apply_transform(u_f0, self.scalers[0])
-        e_f0 = self.apply_transform(e_f0, self.scalers[2])
-        e_l0 = self.apply_transform(e_l0, self.scalers[3])
+        e_f0 = self.apply_transform(e_f0, self.scalers[0])
+        e_l0 = self.apply_transform(e_l0, self.scalers[1])
 
         u_f0 = torch.from_numpy(u_f0).float()
         e_f0 = torch.from_numpy(e_f0).float()
