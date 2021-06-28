@@ -4,7 +4,6 @@ import numpy as np
 from abc import abstractmethod
 from tqdm import tqdm
 from typing import Union
-from diffusion_model import UNet_Diffusion
 
 
 class DiffusionModel(nn.Module):
