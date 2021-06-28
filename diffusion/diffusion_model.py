@@ -6,7 +6,7 @@ from downsampling import DBlock
 from upsampling import UBlock
 
 
-class DiffusionModel(pl.LightningModule):
+class Unet_Diffusion(pl.LightningModule):
     def __init__(self, down_channels, up_channels):
         super().__init__()
         self.save_hyperparameters()
