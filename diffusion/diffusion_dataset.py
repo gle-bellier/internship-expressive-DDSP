@@ -96,6 +96,13 @@ class DiffusionDataset(Dataset):
 
         u_l0 = self.get_quantized_loudness(e_l0, events)
 
+        # Change ranges from [0, 1] -> [-1, 1]
+
+        u_f0 = 2 * (u_f0 - .5)
+        u_l0 = 2 * (u_l0 - .5)
+        e_f0 = 2 * (e_f0 - .5)
+        e_l0 = 2 * (e_l0 - .5)
+
         model_input = torch.cat(
             [
                 u_f0[1:].unsqueeze(-1),
