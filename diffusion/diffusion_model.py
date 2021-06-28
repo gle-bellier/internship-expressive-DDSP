@@ -46,6 +46,12 @@ class DiffusionModel(pl.LightningModule):
                                                  self.up_channels_out)
         ])
 
+        self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
+                                  out_channels=self.up_channels_in[0],
+                                  kernel_size=3,
+                                  stride=1,
+                                  padding=1)
+
     def down_sampling(self, list_blocks, x):
         l_out = []
         for i in range(len(list_blocks)):
@@ -70,11 +76,7 @@ class DiffusionModel(pl.LightningModule):
 
     def cat_hiddens(self, h_pitch, h_noisy):
         hiddens = torch.cat((h_pitch, h_noisy), dim=1)
-        out = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
-                        out_channels=self.up_channels_in[0],
-                        kernel_size=3,
-                        stride=1,
-                        padding=1)(hiddens)
+        out = self.cat_conv(hiddens)
         return out
 
     def forward(self, pitch, noisy, noise_level):
@@ -98,8 +100,8 @@ if __name__ == "__main__":
 
     noise_level = torch.tensor(0.3)
 
-    down_channels = [2, 4, 8, 24]
-    up_channels = [56, 8, 4, 2]
+    down_channels = [2, 4, 8, 48]
+    up_channels = [48, 8, 4, 2]
 
     model = DiffusionModel(down_channels, up_channels)
     out = model(pitch, noisy, noise_level)
