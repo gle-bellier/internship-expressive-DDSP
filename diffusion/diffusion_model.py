@@ -58,8 +58,6 @@ class DiffusionModel(pl.LightningModule):
         l_film_noisy = l_film_noisy[::-1]
 
         for i in range(len(self.up_blocks)):
-            print(" ROund {} -> {}".format(self.up_channels_in[i],
-                                           self.up_channels_out[i]))
             x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
         return x
 
@@ -105,4 +103,3 @@ if __name__ == "__main__":
 
     model = DiffusionModel(down_channels, up_channels)
     out = model(pitch, noisy, noise_level)
-    print(out.shape)
