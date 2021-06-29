@@ -205,8 +205,8 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16, 64, 256]
-    up_channels = [256, 64, 16, 2]
+    down_channels = [2, 16, 256, 512, 1024]
+    up_channels = [1024, 512, 256, 16, 2]
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = UNet_Diffusion(scalers=dataset.scalers,
