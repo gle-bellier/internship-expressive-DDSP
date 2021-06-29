@@ -23,7 +23,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         self.scalers = scalers
         self.ddsp = ddsp
-        self.val_idx=0
+        self.val_idx = 0
 
         self.down_blocks_pitch = nn.ModuleList([
             DBlock(in_channels=channels_in, out_channels=channels_out)
@@ -92,7 +92,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         # permute from B, T, C -> B, C, T
         noisy = x.permute(0, 2, 1)
-        pitch = cdt.permute(0, 2, 1) 
+        pitch = cdt.permute(0, 2, 1)
 
         l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
         l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
@@ -119,20 +119,23 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
     def validation_step(self, batch, batch_idx):
 
-        # loss = self.compute_loss(batch, batch_idx) Why ?? 
+        # loss = self.compute_loss(batch, batch_idx) Why ??
 
         model_input, cdt = batch
         loss = self.compute_loss(model_input, cdt)
         self.log("val_loss", loss)
+
+        # returns cdt for validation end epoch
+        return cdt
 
     def post_process(self, out):
 
         # change range [-1, 1] -> [0, 1]
         out = out / 2 + .5
 
-        f0, l0 = torch.split(out, 1, 1)
+        f0, l0 = torch.split(out, 1, -1)
 
-        f0 = f0.reshape(-1).cpu().numpy()
+        f0 = f0.reshape(-1, 1).cpu().numpy()
         l0 = l0.reshape(-1, 1).cpu().numpy()
 
         # Inverse transforms
@@ -141,15 +144,18 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         return f0, l0
 
-    def validation_epoch_end(self, out):
+    def validation_epoch_end(self, cdt):
+
+        # test for last contours
+        cdt = cdt[-1]
         self.val_idx += 1
 
         if self.val_idx % 100:
             return
 
         device = next(iter(self.parameters())).device
-        x = torch.zeros(16, 2, 256).to(device)
-        x = self.sample(x)
+        x = torch.zeros_like(cdt).to(device)
+        x = self.sample(x, cdt)
         f0, lo = self.post_process(x)
 
         plt.plot(f0)
@@ -158,10 +164,10 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
         if self.ddsp is not None:
-            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-            lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1).to("cuda")
+            lo = torch.from_numpy(lo).float().reshape(1, -1, 1).to("cuda")
             signal = self.ddsp(f0, lo)
-            signal = signal.reshape(-1).numpy()
+            signal = signal.reshape(-1).cpu().numpy()
 
             self.logger.experiment.add_audio(
                 "generation",
@@ -171,10 +177,10 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
             )
 
     @torch.no_grad()
-    def sample(self, x):
+    def sample(self, x, cdt):
         x = torch.randn_like(x)
         for i in range(self.n_step)[::-1]:
-            x = self.inverse_dynamics(x, None, i)
+            x = self.inverse_dynamics(x, cdt, i)
         return x
 
 
