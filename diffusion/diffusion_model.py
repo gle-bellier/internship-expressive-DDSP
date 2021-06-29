@@ -134,7 +134,6 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         out = out / 2 + .5
 
         f0, l0 = torch.split(out, 1, -1)
-
         f0 = f0.reshape(-1, 1).cpu().numpy()
         l0 = l0.reshape(-1, 1).cpu().numpy()
 
@@ -146,17 +145,21 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
     def validation_epoch_end(self, cdt):
 
-        # test for last contours
+        # test for last cdt
         cdt = cdt[-1]
+
         self.val_idx += 1
 
-        if self.val_idx % 100:
+        if self.val_idx % 50:
             return
 
         device = next(iter(self.parameters())).device
         x = torch.zeros_like(cdt).to(device)
         x = self.sample(x, cdt)
-        f0, lo = self.post_process(x)
+
+        # select first elt :
+
+        f0, lo = self.post_process(x[0])
 
         plt.plot(f0)
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
