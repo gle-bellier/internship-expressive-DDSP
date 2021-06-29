@@ -51,6 +51,7 @@ class Bottleneck(nn.Module):
         super().__init__()
         self.conv1 = ConvBlock(in_channels, out_channels)
         self.conv2 = ConvBlock(out_channels, out_channels)
+        self.gru = nn.GRU(input_size=512, hidden_size=203, batch_first=True)
 
     def forward(self, x):
         print("Bottleneck")
@@ -110,28 +111,10 @@ class UNet_RNN(pl.LightningModule):
         self.ddsp = ddsp
         self.val_idx = 0
 
-        self.down_blocks_pitch = nn.ModuleList([
+        self.down_blocks = nn.ModuleList([
             DBlock(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_in,
                                                  self.down_channels_out)
-        ])
-
-        self.down_blocks_noisy = nn.ModuleList([
-            DBlock(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_in,
-                                                 self.down_channels_out)
-        ])
-
-        self.films_pitch = nn.ModuleList([
-            FiLM(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_in[::-1])
-        ])
-
-        self.films_noisy = nn.ModuleList([
-            FiLM(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_in[::-1])
         ])
 
         self.up_blocks = nn.ModuleList([
@@ -139,12 +122,6 @@ class UNet_RNN(pl.LightningModule):
             for channels_in, channels_out in zip(self.up_channels_in,
                                                  self.up_channels_out)
         ])
-
-        self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
-                                  out_channels=self.up_channels_in[0],
-                                  kernel_size=3,
-                                  stride=1,
-                                  padding=1)
 
     def down_sampling(self, list_blocks, x):
         l_out = []
@@ -160,18 +137,6 @@ class UNet_RNN(pl.LightningModule):
         for i in range(len(self.up_blocks)):
             x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
         return x
-
-    def film(self, list_films, l_out, noise_level):
-        l_film = []
-        for i in range(len(list_films)):
-            f = list_films[i](l_out[i], noise_level)
-            l_film = l_film + [f]
-        return l_film
-
-    def cat_hiddens(self, h_pitch, h_noisy):
-        hiddens = torch.cat((h_pitch, h_noisy), dim=1)
-        out = self.cat_conv(hiddens)
-        return out
 
     def neural_pass(self, x, cdt, noise_level):
 
@@ -278,6 +243,7 @@ if __name__ == "__main__":
         (QuantileTransformer, 30),
     ]
 
+    len_sample = 2048
     dataset = DiffusionDataset(list_transforms=list_transforms)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
@@ -288,10 +254,10 @@ if __name__ == "__main__":
     up_channels = [256, 64, 16, 2]
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-    model = UNet_Diffusion(scalers=dataset.scalers,
-                           down_channels=down_channels,
-                           up_channels=up_channels,
-                           ddsp=ddsp)
+    model = UNet_RNN(scalers=dataset.scalers,
+                     down_channels=down_channels,
+                     up_channels=up_channels,
+                     ddsp=ddsp)
 
     model.set_noise_schedule()
 
