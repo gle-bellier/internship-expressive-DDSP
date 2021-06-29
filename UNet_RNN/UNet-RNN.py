@@ -4,7 +4,7 @@ from torch import nn
 from utils import Identity, ConvBlock
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
-from unet_dataset import UNet_Dataset
+from UNet_dataset import UNet_Dataset
 import matplotlib.pyplot as plt
 import os, sys
 
@@ -19,38 +19,34 @@ class DBlock(nn.Module):
         pass
 
     def forward(self, x):
-        print("x shape {}".format(x.shape))
         x = self.conv1(x)
         x = self.conv2(x)
 
         ctx = torch.clone(x)
         out = self.mp(x)
-
-        print("out {} ! ctx {}".format(out.shape, ctx.shape))
         return out, ctx
 
 
 class Bottleneck(nn.Module):
-    def __init__(self, in_channels, out_channels, n_sample):
+    def __init__(self, in_channels, out_channels, input_size):
         super().__init__()
         self.conv1 = ConvBlock(in_channels, out_channels)
         self.conv2 = ConvBlock(out_channels, out_channels)
-        self.gru = nn.GRU(input_size=n_sample,
-                          hidden_size=n_sample,
+        self.gru = nn.GRU(input_size=input_size,
+                          hidden_size=input_size,
                           batch_first=True)
 
     def forward(self, x):
-        print("Bottleneck")
-        print("x shape {}".format(x.shape))
+
         x = self.conv1(x)
 
         # permuting for GRU : B,C,T -> B, T, C
+
         x = x.permute(0, 2, 1)
-        x = self.gru(x)
+        x, _ = self.gru(x)
         x = x.permute(0, 2, 1)
 
         out = self.conv2(x)
-        print("out shape {}".format(out.shape))
         return out
 
 
@@ -78,14 +74,10 @@ class UBlock(nn.Module):
         return out
 
     def forward(self, x, ctx):
-        print("x shape {} ! ctx {}".format(x.shape, ctx.shape))
         x = self.up_conv(x)
-        print("x shape {} ! ctx {}".format(x.shape, ctx.shape))
         x = self.add_ctx(x, ctx)
-        print("x shape {}".format(x.shape))
         x = self.conv1(x)
         out = self.conv2(x)
-        print("out shape {}".format(out.shape))
         return out
 
 
@@ -107,6 +99,10 @@ class UNet_RNN(pl.LightningModule):
         self.ddsp = ddsp
         self.val_idx = 0
 
+        self.size_bottleneck = n_sample
+        for i in range(len(self.down_channels_out)):
+            self.size_bottleneck //= 2
+
         self.down_blocks = nn.ModuleList([
             DBlock(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_in,
@@ -115,7 +111,7 @@ class UNet_RNN(pl.LightningModule):
 
         self.bottleneck = Bottleneck(in_channels=self.down_channels_out[-1],
                                      out_channels=self.up_channels_in[0],
-                                     n_sample=n_sample)
+                                     input_size=self.size_bottleneck)
 
         self.up_blocks = nn.ModuleList([
             UBlock(in_channels=channels_in, out_channels=channels_out)
@@ -127,7 +123,10 @@ class UNet_RNN(pl.LightningModule):
         l_out = []
         l_ctx = []
         for i in range(len(self.down_blocks)):
+            print("Downsampling {} --> {}".format(self.down_channels_in[i],
+                                                  self.down_channels_out[i]))
             x, ctx = self.down_blocks[i](x)
+            print(x.shape)
             l_ctx = [ctx] + l_ctx
 
         return x, l_ctx
@@ -135,15 +134,22 @@ class UNet_RNN(pl.LightningModule):
     def up_sampling(self, x, l_ctx):
 
         for i in range(len(self.up_blocks)):
+            print("Up_sampling {} --> {}".format(self.up_channels_in[i],
+                                                 self.up_channels_out[i]))
+            print("IN : ", x.shape)
+            print("CTX : ", l_ctx[i].shape)
             x = self.up_blocks[i](x, l_ctx[i])
+            print(x.shape)
         return x
 
-    def neural_pass(self, x, noise_level):
+    def neural_pass(self, x):
 
         # permute from B, T, C -> B, C, T
         x = x.permute(0, 2, 1)
 
         out, l_ctx = self.down_sampling(x)
+
+        out = self.bottleneck(out)
 
         out = self.up_sampling(out, l_ctx)
 
@@ -161,9 +167,24 @@ class UNet_RNN(pl.LightningModule):
         self.log("loss", loss)
         return loss
 
+    def compute_loss(self, model_input, target):
+        out = self.neural_pass(model_input)
+
+        pred_f0, pred_lo = torch.split(out, 1, -1)
+        target_f0, target_lo = torch.split(target, 1, -1)
+
+        loss_f0 = nn.functional.mse_loss(pred_f0, target_f0)
+        loss_lo = nn.functional.mse_loss(pred_lo, target_lo)
+
+        return loss_f0 + loss_lo
+
     def validation_step(self, batch, batch_idx):
 
         model_input, target = batch
+
+        print("Model input : ", model_input.shape)
+        print("Target : ", target.shape)
+
         loss = self.compute_loss(model_input, target)
         self.log("val_loss", loss)
 
@@ -216,36 +237,33 @@ class UNet_RNN(pl.LightningModule):
 
 if __name__ == "__main__":
 
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
+        max_epochs=10000,
+    )
+    list_transforms = [
+        (MinMaxScaler, ),
+        (QuantileTransformer, 30),
+    ]
+
+    len_sample = 2048
+    dataset = UNet_Dataset(list_transforms=list_transforms, n_sample=2048)
+    val_len = len(dataset) // 20
+    train_len = len(dataset) - val_len
+
+    train, val = random_split(dataset, [train_len, val_len])
+
+    down_channels = [2, 16, 64, 256]
     ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
 
-    # trainer = pl.Trainer(
-    #     gpus=1,
-    #     callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
-    #     max_epochs=10000,
-    # )
-    # list_transforms = [
-    #     (MinMaxScaler, ),
-    #     (QuantileTransformer, 30),
-    # ]
+    model = UNet_RNN(scalers=dataset.scalers,
+                     n_sample=len_sample,
+                     channels=down_channels,
+                     ddsp=ddsp)
 
-    # len_sample = 2048
-    # dataset = Dataset(list_transforms=list_transforms, n_sample=2048)
-    # val_len = len(dataset) // 20
-    # train_len = len(dataset) - val_len
-
-    # train, val = random_split(dataset, [train_len, val_len])
-
-    # down_channels = [2, 16, 64, 256]
-    # ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
-
-    # model = UNet_RNN(scalers=dataset.scalers,
-    #                  channels=down_channels,
-    #                  ddsp=ddsp)
-
-    # model.set_noise_schedule()
-
-    # trainer.fit(
-    #     model,
-    #     DataLoader(train, 32, True),
-    #     DataLoader(val, 32),
-    # )
+    trainer.fit(
+        model,
+        DataLoader(train, 32, True),
+        DataLoader(val, 32),
+    )
