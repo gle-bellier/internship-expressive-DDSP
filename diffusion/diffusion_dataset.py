@@ -11,7 +11,7 @@ from random import randint
 class DiffusionDataset(Dataset):
     def __init__(self,
                  path="dataset-diffusion.pickle",
-                 n_sample=2050,
+                 n_sample=2048,
                  n_loudness=30,
                  list_transforms=None):
 
@@ -31,11 +31,6 @@ class DiffusionDataset(Dataset):
         self.scalers = self.fit_transforms()
 
     def fit_transforms(self):
-        data = [
-            self.dataset["u_f0"], self.dataset["e_loudness"],
-            self.dataset["e_f0"], self.dataset["e_loudness"]
-        ]  # e_loudness twice because u_loudness is computed from e_loudness
-
         scalers = []
 
         # pitch :
@@ -114,16 +109,16 @@ class DiffusionDataset(Dataset):
 
         model_input = torch.cat(
             [
-                u_f0[1:].unsqueeze(-1),
-                u_l0[1:].unsqueeze(-1),
-                e_f0[:-1].unsqueeze(-1),  # one step behind
-                e_l0[:-1].unsqueeze(-1),  # one step behind
+                e_f0.unsqueeze(-1),  
+                e_l0.unsqueeze(-1),  
             ],
             -1)
 
-        target = torch.cat([
-            e_f0[1:].unsqueeze(-1),
-            e_l0[1:].unsqueeze(-1),
-        ], -1)
+        cdt = torch.cat(
+            [
+                u_f0.unsqueeze(-1),
+                u_l0.unsqueeze(-1),
+            ],
+            -1)
 
-        return model_input, target
+        return model_input, cdt

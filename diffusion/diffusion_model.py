@@ -23,6 +23,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         self.scalers = scalers
         self.ddsp = ddsp
+        self.val_idx=0
 
         self.down_blocks_pitch = nn.ModuleList([
             DBlock(in_channels=channels_in, out_channels=channels_out)
@@ -90,9 +91,8 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
     def neural_pass(self, x, cdt, noise_level):
 
         # permute from B, T, C -> B, C, T
-        x = x.permute(0, 2, 1)
-
-        pitch, noisy = torch.split(x, 1, 1)
+        noisy = x.permute(0, 2, 1)
+        pitch = cdt.permute(0, 2, 1) 
 
         l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
         l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
@@ -112,15 +112,17 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         return torch.optim.Adam(self.parameters(), 1e-4)
 
     def training_step(self, batch, batch_idx):
-        loss = self.compute_loss(batch[1], None)
+        model_input, cdt = batch
+        loss = self.compute_loss(model_input, cdt)
         self.log("loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        print("PRINT")
-        print(len(batch))
 
-        loss = self.compute_loss(batch[1], batch_idx)
+        # loss = self.compute_loss(batch, batch_idx) Why ?? 
+
+        model_input, cdt = batch
+        loss = self.compute_loss(model_input, cdt)
         self.log("val_loss", loss)
 
     def post_process(self, out):
@@ -180,7 +182,7 @@ if __name__ == "__main__":
 
     trainer = pl.Trainer(
         gpus=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
         max_epochs=10000,
     )
     list_transforms = [
@@ -202,6 +204,8 @@ if __name__ == "__main__":
                            down_channels=down_channels,
                            up_channels=up_channels,
                            ddsp=ddsp)
+
+    model.set_noise_schedule()
 
     trainer.fit(
         model,
