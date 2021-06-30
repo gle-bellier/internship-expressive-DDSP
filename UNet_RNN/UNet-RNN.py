@@ -194,6 +194,7 @@ class UNet_RNN(pl.LightningModule):
 
         model_input, target = inputs[-1]  # first elt of last batch
         model_input = model_input[0:1]
+        target = target[0:1]
         self.val_idx += 1
 
         if self.val_idx % 20:
@@ -203,11 +204,13 @@ class UNet_RNN(pl.LightningModule):
         out = self.neural_pass(model_input)
 
         f0, lo = self.post_process(out)
+        target_f0, target_lo = self.post_process(target)
 
         plt.plot(f0)
-
+        plt.plot(target_f0)
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
         plt.plot(lo)
+        plt.plot(target_lo)
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
         if self.ddsp is not None:
