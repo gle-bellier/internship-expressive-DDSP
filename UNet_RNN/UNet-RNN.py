@@ -89,7 +89,7 @@ class UBlock(nn.Module):
 class UNet_RNN(pl.LightningModule):
     def __init__(self, channels, n_sample, scalers, ddsp):
         super().__init__()
-        self.save_hyperparameters()
+        #self.save_hyperparameters()
 
         down_channels = channels
         up_channels = channels[::-1]
@@ -205,6 +205,7 @@ class UNet_RNN(pl.LightningModule):
         f0, lo = self.post_process(out)
 
         plt.plot(f0)
+
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
         plt.plot(lo)
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
