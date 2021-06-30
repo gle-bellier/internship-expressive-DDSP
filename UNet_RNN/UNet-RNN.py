@@ -20,20 +20,19 @@ class DBlock(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.conv2(x)
-
         ctx = torch.clone(x)
+        x = self.conv2(x)
         out = self.mp(x)
         return out, ctx
 
 
 class Bottleneck(nn.Module):
-    def __init__(self, in_channels, out_channels, input_size):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv1 = ConvBlock(in_channels, out_channels)
         self.conv2 = ConvBlock(out_channels, out_channels)
-        self.gru = nn.GRU(input_size=input_size,
-                          hidden_size=input_size,
+        self.gru = nn.GRU(input_size=out_channels,
+                          hidden_size=out_channels,
                           batch_first=True)
 
     def forward(self, x):
@@ -53,7 +52,7 @@ class Bottleneck(nn.Module):
 class UBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.conv1 = ConvBlock(in_channels, out_channels)
+        self.conv1 = ConvBlock(2 * out_channels, out_channels)
         self.conv2 = ConvBlock(out_channels, out_channels)
         self.up_conv = nn.Sequential(
             nn.Upsample(scale_factor=2),
@@ -62,19 +61,25 @@ class UBlock(nn.Module):
                                stride=1,
                                kernel_size=3,
                                padding=1))
+        self.conv_ctx = nn.ConvTranspose1d(in_channels=in_channels,
+                                           out_channels=out_channels,
+                                           stride=1,
+                                           kernel_size=3,
+                                           padding=1)
 
         self.lr = nn.LeakyReLU()
 
     def add_ctx(self, x, ctx):
-        # crop context (y)
-        d_shape = (ctx.shape[-1] - x.shape[-1]) // 2
-        crop = ctx[:, :, d_shape:d_shape + x.shape[2]]
-        #concatenate
-        out = torch.cat([x, crop], 1)
+        # # crop context (y)
+        # d_shape = (ctx.shape[-1] - x.shape[-1]) // 2
+        # crop = ctx[:, :, d_shape:d_shape + x.shape[2]]
+        # #concatenate
+        out = torch.cat([x, ctx], 1)
         return out
 
     def forward(self, x, ctx):
         x = self.up_conv(x)
+        ctx = self.conv_ctx(ctx)
         x = self.add_ctx(x, ctx)
         x = self.conv1(x)
         out = self.conv2(x)
@@ -99,10 +104,6 @@ class UNet_RNN(pl.LightningModule):
         self.ddsp = ddsp
         self.val_idx = 0
 
-        self.size_bottleneck = n_sample
-        for i in range(len(self.down_channels_out)):
-            self.size_bottleneck //= 2
-
         self.down_blocks = nn.ModuleList([
             DBlock(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_in,
@@ -110,8 +111,7 @@ class UNet_RNN(pl.LightningModule):
         ])
 
         self.bottleneck = Bottleneck(in_channels=self.down_channels_out[-1],
-                                     out_channels=self.up_channels_in[0],
-                                     input_size=self.size_bottleneck)
+                                     out_channels=self.up_channels_in[0])
 
         self.up_blocks = nn.ModuleList([
             UBlock(in_channels=channels_in, out_channels=channels_out)
@@ -120,13 +120,9 @@ class UNet_RNN(pl.LightningModule):
         ])
 
     def down_sampling(self, x):
-        l_out = []
         l_ctx = []
         for i in range(len(self.down_blocks)):
-            print("Downsampling {} --> {}".format(self.down_channels_in[i],
-                                                  self.down_channels_out[i]))
             x, ctx = self.down_blocks[i](x)
-            print(x.shape)
             l_ctx = [ctx] + l_ctx
 
         return x, l_ctx
@@ -134,12 +130,7 @@ class UNet_RNN(pl.LightningModule):
     def up_sampling(self, x, l_ctx):
 
         for i in range(len(self.up_blocks)):
-            print("Up_sampling {} --> {}".format(self.up_channels_in[i],
-                                                 self.up_channels_out[i]))
-            print("IN : ", x.shape)
-            print("CTX : ", l_ctx[i].shape)
             x = self.up_blocks[i](x, l_ctx[i])
-            print(x.shape)
         return x
 
     def neural_pass(self, x):
@@ -254,7 +245,7 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16, 64, 256]
+    down_channels = [2, 16, 512, 1024]
     ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
 
     model = UNet_RNN(scalers=dataset.scalers,
