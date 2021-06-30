@@ -89,7 +89,7 @@ class UBlock(nn.Module):
 class UNet_RNN(pl.LightningModule):
     def __init__(self, channels, n_sample, scalers, ddsp):
         super().__init__()
-        #self.save_hyperparameters()
+        self.save_hyperparameters()
 
         down_channels = channels
         up_channels = channels[::-1]
@@ -172,21 +172,16 @@ class UNet_RNN(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
 
         model_input, target = batch
-
-        print("Model input : ", model_input.shape)
-        print("Target : ", target.shape)
-
         loss = self.compute_loss(model_input, target)
         self.log("val_loss", loss)
 
-        # returns cdt for validation end epoch
-        return model_input
+        return (model_input, target)
 
     def post_process(self, out):
 
-        f0, l0 = torch.split(out, 1, 1)
+        f0, l0 = torch.split(out, 1, -1)
 
-        f0 = f0.reshape(-1).cpu().numpy()
+        f0 = f0.reshape(-1, 1).cpu().numpy()
         l0 = l0.reshape(-1, 1).cpu().numpy()
 
         # Inverse transforms
@@ -197,14 +192,16 @@ class UNet_RNN(pl.LightningModule):
 
     def validation_epoch_end(self, inputs):
 
-        model_in = inputs[-1][0]  # first elt of last batch
+        model_input, target = inputs[-1]  # first elt of last batch
+        model_input = model_input[0:1]
         self.val_idx += 1
 
-        if self.val_idx % 100:
+        if self.val_idx % 20:
             return
 
         device = next(iter(self.parameters())).device
-        out = self.neural_pass(model_in)
+        out = self.neural_pass(model_input)
+
         f0, lo = self.post_process(out)
 
         plt.plot(f0)
@@ -213,10 +210,10 @@ class UNet_RNN(pl.LightningModule):
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
         if self.ddsp is not None:
-            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-            lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1).to("cuda")
+            lo = torch.from_numpy(lo).float().reshape(1, -1, 1).to("cuda")
             signal = self.ddsp(f0, lo)
-            signal = signal.reshape(-1).numpy()
+            signal = signal.reshape(-1).cpu().numpy()
 
             self.logger.experiment.add_audio(
                 "generation",
