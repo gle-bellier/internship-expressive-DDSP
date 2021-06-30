@@ -87,7 +87,7 @@ class UBlock(nn.Module):
 
 
 class UNet_RNN(pl.LightningModule):
-    def __init__(self, channels, n_sample, scalers, ddsp):
+    def __init__(self, channels, scalers, ddsp):
         super().__init__()
         #self.save_hyperparameters()
 
@@ -226,17 +226,11 @@ class UNet_RNN(pl.LightningModule):
 
 if __name__ == "__main__":
 
-    trainer = pl.Trainer(
-        gpus=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
-        max_epochs=10000,
-    )
     list_transforms = [
         (MinMaxScaler, ),
         (QuantileTransformer, 30),
     ]
 
-    len_sample = 2048
     dataset = UNet_Dataset(list_transforms=list_transforms, n_sample=2048)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
@@ -247,9 +241,14 @@ if __name__ == "__main__":
     ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
 
     model = UNet_RNN(scalers=dataset.scalers,
-                     n_sample=len_sample,
                      channels=down_channels,
                      ddsp=ddsp)
+
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
+        max_epochs=10000,
+    )
 
     trainer.fit(
         model,
