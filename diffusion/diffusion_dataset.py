@@ -44,7 +44,8 @@ class DiffusionDataset(Dataset):
 
         # loudness
 
-        contour = cat.reshape(-1, 1)
+        contour = self.dataset["e_loudness"]
+        contour = contour.reshape(-1, 1)
         transform = self.list_transforms[1]
         sc = transform[0]
         sc = sc(*transform[1:]).fit(contour)
@@ -107,18 +108,14 @@ class DiffusionDataset(Dataset):
         e_f0 = 2 * (e_f0 - .5)
         e_l0 = 2 * (e_l0 - .5)
 
-        model_input = torch.cat(
-            [
-                e_f0.unsqueeze(-1),  
-                e_l0.unsqueeze(-1),  
-            ],
-            -1)
+        model_input = torch.cat([
+            e_f0.unsqueeze(-1),
+            e_l0.unsqueeze(-1),
+        ], -1)
 
-        cdt = torch.cat(
-            [
-                u_f0.unsqueeze(-1),
-                u_l0.unsqueeze(-1),
-            ],
-            -1)
+        cdt = torch.cat([
+            u_f0.unsqueeze(-1),
+            u_l0.unsqueeze(-1),
+        ], -1)
 
         return model_input, cdt
