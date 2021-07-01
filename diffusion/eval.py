@@ -1,6 +1,7 @@
 import torch
 
 torch.set_grad_enabled(False)
+from diffusion import DiffusionModel
 from diffusion_model import UNet_Diffusion
 #import matplotlib.pyplot as plt
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -32,6 +33,7 @@ model = UNet_Diffusion.load_from_checkpoint(
     scalers=dataset.scalers,
     down_channels=down_channels,
     up_channels=up_channels,
-    ddsp=ddsp).eval()
+    ddsp=ddsp,
+    strict=False).eval()
 
 model.set_noise_schedule()
