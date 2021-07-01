@@ -4,7 +4,10 @@ torch.set_grad_enabled(False)
 from diffusion import DiffusionModel
 from diffusion_model import UNet_Diffusion
 #import matplotlib.pyplot as plt
+import soundfile as sf
+
 from pytorch_lightning.callbacks import ModelCheckpoint
+from random import randint
 
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
@@ -37,3 +40,17 @@ model = UNet_Diffusion.load_from_checkpoint(
     strict=False).eval()
 
 model.set_noise_schedule()
+
+_, midi = dataset[randint(0, len(dataset))]
+
+midi = midi.unsqueeze(0)
+
+n_step = 10
+out = model.partial_denoising(midi, midi, 10)
+f0, lo = model.post_process(out)
+
+f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
+lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+
+audio = ddsp(f0, lo).reshape(-1).numpy()
+sf.write("pitch.wav", audio, 16000)
