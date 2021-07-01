@@ -204,12 +204,15 @@ class UNet_RNN(pl.LightningModule):
         out = self.neural_pass(model_input)
 
         f0, lo = self.post_process(out)
+        midi_f0, midi_lo = self.post_process(model_input)
         target_f0, target_lo = self.post_process(target)
 
         plt.plot(f0)
+        plt.plot(midi_f0)
         plt.plot(target_f0)
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
         plt.plot(lo)
+        plt.plot(midi_lo)
         plt.plot(target_lo)
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
