@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
 import pytorch_lightning as pl
 import pickle
+import matplotlib.pyplot as plt
 from random import randint, sample
 from utils import *
 
@@ -32,6 +33,7 @@ class ModelCategorical(pl.LightningModule):
         self.scalers = scalers
         self.loudness_nbins = 30
         self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
+        self.val_idx = 0
 
         self.pre_lstm = nn.Sequential(
             LinearBlock(in_size, hidden_size),
@@ -178,9 +180,16 @@ class ModelCategorical(pl.LightningModule):
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
+
+        plt.plot(f0.squeeze().cpu())
+        self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
+        plt.plot(loudness.squeeze().cpu())
+        self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
+
         return y
 
     def validation_step(self, batch, batch_idx):
+        self.val_idx += 1
         model_input, target = batch
         prediction = self.forward(model_input.float())
 
@@ -203,7 +212,7 @@ class ModelCategorical(pl.LightningModule):
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 200 == 0:
+        if self.current_epoch % 20 == 0:
 
             audio = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard
