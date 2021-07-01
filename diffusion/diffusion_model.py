@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from diffusion_dataset import DiffusionDataset
 import matplotlib.pyplot as plt
+import math
 
 
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
@@ -183,6 +184,17 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
     def sample(self, x, cdt):
         x = torch.randn_like(x)
         for i in range(self.n_step)[::-1]:
+            x = self.inverse_dynamics(x, cdt, i)
+        return x
+
+    @torch.no_grad()
+    def partial_denoising(self, x, cdt, n_step):
+        noise_level = self.sqrt_alph_cum_prev[n_step]
+        eps = torch.randn_like(x)
+        x = noise_level * x
+        x = x + math.sqrt(1 - noise_level**2) * eps
+
+        for i in range(n_step)[::-1]:
             x = self.inverse_dynamics(x, cdt, i)
         return x
 
