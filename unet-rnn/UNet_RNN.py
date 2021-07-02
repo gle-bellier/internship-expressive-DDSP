@@ -134,16 +134,11 @@ class UNet_RNN(pl.LightningModule):
         return x
 
     def forward(self, x):
-
         # permute from B, T, C -> B, C, T
         x = x.permute(0, 2, 1)
-
         out, l_ctx = self.down_sampling(x)
-
         out = self.bottleneck(out)
-
         out = self.up_sampling(out, l_ctx)
-
         # permute from B, C, T -> B, T, C
         out = out.permute(0, 2, 1)
 
