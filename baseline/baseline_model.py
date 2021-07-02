@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
+from baseline_dataset import Baseline_Dataset
 import pytorch_lightning as pl
 import pickle
 import matplotlib.pyplot as plt
@@ -26,13 +27,12 @@ class LinearBlock(nn.Module):
         return x
 
 
-class ModelCategorical(pl.LightningModule):
-    def __init__(self, in_size, hidden_size, out_size, scalers):
+class Model(pl.LightningModule):
+    def __init__(self, in_size, hidden_size, out_size, scalers, ddsp):
         super().__init__()
         self.save_hyperparameters()
         self.scalers = scalers
-        self.loudness_nbins = 30
-        self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
+        self.ddsp = ddsp
         self.val_idx = 0
 
         self.pre_lstm = nn.Sequential(
@@ -71,51 +71,40 @@ class ModelCategorical(pl.LightningModule):
         return x
 
     def split_predictions(self, prediction):
-        pred_f0 = prediction[..., :100]
-        pred_cents = prediction[..., 100:200]
-        pred_loudness = prediction[..., 200:]
-        return pred_f0, pred_cents, pred_loudness
+        pred_cents = prediction[..., :100]
+        pred_lo = prediction[..., 100:]
+        return pred_cents, pred_lo
 
-    def cross_entropy(self, pred_f0, pred_cents, pred_loudness, target_f0,
-                      target_cents, target_loudness):
-        pred_f0 = pred_f0.permute(0, 2, 1)
+    def cross_entropy(self, pred_cents, pred_lo, target_cents, target_lo):
         pred_cents = pred_cents.permute(0, 2, 1)
-        pred_loudness = pred_loudness.permute(0, 2, 1)
+        pred_lo = pred_lo.permute(0, 2, 1)
 
-        target_f0 = target_f0.squeeze(-1)
         target_cents = target_cents.squeeze(-1)
-        target_loudness = target_loudness.squeeze(-1)
+        target_lo = target_lo.squeeze(-1)
 
-        loss_f0 = nn.functional.cross_entropy(pred_f0, target_f0)
         loss_cents = nn.functional.cross_entropy(pred_cents, target_cents)
-        loss_loudness = nn.functional.cross_entropy(
-            pred_loudness,
-            target_loudness,
-        )
+        loss_loudness = nn.functional.cross_entropy(pred_lo, target_lo)
 
-        return loss_f0, loss_cents, loss_loudness
+        return loss_cents, loss_loudness
 
     def training_step(self, batch, batch_idx):
         model_input, target = batch
         prediction = self.forward(model_input.float())
 
-        pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
-        target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
+        pred_cents, pred_lo = self.split_predictions(prediction)
+        target_cents, target_lo = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
-            pred_f0,
+        loss_cents, loss_lo = self.cross_entropy(
             pred_cents,
-            pred_loudness,
-            target_f0,
+            pred_lo,
             target_cents,
-            target_loudness,
+            target_lo,
         )
 
-        self.log("loss_f0", loss_f0)
         self.log("loss_cents", loss_cents)
-        self.log("loss_loudness", loss_loudness)
+        self.log("loss_loudness", loss_lo)
 
-        return loss_f0 + loss_cents + loss_loudness
+        return loss_cents + loss_lo
 
     def sample_one_hot(self, x):
         n_bin = x.shape[-1]
@@ -124,7 +113,7 @@ class ModelCategorical(pl.LightningModule):
         return sample
 
     @torch.no_grad()
-    def generation_loop(self, x, infer_pitch=False):
+    def generation_loop(self, x):
         context = None
 
         for i in range(x.shape[1] - 1):
@@ -133,30 +122,23 @@ class ModelCategorical(pl.LightningModule):
             x_out = self.pre_lstm(x_in)
             x_out, context = self.lstm(x_out, context)
             x_out = self.post_lstm(x_out)
-            pred_f0, pred_cents, pred_loudness = self.split_predictions(x_out)
-
-            if infer_pitch:
-                f0 = self.sample_one_hot(pred_f0)
-            else:
-                f0 = x[:, i + 1:i + 2, :100].float()
+            pred_cents, pred_lo = self.split_predictions(x_out)
 
             cents = self.sample_one_hot(pred_cents)
-            loudness = self.sample_one_hot(pred_loudness)
+            loudness = self.sample_one_hot(pred_lo)
 
-            cat = torch.cat([f0, cents, loudness], -1)
+            cat = torch.cat([cents, loudness], -1)
             ndim = cat.shape[-1]
 
             x[:, i + 1:i + 2, -ndim:] = cat
 
         pred = x[..., -ndim:]
-        pred_f0, pred_cents, pred_loudness = self.split_predictions(pred)
+        pred_cents, pred_lo = self.split_predictions(pred)
 
-        pred_f0 = pred_f0[:, 1:]
-        pred_loudness = pred_loudness[:, 1:]
+        pred_lo = pred_lo[:, 1:]
         pred_cents = pred_cents[:, :-1]
 
-        out = map(lambda x: torch.argmax(x, -1),
-                  [pred_f0, pred_cents, pred_loudness])
+        out = map(lambda x: torch.argmax(x, -1), [pred_cents, pred_lo])
 
         return list(out)
 
@@ -176,7 +158,7 @@ class ModelCategorical(pl.LightningModule):
 
         f0 = pctof(f0, cents)
 
-        loudness = loudness / (self.loudness_nbins - 1)
+        loudness = loudness / (121 - 1)
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
@@ -193,22 +175,19 @@ class ModelCategorical(pl.LightningModule):
         model_input, target = batch
         prediction = self.forward(model_input.float())
 
-        pred_f0, pred_cents, pred_loudness = self.split_predictions(prediction)
-        target_f0, target_cents, target_loudness = torch.split(target, 1, -1)
+        pred_cents, pred_lo = self.split_predictions(prediction)
+        target_cents, target_lo = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_loudness = self.cross_entropy(
-            pred_f0,
+        loss_f0, loss_cents, loss_lo = self.cross_entropy(
             pred_cents,
-            pred_loudness,
-            target_f0,
+            pred_lo,
             target_cents,
-            target_loudness,
+            target_lo,
         )
 
         self.log("val_loss_f0", loss_f0)
-        self.log("val_loss_cents", loss_cents)
-        self.log("val_loss_loudness", loss_loudness)
-        self.log("val_total", loss_f0 + loss_cents + loss_loudness)
+        self.log("val_loss_loudness", loss_lo)
+        self.log("val_total", loss_cents + loss_lo)
 
         ## Every 100 epochs : produce audio
 
@@ -219,3 +198,39 @@ class ModelCategorical(pl.LightningModule):
             tb = self.logger.experiment
             n = "Epoch={}".format(self.current_epoch)
             tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
+
+
+if __name__ == "__main__":
+
+    list_transforms = [
+        (MinMaxScaler, ),  # pitch
+        (QuantileTransformer, 120),  # loudness
+        (QuantileTransformer, 100),  # cents
+    ]
+
+    dataset = Baseline_Dataset(list_transforms=list_transforms, n_sample=2048)
+    val_len = len(dataset) // 20
+    train_len = len(dataset) - val_len
+
+    train, val = random_split(dataset, [train_len, val_len])
+
+    down_channels = [2, 16, 512, 1024]
+    ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
+
+    model = Model(in_size=472,
+                  hidden_size=512,
+                  out_size=221,
+                  scalers=dataset.scalers,
+                  ddsp=ddsp)
+
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
+        max_epochs=10000,
+    )
+
+    trainer.fit(
+        model,
+        DataLoader(train, 32, True),
+        DataLoader(val, 32),
+    )
