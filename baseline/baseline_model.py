@@ -159,19 +159,25 @@ class Model(pl.LightningModule):
         pitch = torch.argmax(pitch, -1)
 
         cents = cents / 100 - .5
-
-        f0 = pctof(pitch[..., 1:], cents)
-
         lo = lo / (121 - 1)
-        f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
+
+        print(cents.shape)
+        print(pitch.shape)
+
+        pitch = self.apply_inverse_transform(pitch.squeeze(0), 0)
         lo = self.apply_inverse_transform(lo.squeeze(0), 1)
+        cents = self.apply_inverse_transform(cents.squeeze(0), 2)
+
+        print(cents.shape)
+        print(pitch.shape)
+        f0 = pctof(pitch, cents)
 
         return f0, lo
 
     def get_audio(self, model_input, target):
 
         model_input = model_input.unsqueeze(0).float()
-        pitch = model_input[..., :128]
+        pitch = model_input[:, 1:, :128]
 
         out = self.generation_loop(model_input)
         f0, lo = self.post_process(out, pitch)
