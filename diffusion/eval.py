@@ -41,7 +41,7 @@ model = UNet_Diffusion.load_from_checkpoint(
 
 model.set_noise_schedule()
 
-N_EXAMPLE = 15
+N_EXAMPLE = 5
 for i in range(N_EXAMPLE):
     _, midi = dataset[randint(0, len(dataset))]
 

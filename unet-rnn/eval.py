@@ -30,7 +30,7 @@ down_channels = [2, 16, 512, 1024]
 ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 model = UNet_RNN.load_from_checkpoint(
-    "UNet_RNN/lightning_logs/version_7/checkpoints/epoch=9518-step=142784.ckpt",
+    "unet_rnn/lightning_logs/version_7/checkpoints/epoch=9518-step=142784.ckpt",
     scalers=dataset.scalers,
     channels=down_channels,
     ddsp=ddsp,
@@ -49,5 +49,4 @@ for i in range(NB_EXAMPLES):
     lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
 
     audio = ddsp(f0, lo).reshape(-1).numpy()
-    sf.write("results/saved_samples/UNet-RNN/sample{}.wav".format(i), audio,
-             16000)
+    sf.write("results/unet-rnn/samples/sample{}.wav".format(i), audio, 16000)
