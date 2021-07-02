@@ -30,7 +30,7 @@ class LinearBlock(nn.Module):
 class Model(pl.LightningModule):
     def __init__(self, in_size, hidden_size, out_size, scalers, ddsp):
         super().__init__()
-        self.save_hyperparameters()
+        # self.save_hyperparameters()
         self.scalers = scalers
         self.ddsp = ddsp
         self.val_idx = 0
@@ -153,10 +153,13 @@ class Model(pl.LightningModule):
     def get_audio(self, model_input, target):
 
         model_input = model_input.unsqueeze(0).float()
-        f0, cents, loudness = self.generation_loop(model_input)
+        cents, loudness = self.generation_loop(model_input)
         cents = cents / 100 - .5
 
-        f0 = pctof(f0, cents)
+        pitch = torch.argmax(model_input[..., :128], -1)
+        pitch = pitch[..., 1:]
+
+        f0 = pctof(pitch, cents)
 
         loudness = loudness / (121 - 1)
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
@@ -178,14 +181,14 @@ class Model(pl.LightningModule):
         pred_cents, pred_lo = self.split_predictions(prediction)
         target_cents, target_lo = torch.split(target, 1, -1)
 
-        loss_f0, loss_cents, loss_lo = self.cross_entropy(
+        loss_cents, loss_lo = self.cross_entropy(
             pred_cents,
             pred_lo,
             target_cents,
             target_lo,
         )
 
-        self.log("val_loss_f0", loss_f0)
+        self.log("val_loss_cents", loss_cents)
         self.log("val_loss_loudness", loss_lo)
         self.log("val_total", loss_cents + loss_lo)
 
@@ -215,7 +218,7 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     down_channels = [2, 16, 512, 1024]
-    ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
+    ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = Model(in_size=472,
                   hidden_size=512,
@@ -225,7 +228,7 @@ if __name__ == "__main__":
 
     trainer = pl.Trainer(
         gpus=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
         max_epochs=10000,
     )
 

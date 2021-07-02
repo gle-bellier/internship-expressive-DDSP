@@ -100,12 +100,14 @@ class Baseline_Dataset(Dataset):
 
         u_f0 = torch.from_numpy(u_f0).float()
         e_f0 = torch.from_numpy(e_f0).float()
-        e_l0 = torch.from_numpy(e_lo).float()
+        e_lo = torch.from_numpy(e_lo).float()
+        e_cents = torch.from_numpy(e_cents).float()
         onsets = torch.from_numpy(onsets).float()
         offsets = torch.from_numpy(offsets).float()
 
-        u_lo = self.get_quantized_loudness(e_l0, onsets, offsets)
+        u_lo = self.get_quantized_loudness(e_lo, onsets, offsets)
 
+        u_f0 = (127 * u_f0).long()
         u_f0 = nn.functional.one_hot(u_f0, 128)
 
         u_lo = (120 * u_lo).long()
@@ -116,6 +118,9 @@ class Baseline_Dataset(Dataset):
 
         e_lo = (120 * e_lo).long()
         e_lo = nn.functional.one_hot(e_lo, 121)
+
+        onsets = onsets.reshape(-1, 1)
+        offsets = offsets.reshape(-1, 1)
 
         model_input = torch.cat(
             [
