@@ -133,7 +133,7 @@ class UNet_RNN(pl.LightningModule):
             x = self.up_blocks[i](x, l_ctx[i])
         return x
 
-    def neural_pass(self, x):
+    def forward(self, x):
 
         # permute from B, T, C -> B, C, T
         x = x.permute(0, 2, 1)
@@ -159,7 +159,7 @@ class UNet_RNN(pl.LightningModule):
         return loss
 
     def compute_loss(self, model_input, target):
-        out = self.neural_pass(model_input)
+        out = self.forward(model_input)
 
         pred_f0, pred_lo = torch.split(out, 1, -1)
         target_f0, target_lo = torch.split(target, 1, -1)
