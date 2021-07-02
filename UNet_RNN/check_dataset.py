@@ -11,9 +11,6 @@ from utils import *
 
 def post_process(scalers, out):
 
-    # change range [-1, 1] -> [0, 1]
-    out = out / 2 + .5
-
     f0, l0 = torch.split(out, 1, -1)
     f0 = f0.reshape(-1, 1).cpu().numpy()
     l0 = l0.reshape(-1, 1).cpu().numpy()
@@ -35,7 +32,7 @@ if __name__ == "__main__":
     dataset = UNet_Dataset(list_transforms=list_transforms)
     scalers = dataset.scalers
 
-    for i in range(10):
+    for i in range(100):
         model_input, target = dataset[i]
 
         # u_f0 = model_input[:, 0].squeeze()
