@@ -29,10 +29,10 @@ train, val = random_split(dataset, [train_len, val_len])
 
 down_channels = [2, 16, 256, 512, 1024]
 up_channels = [1024, 512, 256, 16, 2]
-ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
+ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 model = UNet_Diffusion.load_from_checkpoint(
-    "lightning_logs/version_3/checkpoints/epoch=3739-step=56099.ckpt",
+    "diffusion/lightning_logs/version_3/checkpoints/epoch=3739-step=56099.ckpt",
     scalers=dataset.scalers,
     down_channels=down_channels,
     up_channels=up_channels,

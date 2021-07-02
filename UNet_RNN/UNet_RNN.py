@@ -244,7 +244,7 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     down_channels = [2, 16, 512, 1024]
-    ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
+    ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = UNet_RNN(scalers=dataset.scalers,
                      channels=down_channels,

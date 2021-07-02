@@ -219,7 +219,7 @@ if __name__ == "__main__":
 
     down_channels = [2, 16, 256, 512, 1024]
     up_channels = [1024, 512, 256, 16, 2]
-    ddsp = torch.jit.load("../ddsp_debug_pretrained.ts").eval()
+    ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = UNet_Diffusion(scalers=dataset.scalers,
                            down_channels=down_channels,
