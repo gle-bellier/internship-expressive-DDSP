@@ -41,16 +41,18 @@ model = UNet_Diffusion.load_from_checkpoint(
 
 model.set_noise_schedule()
 
-_, midi = dataset[randint(0, len(dataset))]
+N_EXAMPLE = 15
+for i in range(N_EXAMPLE):
+    _, midi = dataset[randint(0, len(dataset))]
 
-midi = midi.unsqueeze(0)
+    midi = midi.unsqueeze(0)
 
-n_step = 10
-out = model.partial_denoising(midi, midi, 10)
-f0, lo = model.post_process(out)
+    n_step = 10
+    out = model.partial_denoising(midi, midi, 10)
+    f0, lo = model.post_process(out)
 
-f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+    f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
+    lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
 
-audio = ddsp(f0, lo).reshape(-1).numpy()
-sf.write("pitch.wav", audio, 16000)
+    audio = ddsp(f0, lo).reshape(-1).numpy()
+    sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
