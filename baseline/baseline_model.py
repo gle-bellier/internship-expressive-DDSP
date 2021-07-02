@@ -83,9 +83,9 @@ class Model(pl.LightningModule):
         target_lo = target_lo.squeeze(-1)
 
         loss_cents = nn.functional.cross_entropy(pred_cents, target_cents)
-        loss_loudness = nn.functional.cross_entropy(pred_lo, target_lo)
+        loss_lo = nn.functional.cross_entropy(pred_lo, target_lo)
 
-        return loss_cents, loss_loudness
+        return loss_cents, loss_lo
 
     def training_step(self, batch, batch_idx):
         model_input, target = batch
@@ -102,7 +102,7 @@ class Model(pl.LightningModule):
         )
 
         self.log("loss_cents", loss_cents)
-        self.log("loss_loudness", loss_lo)
+        self.log("loss_lo", loss_lo)
 
         return loss_cents + loss_lo
 
@@ -125,9 +125,9 @@ class Model(pl.LightningModule):
             pred_cents, pred_lo = self.split_predictions(x_out)
 
             cents = self.sample_one_hot(pred_cents)
-            loudness = self.sample_one_hot(pred_lo)
+            lo = self.sample_one_hot(pred_lo)
 
-            cat = torch.cat([cents, loudness], -1)
+            cat = torch.cat([cents, lo], -1)
             ndim = cat.shape[-1]
 
             x[:, i + 1:i + 2, -ndim:] = cat
@@ -138,9 +138,9 @@ class Model(pl.LightningModule):
         pred_lo = pred_lo[:, 1:]
         pred_cents = pred_cents[:, :-1]
 
-        out = map(lambda x: torch.argmax(x, -1), [pred_cents, pred_lo])
+        out = torch.cat([pred_cents, pred_lo], -1)
 
-        return list(out)
+        return out
 
     def apply_inverse_transform(self, x, idx):
         scaler = self.scalers[idx]
@@ -150,26 +150,38 @@ class Model(pl.LightningModule):
         out = out.unsqueeze(0)
         return out.float()
 
+    def post_process(self, out, pitch):
+        cents = out[..., :100]
+        lo = out[..., 100:]
+
+        cents = torch.argmax(cents, -1)
+        lo = torch.argmax(lo, -1)
+        pitch = torch.argmax(pitch, -1)
+
+        cents = cents / 100 - .5
+
+        f0 = pctof(pitch[..., 1:], cents)
+
+        lo = lo / (121 - 1)
+        f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
+        lo = self.apply_inverse_transform(lo.squeeze(0), 1)
+
+        return f0, lo
+
     def get_audio(self, model_input, target):
 
         model_input = model_input.unsqueeze(0).float()
-        cents, loudness = self.generation_loop(model_input)
-        cents = cents / 100 - .5
+        pitch = model_input[..., :128]
 
-        pitch = torch.argmax(model_input[..., :128], -1)
-        pitch = pitch[..., 1:]
+        out = self.generation_loop(model_input)
+        f0, lo = self.post_process(out, pitch)
 
-        f0 = pctof(pitch, cents)
-
-        loudness = loudness / (121 - 1)
-        f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
-        loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
-        y = self.ddsp(f0, loudness)
+        y = self.ddsp(f0, lo)
 
         plt.plot(f0.squeeze().cpu())
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
-        plt.plot(loudness.squeeze().cpu())
-        self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
+        plt.plot(lo.squeeze().cpu())
+        self.logger.experiment.add_figure("lo", plt.gcf(), self.val_idx)
 
         return y
 
@@ -189,7 +201,7 @@ class Model(pl.LightningModule):
         )
 
         self.log("val_loss_cents", loss_cents)
-        self.log("val_loss_loudness", loss_lo)
+        self.log("val_loss_lo", loss_lo)
         self.log("val_total", loss_cents + loss_lo)
 
         ## Every 100 epochs : produce audio
@@ -207,7 +219,7 @@ if __name__ == "__main__":
 
     list_transforms = [
         (MinMaxScaler, ),  # pitch
-        (QuantileTransformer, 120),  # loudness
+        (QuantileTransformer, 120),  # lo
         (QuantileTransformer, 100),  # cents
     ]
 
