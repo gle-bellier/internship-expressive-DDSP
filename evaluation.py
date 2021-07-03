@@ -23,6 +23,33 @@ class Evaluator:
             return self.score(out_f0, out_loudness, target_f0, target_loudness,
                               reduction)
 
+    def get_trans_frames(self, onsets, offsets, ratio=0.1):
+        """ Input: onsets, offsets [B, T, C], ratio between onset and frame in a note
+            Outputs: transitions, frames [B, T, C]
+        """
+        trans = torch.zeros_like(onsets)
+        frames = torch.zeros_like(onsets)
+
+        note_on = 0
+
+        for i in range(onsets.shape[1]):
+            if onsets[:, i, :]:
+                note_on = i
+            elif offsets[:, i, :]:
+                l = i - note_on
+                l_onset = int(ratio * l)
+
+                # update transition tensor
+                s_attack, e_attack = note_on, note_on + l_onset
+                trans[:, s_attack:e_attack, :] = 1
+                s_release, e_release = i - l_onset, i
+                trans[:, s_release:e_release, :] = 1
+
+                #update frames tensor
+                frames[:, e_attack:s_release, :] = 1
+
+        return trans, frames
+
     def plot(self, out_f0, out_loudness, target_f0, target_loudness):
 
         t = torch.arange(0, out_f0.size(1), 1) / self.sr
