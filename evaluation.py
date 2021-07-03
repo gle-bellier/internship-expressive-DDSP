@@ -70,13 +70,10 @@ class Evaluator:
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.show()
 
-    def score(self, out_f0, out_loudness, target_f0, target_loudness,
-              reduction):
-
-        d_cents = 1200 * torch.log2(
-            torch.abs(out_f0.squeeze()) / target_f0.squeeze())
-
-        d_cents = torch.abs(d_cents)
+    def score_pitch(self, x, y, reduction="mean"):
+        x, y = x.squeeze(), y.squeeze()
+        d_cents = 1200 * torch.log2(torch.abs(x / y))
+        d_cents[torch.isnan(d_cents)] = 0
         if reduction == "mean":
             return torch.mean(d_cents).numpy()
         elif reduction == "median":
@@ -86,6 +83,22 @@ class Evaluator:
         else:
             print("ERROR reduction type")
             return None
+
+    def score(self,
+              f0,
+              lo,
+              target_f0,
+              target_lo,
+              trans,
+              frames,
+              reduction="mean"):
+
+        score_trans = self.score_pitch(f0 * trans, target_f0 * trans,
+                                       reduction)
+        score_frames = self.score_pitch(f0 * frames, target_f0 * frames,
+                                        reduction)
+
+        return score_trans, score_frames
 
     def listen(self,
                out_f0,
