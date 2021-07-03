@@ -100,6 +100,10 @@ class Evaluator:
 
         return score_trans, score_frames
 
+    def accuracy(self, f0, target_f0, onsets, offsets):
+
+        pass
+
     def listen(self,
                out_f0,
                out_loudness,
