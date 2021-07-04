@@ -42,6 +42,9 @@ score_total = score_trans + score_frames
 print("Score frames = {}, score transitions = {}, score total = {}".format(
     score_frames, score_trans, score_total))
 
+accuracy = e.accuracy(u_f0, u_f0 + 2, frames)
+print("Accuracy = ", accuracy)
+
 plt.plot(trans.squeeze())
 plt.plot(frames.squeeze())
 plt.show()

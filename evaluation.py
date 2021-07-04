@@ -75,11 +75,11 @@ class Evaluator:
         d_cents = 1200 * torch.log2(torch.abs(x / y))
         d_cents[torch.isnan(d_cents)] = 0
         if reduction == "mean":
-            return torch.mean(d_cents).numpy()
+            return torch.mean(d_cents)
         elif reduction == "median":
-            return torch.median(d_cents).numpy()
+            return torch.median(d_cents)
         elif reduction == "sum":
-            return torch.sum(d_cents).numpy()
+            return torch.sum(d_cents)
         else:
             print("ERROR reduction type")
             return None
@@ -116,12 +116,24 @@ class Evaluator:
 
     def accuracy(self, f0, target_f0, frames):
 
-        notes = f0 * frames
-        target_notes = target_f0 * frames
+        # only considering sustained parts
+        f0 = (f0 * frames).squeeze()
+        target_f0 = (target_f0 * frames).squeeze()
 
-        l_notes = self.get_notes(frames)
-        print(l_notes)
-        print(len(l_notes))
+        l_notes = self.get_notes(frames.squeeze())
+        correct_f0 = 0
+
+        for note in l_notes:
+            target_pitch = torch.mean(target_f0[note["start"]:note["end"]])
+            pitch = torch.mean(f0[note["start"]:note["end"]])
+
+            d = torch.abs(self.score_pitch(pitch, target_pitch))
+
+            # if diff> 50 cents : note is off
+            if d < 50:
+                correct_f0 += 1
+
+        return correct_f0 / len(l_notes)
 
         pass
 
