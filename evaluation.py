@@ -100,7 +100,28 @@ class Evaluator:
 
         return score_trans, score_frames
 
-    def accuracy(self, f0, target_f0, onsets, offsets):
+    def get_notes(self, frames):
+        note = {"start": None, "end": None}
+        l_notes = []
+
+        for i in range(len(frames)):
+            if frames[i] and note["start"] is None:
+                note["start"] = i
+            elif not frames[i] and note["start"] is not None:  # note turned off
+                note["end"] = i
+                l_notes.append(note)
+                note = {"start": None, "end": None}
+
+        return l_notes
+
+    def accuracy(self, f0, target_f0, frames):
+
+        notes = f0 * frames
+        target_notes = target_f0 * frames
+
+        l_notes = self.get_notes(frames)
+        print(l_notes)
+        print(len(l_notes))
 
         pass
 
