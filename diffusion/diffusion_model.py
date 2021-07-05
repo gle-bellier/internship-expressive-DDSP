@@ -1,5 +1,7 @@
 import torch
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
+
 from torch import nn
 from utils import FiLM, Identity
 from downsampling import DBlock
@@ -200,12 +202,13 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/')
 
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
-        max_epochs=10000,
-    )
+        max_epochs=100000,
+        logger=tb_logger)
     list_transforms = [
         (MinMaxScaler, ),
         (QuantileTransformer, 30),

@@ -1,5 +1,7 @@
 import torch
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
+
 from torch import nn
 from utils import Identity, ConvBlock
 from torch.utils.data import DataLoader, Dataset, random_split
@@ -190,7 +192,7 @@ class UNet(pl.LightningModule):
             return
 
         device = next(iter(self.parameters())).device
-        out = self.neural_pass(model_input)
+        out = self.forward(model_input)
 
         f0, lo = self.post_process(out)
         midi_f0, midi_lo = self.post_process(model_input)
@@ -237,11 +239,12 @@ if __name__ == "__main__":
 
     model = UNet(scalers=dataset.scalers, channels=down_channels, ddsp=ddsp)
 
+    tb_logger = pl_loggers.TensorBoardLogger('logs/unet/')
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
         max_epochs=10000,
-    )
+        logger=tb_logger)
 
     trainer.fit(
         model,

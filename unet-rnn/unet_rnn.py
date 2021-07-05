@@ -1,10 +1,12 @@
 import torch
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
+
 from torch import nn
 from utils import Identity, ConvBlock
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
-from UNet_dataset import UNet_Dataset
+from unet_dataset import UNet_Dataset
 import matplotlib.pyplot as plt
 import os, sys
 
@@ -244,12 +246,13 @@ if __name__ == "__main__":
     model = UNet_RNN(scalers=dataset.scalers,
                      channels=down_channels,
                      ddsp=ddsp)
+    tb_logger = pl_loggers.TensorBoardLogger('logs/unet-rnn/')
 
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
         max_epochs=10000,
-    )
+        logger=tb_logger)
 
     trainer.fit(
         model,

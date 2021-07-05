@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
 from baseline_dataset import Baseline_Dataset
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
+
 import pickle
 import matplotlib.pyplot as plt
 from random import randint, sample
@@ -244,11 +246,12 @@ if __name__ == "__main__":
                   scalers=dataset.scalers,
                   ddsp=ddsp)
 
+    tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/')
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
         max_epochs=10000,
-    )
+        logger=tb_logger)
 
     trainer.fit(
         model,
