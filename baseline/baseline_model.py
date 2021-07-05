@@ -103,10 +103,13 @@ class Model(pl.LightningModule):
             target_lo,
         )
 
+        loss = loss_cents + loss_lo
+
         self.log("loss_cents", loss_cents)
         self.log("loss_lo", loss_lo)
+        self.log("loss", loss)
 
-        return loss_cents + loss_lo
+        return loss
 
     def sample_one_hot(self, x):
         n_bin = x.shape[-1]
@@ -156,18 +159,15 @@ class Model(pl.LightningModule):
         cents = out[..., :100]
         lo = out[..., 100:]
 
-        cents = torch.argmax(cents, -1)
-        lo = torch.argmax(lo, -1)
+        cents = torch.argmax(cents, -1) / 100
+        lo = torch.argmax(lo, -1) / 120
         pitch = torch.argmax(pitch, -1)
-
-        cents = cents / 100 - .5
-        lo = lo / (121 - 1)
 
         pitch = self.apply_inverse_transform(pitch.squeeze(0), 0)
         lo = self.apply_inverse_transform(lo.squeeze(0), 1)
-        cents = self.apply_inverse_transform(cents.squeeze(0), 2)
+        cents = self.apply_inverse_transform(cents.squeeze(0), 2) * 100
 
-        f0 = pctof(pitch, cents)
+        f0 = pitch_cents_to_frequencies(pitch, cents)
 
         return f0, lo
 
@@ -184,7 +184,13 @@ class Model(pl.LightningModule):
         plt.plot(f0.squeeze().cpu())
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
         plt.plot(lo.squeeze().cpu())
-        self.logger.experiment.add_figure("lo", plt.gcf(), self.val_idx)
+        self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
+        self.logger.experiment.add_audio(
+            "generation",
+            y,
+            self.val_idx,
+            16000,
+        )
 
         return y
 
@@ -205,17 +211,12 @@ class Model(pl.LightningModule):
 
         self.log("val_loss_cents", loss_cents)
         self.log("val_loss_lo", loss_lo)
-        self.log("val_total", loss_cents + loss_lo)
+        self.log("val_loss", loss_cents + loss_lo)
 
         ## Every 100 epochs : produce audio
 
         if self.current_epoch % 20 == 0:
-
-            audio = self.get_audio(model_input[0], target[0])
-            # output audio in Tensorboard
-            tb = self.logger.experiment
-            n = "Epoch={}".format(self.current_epoch)
-            tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
+            self.get_audio(model_input[0], target[0])
 
 
 if __name__ == "__main__":
@@ -244,7 +245,7 @@ if __name__ == "__main__":
     tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/')
     trainer = pl.Trainer(
         gpus=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
         max_epochs=10000,
         logger=tb_logger)
 
