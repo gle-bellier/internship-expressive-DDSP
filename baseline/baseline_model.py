@@ -163,15 +163,10 @@ class Model(pl.LightningModule):
         cents = cents / 100 - .5
         lo = lo / (121 - 1)
 
-        print(cents.shape)
-        print(pitch.shape)
-
         pitch = self.apply_inverse_transform(pitch.squeeze(0), 0)
         lo = self.apply_inverse_transform(lo.squeeze(0), 1)
         cents = self.apply_inverse_transform(cents.squeeze(0), 2)
 
-        print(cents.shape)
-        print(pitch.shape)
         f0 = pctof(pitch, cents)
 
         return f0, lo
