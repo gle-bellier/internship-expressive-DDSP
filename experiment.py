@@ -5,9 +5,9 @@ from torch.utils.data import DataLoader, Dataset, random_split
 
 torch.set_grad_enabled(False)
 
-from LSTMCategorical import ModelCategorical
-from LSTMContinuous import ModelContinuousPitch
-from ExpressiveDataset import ExpressiveDataset, ExpressiveDatasetPitchContinuous
+from models.LSTMCategorical import ModelCategorical
+from models.LSTMContinuous import ModelContinuousPitch
+from expressive_dataset import ExpressiveDataset, ExpressiveDatasetPitchContinuous
 from newLSTMpreprocess import pctof
 from effortless_config import Config
 import pytorch_lightning as pl

@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
 import pytorch_lightning as pl
 import pickle
+import matplotlib.pyplot as plt
 from random import randint, sample
-from ExpressiveDataset import ExpressiveDataset
 from utils import *
 
 
@@ -33,6 +33,7 @@ class ModelCategorical(pl.LightningModule):
         self.scalers = scalers
         self.loudness_nbins = 30
         self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
+        self.val_idx = 0
 
         self.pre_lstm = nn.Sequential(
             LinearBlock(in_size, hidden_size),
@@ -179,9 +180,16 @@ class ModelCategorical(pl.LightningModule):
         f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
         loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
         y = self.ddsp(f0, loudness)
+
+        plt.plot(f0.squeeze().cpu())
+        self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
+        plt.plot(loudness.squeeze().cpu())
+        self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
+
         return y
 
     def validation_step(self, batch, batch_idx):
+        self.val_idx += 1
         model_input, target = batch
         prediction = self.forward(model_input.float())
 
@@ -204,7 +212,7 @@ class ModelCategorical(pl.LightningModule):
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 200 == 0:
+        if self.current_epoch % 20 == 0:
 
             audio = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard
@@ -213,31 +221,31 @@ class ModelCategorical(pl.LightningModule):
             tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    trainer = pl.Trainer(
-        gpus=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
-        max_epochs=50000,
-    )
-    list_transforms = [
-        (Identity, ),  # u_f0 
-        (MinMaxScaler, ),  # u_loudness
-        (Identity, ),  # e_f0
-        (Identity, ),  # e_cents
-        (MinMaxScaler, ),  # e_loudness
-    ]
+#     trainer = pl.Trainer(
+#         gpus=1,
+#         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+#         max_epochs=50000,
+#     )
+#     list_transforms = [
+#         (Identity, ),  # u_f0
+#         (MinMaxScaler, ),  # u_loudness
+#         (Identity, ),  # e_f0
+#         (Identity, ),  # e_cents
+#         (MinMaxScaler, ),  # e_loudness
+#     ]
 
-    dataset = ExpressiveDataset(n_sample=512, list_transforms=list_transforms)
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
+#     dataset = ExpressiveDataset(n_sample=512, list_transforms=list_transforms)
+#     val_len = len(dataset) // 20
+#     train_len = len(dataset) - val_len
 
-    train, val = random_split(dataset, [train_len, val_len])
+#     train, val = random_split(dataset, [train_len, val_len])
 
-    model = ModelCategorical(360, 1024, 230, scalers=dataset.scalers)
+#     model = ModelCategorical(360, 1024, 230, scalers=dataset.scalers)
 
-    trainer.fit(
-        model,
-        DataLoader(train, 32, True),
-        DataLoader(val, 32),
-    )
+#     trainer.fit(
+#         model,
+#         DataLoader(train, 32, True),
+#         DataLoader(val, 32),
+#     )

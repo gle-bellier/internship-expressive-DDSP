@@ -6,7 +6,6 @@ from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxSca
 import pytorch_lightning as pl
 import pickle
 from random import randint, sample
-from ExpressiveDataset import ExpressiveDatasetPitchContinuous
 from utils import *
 
 
@@ -217,32 +216,32 @@ class ModelContinuousPitch(pl.LightningModule):
                 }, i)
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    trainer = pl.Trainer(
-        gpus=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
-        max_epochs=50000,
-    )
-    list_transforms = [
-        (MinMaxScaler, ),  # u_f0 
-        (MinMaxScaler, ),  # u_loudness
-        (MinMaxScaler, ),  # e_f0
-        (Identity, ),  # e_cents
-        (MinMaxScaler, ),  # e_loudness
-    ]
+#     trainer = pl.Trainer(
+#         gpus=1,
+#         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+#         max_epochs=50000,
+#     )
+#     list_transforms = [
+#         (MinMaxScaler, ),  # u_f0
+#         (MinMaxScaler, ),  # u_loudness
+#         (MinMaxScaler, ),  # e_f0
+#         (Identity, ),  # e_cents
+#         (MinMaxScaler, ),  # e_loudness
+#     ]
 
-    dataset = ExpressiveDatasetPitchContinuous(n_sample=512,
-                                               list_transforms=list_transforms)
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
+#     dataset = ExpressiveDatasetPitchContinuous(n_sample=512,
+#                                                list_transforms=list_transforms)
+#     val_len = len(dataset) // 20
+#     train_len = len(dataset) - val_len
 
-    train, val = random_split(dataset, [train_len, val_len])
+#     train, val = random_split(dataset, [train_len, val_len])
 
-    model = ModelContinuousPitch(63, 1024, 32, scalers=dataset.scalers)
+#     model = ModelContinuousPitch(63, 1024, 32, scalers=dataset.scalers)
 
-    trainer.fit(
-        model,
-        DataLoader(train, 32, True),
-        DataLoader(val, 32),
-    )
+#     trainer.fit(
+#         model,
+#         DataLoader(train, 32, True),
+#         DataLoader(val, 32),
+#     )
