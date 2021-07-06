@@ -184,7 +184,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
     @torch.no_grad()
     def sample(self, x, cdt):
-        #x = torch.randn_like(x)
+        x = torch.randn_like(x)
         for i in range(self.n_step)[::-1]:
             x = self.inverse_dynamics(x, cdt, i)
         return x
