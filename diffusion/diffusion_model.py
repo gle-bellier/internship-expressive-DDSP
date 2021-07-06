@@ -157,12 +157,12 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
             return
 
         device = next(iter(self.parameters())).device
-        x = torch.zeros_like(cdt).to(device)
-        x = self.sample(x, cdt)
+
+        out = self.partial_denoising(cdt, cdt, 30)
 
         # select first elt :
 
-        f0, lo = self.post_process(x[0])
+        f0, lo = self.post_process(out[0])
 
         plt.plot(f0)
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
@@ -184,7 +184,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
     @torch.no_grad()
     def sample(self, x, cdt):
-        x = torch.randn_like(x)
+        #x = torch.randn_like(x)
         for i in range(self.n_step)[::-1]:
             x = self.inverse_dynamics(x, cdt, i)
         return x
@@ -220,11 +220,9 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    # down_channels = [2, 16, 256, 512, 1024]
-    # up_channels = [1024, 512, 256, 16, 2]
+    down_channels = [2, 16, 256, 512, 1024]
+    up_channels = [1024, 512, 256, 16, 2]
 
-    down_channels = [2, 16, 256]
-    up_channels = [256, 16, 2]
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = UNet_Diffusion(scalers=dataset.scalers,
