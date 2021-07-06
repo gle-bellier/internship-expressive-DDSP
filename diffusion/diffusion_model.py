@@ -160,6 +160,14 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         out = self.partial_denoising(cdt, cdt, 30)
 
+        f0, lo = out[0].split(1, -1)
+
+        plt.plot(f0.cpu())
+        self.logger.experiment.add_figure("pitch RAW", plt.gcf(), self.val_idx)
+        plt.plot(lo.cpu())
+        self.logger.experiment.add_figure("loudness RAW", plt.gcf(),
+                                          self.val_idx)
+
         # select first elt :
 
         f0, lo = self.post_process(out[0])
