@@ -136,8 +136,6 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         lo = model_input[..., 1:]
         cdt = cdt[..., 0:1]
 
-        print(model_input.shape)
-        print(cdt.shape)
         loss = self.compute_loss(model_input, cdt)
         self.log("val_loss", loss)
 
@@ -218,7 +216,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/pitch/')
 
     trainer = pl.Trainer(
         gpus=1,
