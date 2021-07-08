@@ -132,15 +132,15 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         model_input, cdt = batch
 
         # only on pitch
+        lo = model_input[..., 1:2]
         model_input = model_input[..., 0:1]
-        lo = model_input[..., 1:]
         cdt = cdt[..., 0:1]
 
         loss = self.compute_loss(model_input, cdt)
         self.log("val_loss", loss)
 
         # returns cdt for validation end epoch
-        return (cdt, lo)
+        return cdt, lo
 
     def post_process(self, out):
 
@@ -171,12 +171,11 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         f0 = out[0]
         lo = lo[0]
-        out = torch.cat([f0, lo], -1)
 
         plt.plot(f0.cpu())
         self.logger.experiment.add_figure("pitch RAW", plt.gcf(), self.val_idx)
 
-        # select first elt :
+        out = torch.cat([f0, lo], -1)
 
         f0, lo = self.post_process(out)
 
