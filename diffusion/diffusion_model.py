@@ -100,7 +100,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
         l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
 
-        l_film_pitch = self.film(self.films_pitch, l_out_pitch, None)
+        l_film_pitch = self.film(self.films_pitch, l_out_pitch, noise_level)
         l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
 
         hiddens = self.cat_hiddens(l_out_pitch[-1], l_out_noisy[-1])
