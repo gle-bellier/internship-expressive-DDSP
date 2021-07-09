@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 from diffusion import DiffusionModel
+from utils import *
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import QuantileTransformer
@@ -12,223 +14,110 @@ from torchvision import datasets, transforms
 import os
 
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, n_dim, multiplier=30):
+class UNet(pl.LightningModule, DiffusionModel):
+    def __init__(self, channels):
         super().__init__()
-        self.n_dim = n_dim
-        exponents = 1e-4**torch.linspace(0, 1, n_dim // 2)
-        self.register_buffer("exponents", exponents)
-        self.multiplier = multiplier
-
-    def forward(self, level):
-        level = level.reshape(-1, 1)
-        exponents = self.exponents.unsqueeze(0)
-        encoding = exponents * level * self.multiplier
-        encoding = torch.stack([encoding.sin(), encoding.cos()], -1)
-        encoding = encoding.reshape(*encoding.shape[:1], -1)
-        return encoding.unsqueeze(-1)
-
-
-class FWAM(nn.Module):
-    def forward(self, x, scale, bias):
-        return scale * x + bias
-
-
-class UpBlock(nn.Module):
-    def __init__(self, in_size, out_size):
-        super().__init__()
-        self.branch_1 = nn.ModuleList([
-            nn.LeakyReLU(.2),
-            nn.Conv1d(in_size, out_size, 3, padding=1, dilation=1),
-            FWAM(),
-            nn.LeakyReLU(.2),
-            nn.Conv1d(out_size, out_size, 3, padding=2, dilation=2),
-        ])
-
-        self.branch_2 = nn.Conv1d(in_size, out_size, 1)
-
-        self.branch_3 = nn.ModuleList([
-            FWAM(),
-            nn.LeakyReLU(.2),
-            nn.Conv1d(out_size, out_size, 3, padding=4, dilation=4),
-            FWAM(),
-            nn.LeakyReLU(.2),
-            nn.Conv1d(out_size, out_size, 3, padding=8, dilation=8),
-        ])
-
-    def forward(self, x, scale, bias):
-        x2 = self.branch_2(x)
-
-        for layer in self.branch_1:
-            if isinstance(layer, FWAM):
-                x = layer(x, scale, bias)
-            else:
-                x = layer(x)
-
-        x = x + x2
-        x3 = x.clone()
-
-        for layer in self.branch_3:
-            if isinstance(layer, FWAM):
-                x = layer(x, scale, bias)
-
-        return x3 + x
-
-
-class DownBlock(nn.Module):
-    def __init__(self, in_size, out_size):
-        super().__init__()
-        self.branch_1 = nn.Conv1d(in_size, out_size, 1)
-        self.branch_2 = nn.Sequential(
-            nn.LeakyReLU(.2),
-            nn.Conv1d(in_size, out_size, 3, padding=1, dilation=1),
-            nn.LeakyReLU(.2),
-            nn.Conv1d(out_size, out_size, 3, padding=3, dilation=3),
-            nn.LeakyReLU(.2),
-            nn.Conv1d(out_size, out_size, 3, padding=9, dilation=9),
-        )
-
-    def forward(self, x):
-        return self.branch_1(x) + self.branch_2(x)
-
-
-class Film(nn.Module):
-    def __init__(self, in_size, out_size):
-        super().__init__()
-
-        self.in_conv = nn.Conv1d(in_size, out_size, 3, padding=1)
-        self.pe = PositionalEncoding(out_size)
-        self.out_conv = nn.Conv1d(out_size,
-                                  2 * out_size,
-                                  3,
-                                  padding=1,
-                                  groups=2)
-
-    def forward(self, x, level):
-        x = self.in_conv(x)
-        x = nn.functional.leaky_relu(x, .2)
-        x = x + self.pe(level)
-        x = self.out_conv(x)
-        return torch.split(x, x.shape[1] // 2, 1)
-
-
-class Model(pl.LightningModule, DiffusionModel):
-    def __init__(self):
-        super().__init__()
-
         #self.save_hyperparameters()
+
+        down_channels = channels
+        up_channels = channels[::-1]
+
+        self.down_channels_in = down_channels[:-1]
+        self.down_channels_out = down_channels[1:]
+
+        self.up_channels_in = up_channels[:-1]
+        self.up_channels_out = up_channels[1:]
 
         self.val_idx = 0
 
-        self.down_chain = nn.ModuleList([
-            nn.Conv1d(2, 128, 3, padding=1),
-            DownBlock(128, 128),
-            DownBlock(128, 256),
-            DownBlock(256, 256),
-            DownBlock(256, 512),
+        self.down_blocks = nn.ModuleList([
+            DBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_in,
+                                                 self.down_channels_out)
         ])
 
-        self.up_chain = nn.ModuleList([
-            UpBlock(512, 256),
-            UpBlock(256, 128),
-            UpBlock(128, 128),
-            UpBlock(128, 128),
+        self.bottleneck = Bottleneck(in_channels=self.down_channels_out[-1],
+                                     out_channels=self.up_channels_in[0])
+
+        self.up_blocks = nn.ModuleList([
+            UBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.up_channels_in,
+                                                 self.up_channels_out)
         ])
 
-        self.film_chain = nn.ModuleList([
-            Film(128, 128),
-            Film(128, 128),
-            Film(256, 128),
-            Film(256, 256),
-        ])
+    def down_sampling(self, x):
+        l_ctx = []
+        for i in range(len(self.down_blocks)):
+            x, ctx = self.down_blocks[i](x)
+            l_ctx = [ctx] + l_ctx
 
-        self.out_conv = nn.Conv1d(128, 2, 3, padding=1)
+        return x, l_ctx
+
+    def up_sampling(self, x, l_ctx):
+
+        for i in range(len(self.up_blocks)):
+            x = self.up_blocks[i](x, l_ctx[i])
+        return x
 
     def neural_pass(self, x, cdt, noise_level):
-        hidden = []
-        for layer in self.down_chain:
-            x = layer(x)
-            hidden.append(x)
 
-        for i in range(len(self.film_chain)):
-            hidden[i] = self.film_chain[i](hidden[i], noise_level)
+        batch_size, channels, width, height = x.size()
+        # (b, 1, 28, 28) -> (b,1,  1*28*28)
+        x = x.view(batch_size, 1, width * height)
+        out, l_ctx = self.down_sampling(x)
+        out = self.bottleneck(out)
+        out = self.up_sampling(out, l_ctx)
+        out = out.view(batch_size, channels, width, height)
 
-        x = hidden.pop(-1)
-
-        for layer in self.up_chain:
-            x = layer(x, *hidden.pop(-1))
-
-        x = self.out_conv(x)
-        return x
+        return out
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), 1e-4)
 
     def training_step(self, batch, batch_idx):
-        loss = self.compute_loss(batch, None)
+        model_input, target = batch
+        loss = self.compute_loss(model_input, target)
         self.log("loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss = self.compute_loss(batch, batch_idx)
+
+        model_input, target = batch
+        loss = self.compute_loss(model_input, target)
         self.log("val_loss", loss)
 
-    def post_process(self, x):
-        x = x / 2 + .5
-        f0, lo = torch.split(x, 1, 1)
-        f0 = mtof(f0.reshape(-1).cpu().numpy() * 127)
-
-        lo = lo.reshape(-1, 1).cpu().numpy()
-        lo = self.Q.inverse_transform(lo).reshape(-1)
-        return f0, lo
-
-    def validation_epoch_end(self, out):
-        self.val_idx += 1
-
-        if self.val_idx % 100:
-            return
-
-        device = next(iter(self.parameters())).device
-        x = torch.zeros(16, 2, 256).to(device)
-        x = self.sample(x)
-        f0, lo = self.post_process(x)
-
-        plt.plot(f0)
-        self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
-        plt.plot(lo)
-        self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
-
-        if self.ddsp is not None:
-            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-            lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
-            signal = self.ddsp(f0, lo)
-            signal = signal.reshape(-1).numpy()
-
-            self.logger.experiment.add_audio(
-                "generation",
-                signal,
-                self.val_idx,
-                16000,
-            )
+        return (model_input, target)
 
     @torch.no_grad()
-    def sample(self, x):
-        x = torch.randn_like(x)
-        for i in range(self.n_step)[::-1]:
-            x = self.inverse_dynamics(x, None, i)
-        return x
-
-    @torch.no_grad()
-    def partial_denoising(self, x, n_step):
+    def partial_denoising(self, x, cdt, n_step):
         noise_level = self.sqrt_alph_cum_prev[n_step]
-        print(f"{noise_level*100:.2f}% of kept")
         eps = torch.randn_like(x)
         x = noise_level * x
         x = x + math.sqrt(1 - noise_level**2) * eps
 
         for i in range(n_step)[::-1]:
-            x = self.inverse_dynamics(x, None, i)
+            x = self.inverse_dynamics(x, cdt, i)
         return x
+
+    def validation_epoch_end(self, inputs):
+
+        model_input, target = inputs[-1]  # first elt of last batch
+        model_input = model_input[0:1]
+        target = target[0:1]
+        self.val_idx += 1
+
+        if self.val_idx % 10:
+            return
+
+        device = next(iter(self.parameters())).device
+        rec = self.partial_denoising(model_input, None, 50)
+
+        plt.imshow(rec.squeeze().cpu(), cmap='gray_r')
+        self.logger.experiment.add_figure("rec", plt.gcf(), self.val_idx)
+
+        diff = torch.abs(rec - model_input)
+        plt.imshow(diff.squeeze().cpu(), cmap='gray_r')
+        self.logger.experiment.add_figure("diff", plt.gcf(), self.val_idx)
 
 
 if __name__ == "__main__":
@@ -250,18 +139,22 @@ if __name__ == "__main__":
                        train=False,
                        download=True,
                        transform=transform)
-    train = DataLoader(mnist_train, batch_size=64)
-    test = DataLoader(mnist_test, batch_size=64)
+    train = DataLoader(mnist_train, batch_size=32)
+    test = DataLoader(mnist_test, batch_size=32)
 
-    model = Model()
+    model = UNet(channels=[
+        1,
+        64,
+        128,
+    ])
 
     model.set_noise_schedule()
 
     check_callback = pl.callbacks.ModelCheckpoint(monitor="val_loss")
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/mnist/')
 
-    trainer = pl.Trainer(
-        gpus=1,
-        max_epochs=1000000,
-        callbacks=[check_callback],
-    )
+    trainer = pl.Trainer(gpus=1,
+                         max_epochs=1000000,
+                         callbacks=[check_callback],
+                         logger=tb_logger)
     trainer.fit(model, train, test)

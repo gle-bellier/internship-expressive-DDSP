@@ -103,5 +103,6 @@ class DiffusionModel(nn.Module):
     def compute_loss(self, y, cdt):
         y_noise, eps, noise_level = self.q_sample(y)
         pred_noise = self.neural_pass(y_noise, cdt, noise_level)
+
         loss = (eps - pred_noise).abs().mean()
         return loss
