@@ -3,15 +3,45 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 
 from torch import nn
-from utils import FiLM, Identity
+from utils import *
 from downsampling import DBlock
 from upsampling import UBlock
-from new_diffusion import DiffusionModel
+from diffusion import DiffusionModel
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from diffusion_dataset import DiffusionDataset
 import matplotlib.pyplot as plt
 import math
+
+
+class FiLM(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.in_conv = nn.Conv1d(in_channels,
+                                 out_channels,
+                                 kernel_size=3,
+                                 stride=1,
+                                 padding=1)
+        self.lr = nn.LeakyReLU()
+        self.pe = PositionalEncoding(out_channels)
+        self.shift_conv = nn.Conv1d(out_channels,
+                                    out_channels,
+                                    kernel_size=3,
+                                    stride=1,
+                                    padding=1)
+        self.scale_conv = nn.Conv1d(out_channels,
+                                    out_channels,
+                                    kernel_size=3,
+                                    stride=1,
+                                    padding=1)
+
+    def forward(self, x, noise_level):
+        out = self.in_conv(x)
+        out = self.lr(out)
+
+        scale = self.scale_conv(out)
+        shift = self.shift_conv(out)
+        return scale, shift
 
 
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
@@ -100,7 +130,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
         l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
 
-        l_film_pitch = self.film(self.films_pitch, l_out_pitch, None)
+        l_film_pitch = self.film(self.films_pitch, l_out_pitch, noise_level)
         l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
 
         hiddens = self.cat_hiddens(l_out_pitch[-1], l_out_noisy[-1])
@@ -150,9 +180,10 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         # test for last cdt
         cdt = cdt[-1]
+
         self.val_idx += 1
 
-        if self.val_idx % 1:
+        if self.val_idx % 50:
             return
 
         device = next(iter(self.parameters())).device
@@ -190,13 +221,22 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
             )
 
     @torch.no_grad()
-    def partial_denoising(self, y_0, cdt, n_step):
-        noise_level = torch.tensor(self.sqrt_alph_cum_prev[n_step])
-        y_n, _ = self.diffusion_process(y_0, noise_level)
+    def sample(self, x, cdt):
+        x = torch.randn_like(x)
+        for i in range(self.n_step)[::-1]:
+            x = self.inverse_dynamics(x, cdt, i)
+        return x
 
-        y_0 = self.denoising_process(y_n, cdt)
+    @torch.no_grad()
+    def partial_denoising(self, x, cdt, n_step):
+        noise_level = self.sqrt_alph_cum_prev[n_step]
+        eps = torch.randn_like(x)
+        x = noise_level * x
+        x = x + math.sqrt(1 - noise_level**2) * eps
 
-        return y_0
+        for i in range(n_step)[::-1]:
+            x = self.inverse_dynamics(x, cdt, i)
+        return x
 
 
 if __name__ == "__main__":
@@ -218,8 +258,8 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16, 256, 512, 1024]
-    up_channels = [1024, 512, 256, 16, 2]
+    down_channels = [2, 8, 128, 512]
+    up_channels = [512, 256, 16, 2]
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
