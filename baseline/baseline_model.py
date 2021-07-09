@@ -161,13 +161,16 @@ class Model(pl.LightningModule):
 
         cents = torch.argmax(cents, -1) / 100
         lo = torch.argmax(lo, -1) / 120
-        pitch = torch.argmax(pitch, -1)
+        pitch = torch.argmax(pitch, -1) / 127
 
         pitch = self.apply_inverse_transform(pitch.squeeze(0), 0)
         lo = self.apply_inverse_transform(lo.squeeze(0), 1)
-        cents = self.apply_inverse_transform(cents.squeeze(0), 2) * 100
+        cents = self.apply_inverse_transform(cents.squeeze(0), 2)
 
-        f0 = pitch_cents_to_frequencies(pitch, cents)
+        # Change range [0, 1] -> [-0.5, 0.5]
+        cents -= 0.5
+
+        f0 = pctof(pitch, cents)
 
         return f0, lo
 
