@@ -4,7 +4,7 @@ import numpy as np
 from abc import abstractmethod
 
 
-class Diffusion(nn.Module):
+class DiffusionModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.data_range = [-1, 1]
@@ -21,19 +21,15 @@ class Diffusion(nn.Module):
         betas = init(**init_kwargs)
         alphas = 1 - betas
         alphas_cum = alphas.cumprod(dim=0)
-        sqrt_alphas_cum = torch.sqrt(alphas_cum)
+        self.sqrt_alphas_cum = torch.sqrt(alphas_cum).numpy()
 
         l0 = torch.tensor([1.])
-        ls = torch.cat((l0, alphas_cum))
-
-        sqrt_1_m_alphas_cum = torch.sqrt(1 - sqrt_alphas_cum)
+        self.ls = torch.cat((l0, alphas_cum)).numpy()
 
         self.register_buffer("betas", betas)
         self.register_buffer("alphas", alphas)
-        self.register_buffer("alph_cum", alphas_cum)
-        self.register_buffer("sqrt_alpha_cum", sqrt_alphas_cum)
-        self.register_buffer("sqrt_1_m_alphas_cum", sqrt_1_m_alphas_cum)
-        self.register_buffer("ls", ls)
+        self.register_buffer("alphas_cum", alphas_cum)
+        # self.register_buffer("sqrt_alpha_cum", sqrt_alphas_cum)
 
     def get_noise_level(self, batch_size):
         s = np.random.choice(range(self.n_step), size=batch_size)
@@ -47,7 +43,10 @@ class Diffusion(nn.Module):
     def diffusion_process(self, y0):
 
         noise_level = self.get_noise_level(y0.shape[0])
+        noise_level = noise_level.to(y0.device)
         eps = torch.randn_like(y0)
+
+        noise_level = noise_level.reshape(-1, *((len(y0.shape) - 1) * (1, )))
         yn = noise_level * y0 + torch.sqrt(1 - noise_level * noise_level) * eps
         return yn, noise_level, eps
 

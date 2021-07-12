@@ -6,7 +6,7 @@ from torch import nn
 from utils import FiLM, Identity
 from downsampling import DBlock
 from upsampling import UBlock
-from diffusion import DiffusionModel
+from new_diffusion import DiffusionModel
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from diffusion_dataset import DiffusionDataset
@@ -16,9 +16,13 @@ import math
 
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
     def __init__(self, down_channels, up_channels, scalers, ddsp):
+        super().__init__()
+        self.val_idx = 0
         self.conv_down = nn.Conv1d(down_channels[0], down_channels[1], 3, 1, 1)
-        self.conv_mid = nn.Conv1d(down_channels[1], up_channels[1], 3, 1, 1)
-        self.conv_up = nn.Conv1d(up_channels[1], up_channels[0], 3, 1, 1)
+        self.conv_mid = nn.Conv1d(down_channels[1], up_channels[0], 3, 1, 1)
+        self.conv_up = nn.Conv1d(up_channels[0], up_channels[1], 3, 1, 1)
+        self.scalers = scalers
+        self.ddsp = ddsp
 
     def neural_pass(self, x, cdt, noise_level):
 
@@ -28,7 +32,6 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         x = self.conv_down(x)
         x = self.conv_mid(x)
         out = self.conv_up(x)
-
         # permute from B, C, T -> B, T, C
         out = out.permute(0, 2, 1)
 
@@ -76,7 +79,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         self.val_idx += 1
 
-        if self.val_idx % 50:
+        if self.val_idx % 5:
             return
 
         device = next(iter(self.parameters())).device
@@ -115,7 +118,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/new/')
 
     trainer = pl.Trainer(
         gpus=1,
@@ -134,7 +137,7 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     down_channels = [2, 16]
-    up_channels = [32, 2]
+    up_channels = [16, 2]
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
