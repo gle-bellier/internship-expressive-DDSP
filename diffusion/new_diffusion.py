@@ -52,7 +52,9 @@ class DiffusionModel(nn.Module):
 
     def compute_loss(self, y0, cdt):
         yn, noise_level, eps = self.diffusion_process(y0)
+
         pred_eps = self.neural_pass(yn, cdt, noise_level)
+
         loss = torch.mean(torch.abs(eps - pred_eps))
 
         return loss
@@ -70,6 +72,8 @@ class DiffusionModel(nn.Module):
                 torch.sqrt(1 - self.alphas_cum[t] * self.alphas_cum[t]))
 
             noise_level = self.sqrt_alphas_cum[t]
+            noise_level = torch.tensor(noise_level).to(yn.device)
+
             pred_eps = self.neural_pass(x, cdt, noise_level)
             x = coeff1 * (x - coeff2 * pred_eps) + z
             if clip:

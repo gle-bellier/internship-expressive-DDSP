@@ -17,21 +17,94 @@ import math
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
     def __init__(self, down_channels, up_channels, scalers, ddsp):
         super().__init__()
-        self.val_idx = 0
-        self.conv_down = nn.Conv1d(down_channels[0], down_channels[1], 3, 1, 1)
-        self.conv_mid = nn.Conv1d(down_channels[1], up_channels[0], 3, 1, 1)
-        self.conv_up = nn.Conv1d(up_channels[0], up_channels[1], 3, 1, 1)
+        self.down_channels_in = down_channels[:-1]
+        self.down_channels_out = down_channels[1:]
+
+        self.up_channels_in = up_channels[:-1]
+        self.up_channels_out = up_channels[1:]
+
         self.scalers = scalers
         self.ddsp = ddsp
+        self.val_idx = 0
+
+        self.down_blocks_pitch = nn.ModuleList([
+            DBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_in,
+                                                 self.down_channels_out)
+        ])
+
+        self.down_blocks_noisy = nn.ModuleList([
+            DBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_in,
+                                                 self.down_channels_out)
+        ])
+
+        self.films_pitch = nn.ModuleList([
+            FiLM(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_out,
+                                                 self.up_channels_in[::-1])
+        ])
+
+        self.films_noisy = nn.ModuleList([
+            FiLM(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_out,
+                                                 self.up_channels_in[::-1])
+        ])
+
+        self.up_blocks = nn.ModuleList([
+            UBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.up_channels_in,
+                                                 self.up_channels_out)
+        ])
+
+        self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
+                                  out_channels=self.up_channels_in[0],
+                                  kernel_size=3,
+                                  stride=1,
+                                  padding=1)
+
+    def down_sampling(self, list_blocks, x):
+        l_out = []
+        for i in range(len(list_blocks)):
+            x = list_blocks[i](x)
+            l_out = l_out + [x]
+        return l_out
+
+    def up_sampling(self, x, l_film_pitch, l_film_noisy):
+        l_film_pitch = l_film_pitch[::-1]
+        l_film_noisy = l_film_noisy[::-1]
+
+        for i in range(len(self.up_blocks)):
+            x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
+        return x
+
+    def film(self, list_films, l_out, noise_level):
+        l_film = []
+        for i in range(len(list_films)):
+            f = list_films[i](l_out[i], noise_level)
+            l_film = l_film + [f]
+        return l_film
+
+    def cat_hiddens(self, h_pitch, h_noisy):
+        hiddens = torch.cat((h_pitch, h_noisy), dim=1)
+        out = self.cat_conv(hiddens)
+        return out
 
     def neural_pass(self, x, cdt, noise_level):
 
         # permute from B, T, C -> B, C, T
-        x = x.permute(0, 2, 1)
+        noisy = x.permute(0, 2, 1)
+        pitch = cdt.permute(0, 2, 1)
 
-        x = self.conv_down(x)
-        x = self.conv_mid(x)
-        out = self.conv_up(x)
+        l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
+        l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
+
+        l_film_pitch = self.film(self.films_pitch, l_out_pitch, noise_level)
+        l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
+
+        hiddens = self.cat_hiddens(l_out_pitch[-1], l_out_noisy[-1])
+        out = self.up_sampling(hiddens, l_film_pitch, l_film_noisy)
+
         # permute from B, C, T -> B, T, C
         out = out.permute(0, 2, 1)
 
@@ -136,8 +209,8 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16]
-    up_channels = [16, 2]
+    down_channels = [2, 16, 64, 256]
+    up_channels = [256, 128, 16, 2]
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
