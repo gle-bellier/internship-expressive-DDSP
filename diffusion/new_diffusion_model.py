@@ -152,7 +152,7 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         self.val_idx += 1
 
-        if self.val_idx % 5:
+        if self.val_idx % 100:
             return
 
         device = next(iter(self.parameters())).device

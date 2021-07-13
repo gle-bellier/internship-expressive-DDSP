@@ -76,7 +76,8 @@ class DiffusionModel(nn.Module):
             noise_level = torch.tensor(noise_level).to(yn.device)
 
             pred_eps = self.neural_pass(x, cdt, noise_level)
-            x = coeff1 * (x - coeff2 * pred_eps) + z
+            sigma = self.betas[t]
+            x = coeff1 * (x - coeff2 * pred_eps) + sigma * z
             if clip:
                 x.clamp_(*self.data_range)
 
