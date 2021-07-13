@@ -60,6 +60,7 @@ class DiffusionModel(nn.Module):
         return loss
 
     def sampling(self, yn, cdt, n_steps, clip=True):
+        n_step = min(n_steps, self.n_step)
         x = torch.randn_like(yn)
         for t in range(1, n_steps + 1)[::-1]:
             if t > 1:
