@@ -8,7 +8,7 @@ class DBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.b1 = nn.Sequential(
-            nn.MaxPool1d(kernel_size=2),
+            nn.AvgPool1d(kernel_size=2),
             nn.Conv1d(in_channels=in_channels,
                       out_channels=out_channels,
                       kernel_size=1,
