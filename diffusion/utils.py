@@ -84,6 +84,48 @@ class FiLM(nn.Module):
         return scale, shift
 
 
+class FiLM_RNN(nn.Module):
+    def __init__(self, in_channels, out_channels, num_layers=1):
+        super().__init__()
+        self.in_conv = nn.Conv1d(in_channels,
+                                 in_channels,
+                                 kernel_size=3,
+                                 stride=1,
+                                 padding=1)
+        self.gru = nn.GRU(input_size=out_channels,
+                          hidden_size=out_channels,
+                          num_layers=num_layers,
+                          batch_first=True)
+
+        self.lr = nn.LeakyReLU()
+        self.pe = PositionalEncoding(out_channels)
+        self.shift_conv = nn.Conv1d(out_channels,
+                                    out_channels,
+                                    kernel_size=3,
+                                    stride=1,
+                                    padding=1)
+        self.scale_conv = nn.Conv1d(out_channels,
+                                    out_channels,
+                                    kernel_size=3,
+                                    stride=1,
+                                    padding=1)
+
+    def forward(self, x, noise_level):
+
+        out = x.permute(0, 2, 1)
+        out, _ = self.gru(out)
+        out = out.permute(0, 2, 1)
+        out = self.in_conv(out)
+
+        out = self.lr(out)
+        if noise_level is not None:
+            pe = self.pe(noise_level)
+            out = out + pe
+        scale = self.scale_conv(out)
+        shift = self.shift_conv(out)
+        return scale, shift
+
+
 class FeatureWiseAffine(nn.Module):
     def __init__(self):
         super().__init__()
