@@ -1,7 +1,9 @@
 import torch
 import pickle
-from utils import *
 import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import pandas as pd
 
 
 class Analyzer:
@@ -42,15 +44,40 @@ class Analyzer:
         return trans, frames
 
     def get_notes(self, frames, f0, lo):
-        note = {"start": None, "end": None, "f0": None, "lo": None}
         notes = []
         onsets = self.get_onsets(frames)
         for onset in onsets:
+            note = {"start": None, "end": None, "f0": None, "lo": None}
             note["start"], note["end"] = onset["start"], onset["end"]
             note["f0"] = torch.mean(f0[note["start"]:note["end"]])
             note["lo"] = torch.mean(lo[note["start"]:note["end"]])
-            notes += [note]
+
+            notes.append(note)
         return notes
+
+    def get_f0_l0_df(self):
+        pitch = []
+        loudness = []
+        cat = []
+        midi, target = self.get_all_notes()
+
+        for note in midi:
+            pitch += [note["f0"]]
+            loudness += [note["lo"]]
+            cat += ["midi"]
+
+        for note in target:
+            pitch += [note["f0"]]
+            loudness += [note["lo"]]
+            cat += ["target"]
+
+        df = pd.DataFrame({
+            "pitch": pd.Series(pitch, dtype="float32"),
+            "loudness": pd.Series(loudness, dtype="float32"),
+            "cat": pd.Categorical(cat),
+        })
+
+        return df
 
     def get_all_notes(self):
         trans, frames = self.get_trans_frames()
@@ -104,4 +131,18 @@ analyzer = Analyzer(path)
 trans, frames = analyzer.get_trans_frames()
 midi, target = analyzer.get_all_notes()
 
-print(analyzer.score())
+df = analyzer.get_f0_l0_df()
+print(df.dtypes)
+
+# sns.set_theme(style="darkgrid")
+# fig, ax = plt.subplots()
+# g = sns.jointplot(x="pitch", y="loudness", data=df, hue="type", kind="kde")
+# plt.show()
+
+g = sns.jointplot(x="pitch",
+                  y="loudness",
+                  data=df,
+                  kind="kde",
+                  hue="cat",
+                  alpha=.7)
+plt.show()
