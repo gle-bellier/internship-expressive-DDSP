@@ -12,9 +12,9 @@ class Analyzer:
 
     def load_data(self):
 
-        self.u_f0 = torch.from_numpy(self.dataset["u_f0"]).long()
+        self.u_f0 = torch.from_numpy(self.dataset["u_f0"]).float()
         self.u_lo = torch.from_numpy(self.dataset["u_loudness"]).float()
-        self.e_f0 = torch.from_numpy(self.dataset["e_f0"]).long()
+        self.e_f0 = torch.from_numpy(self.dataset["e_f0"]).float()
         self.e_lo = torch.from_numpy(self.dataset["e_loudness"]).float()
         self.onsets = torch.from_numpy(self.dataset["onsets"]).float()
         self.offsets = torch.from_numpy(self.dataset["offsets"]).float()
@@ -41,23 +41,67 @@ class Analyzer:
 
         return trans, frames
 
-    def get_notes(self, frames):
+    def get_notes(self, frames, f0, lo):
+        note = {"start": None, "end": None, "f0": None, "lo": None}
+        notes = []
+        onsets = self.get_onsets(frames)
+        for onset in onsets:
+            note["start"], note["end"] = onset["start"], onset["end"]
+            note["f0"] = torch.mean(f0[note["start"]:note["end"]])
+            note["lo"] = torch.mean(lo[note["start"]:note["end"]])
+            notes += [note]
+        return notes
+
+    def get_all_notes(self):
+        trans, frames = self.get_trans_frames()
+        midi = self.get_notes(frames, self.u_f0, self.u_lo)
+        target = self.get_notes(frames, self.e_f0, self.e_lo)
+
+        return midi, target
+
+    def get_onsets(self, frames):
         note = {"start": None, "end": None}
-        l_notes = []
+        onsets = []
 
         for i in range(len(frames)):
             if frames[i] and note["start"] is None:
                 note["start"] = i
             elif not frames[i] and note["start"] is not None:  # note turned off
                 note["end"] = i
-                l_notes.append(note)
+                onsets.append(note)
                 note = {"start": None, "end": None}
+        return onsets
 
-        return l_notes
+    def score_pitch(self, x, y, reduction="mean"):
+        y[y == 0] = 0.001
+        x[x == 0] = 0.001
+        d_cents = torch.abs(1200 * torch.log2(torch.abs(x / y)))
+        d_cents[torch.isnan(d_cents)] = 0
+
+        if reduction == "mean":
+            return torch.mean(d_cents)
+        elif reduction == "median":
+            return torch.median(d_cents)
+        elif reduction == "sum":
+            return torch.sum(d_cents)
+        else:
+            print("ERROR reduction type")
+            return None
+
+    def score(self, reduction="mean"):
+        trans, frames = self.get_trans_frames()
+        score_trans = self.score_pitch(self.u_f0 * trans, self.e_f0 * trans,
+                                       reduction)
+        score_frames = self.score_pitch(self.u_f0 * frames, self.e_f0 * frames,
+                                        reduction)
+
+        return score_trans, score_frames
 
 
 path = "dataset/dataset-article.pickle"
 
 analyzer = Analyzer(path)
 trans, frames = analyzer.get_trans_frames()
-l_notes = analyzer.get_notes(frames)
+midi, target = analyzer.get_all_notes()
+
+print(analyzer.score())
