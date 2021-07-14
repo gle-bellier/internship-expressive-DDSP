@@ -242,6 +242,6 @@ if __name__ == "__main__":
 
     trainer.fit(
         model,
-        DataLoader(train, 32, True),
-        DataLoader(val, 32),
+        DataLoader(train, 64, True),
+        DataLoader(val, 64),
     )
