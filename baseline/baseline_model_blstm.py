@@ -36,21 +36,21 @@ class Model(pl.LightningModule):
         self.scalers = scalers
         self.ddsp = ddsp
         self.val_idx = 0
+        self.lr = nn.LeakyReLU()
 
-        self.pre_lstm = nn.Sequential(
+        self.pre_gru = nn.Sequential(
             LinearBlock(in_size, hidden_size),
             LinearBlock(hidden_size, hidden_size),
         )
 
-        self.lstm = nn.GRU(
-            hidden_size,
-            hidden_size,
-            num_layers=1,
-            batch_first=True,
-        )
+        self.gru = nn.GRU(hidden_size,
+                          hidden_size,
+                          num_layers=1,
+                          batch_first=True,
+                          bidirectional=True)
 
-        self.post_lstm = nn.Sequential(
-            LinearBlock(hidden_size, hidden_size),
+        self.post_gru = nn.Sequential(
+            LinearBlock(hidden_size * 2, hidden_size),
             LinearBlock(
                 hidden_size,
                 out_size,
@@ -67,9 +67,10 @@ class Model(pl.LightningModule):
         )
 
     def forward(self, x):
-        x = self.pre_lstm(x)
-        x = self.lstm(x)[0]
-        x = self.post_lstm(x)
+        x = self.pre_gru(x)
+        x = self.gru(x)[0]
+        x = self.lr(x)
+        x = self.post_gru(x)
         return x
 
     def split_predictions(self, prediction):
@@ -124,9 +125,9 @@ class Model(pl.LightningModule):
         for i in range(x.shape[1] - 1):
             x_in = x[:, i:i + 1]
 
-            x_out = self.pre_lstm(x_in)
-            x_out, context = self.lstm(x_out, context)
-            x_out = self.post_lstm(x_out)
+            x_out = self.pre_gru(x_in)
+            x_out, context = self.gru(x_out, context)
+            x_out = self.post_gru(x_out)
             pred_cents, pred_lo = self.split_predictions(x_out)
 
             cents = self.sample_one_hot(pred_cents)
@@ -218,7 +219,7 @@ class Model(pl.LightningModule):
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 20 == 0:
+        if self.current_epoch % 100 == 0:
             self.get_audio(model_input[0], target[0])
 
 
@@ -245,7 +246,7 @@ if __name__ == "__main__":
                   scalers=dataset.scalers,
                   ddsp=ddsp)
 
-    tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/blstm/')
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],

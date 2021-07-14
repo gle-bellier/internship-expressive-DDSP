@@ -6,7 +6,7 @@ from torch import nn
 from utils import FiLM, Identity
 from downsampling import DBlock
 from upsampling import UBlock
-from diffusion import DiffusionModel
+from new_diffusion import DiffusionModel
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from diffusion_dataset import DiffusionDataset
@@ -15,38 +15,28 @@ import math
 
 
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
-    def __init__(self, down_channels, up_channels, down_dilations,
-                 up_dilations, scalers, ddsp):
+    def __init__(self, down_channels, up_channels, scalers, ddsp):
         super().__init__()
-        #self.save_hyperparameters()
         self.down_channels_in = down_channels[:-1]
         self.down_channels_out = down_channels[1:]
-        self.down_dilations = down_dilations
 
         self.up_channels_in = up_channels[:-1]
         self.up_channels_out = up_channels[1:]
-        self.up_dilations = up_dilations
 
         self.scalers = scalers
         self.ddsp = ddsp
         self.val_idx = 0
 
         self.down_blocks_pitch = nn.ModuleList([
-            DBlock(in_channels=channels_in,
-                   out_channels=channels_out,
-                   dilation=dilation)
-            for channels_in, channels_out, dilation in zip(
-                self.down_channels_in, self.down_channels_out,
-                self.down_dilations)
+            DBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_in,
+                                                 self.down_channels_out)
         ])
 
         self.down_blocks_noisy = nn.ModuleList([
-            DBlock(in_channels=channels_in,
-                   out_channels=channels_out,
-                   dilation=dilation)
-            for channels_in, channels_out, dilation in zip(
-                self.down_channels_in, self.down_channels_out,
-                self.down_dilations)
+            DBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_in,
+                                                 self.down_channels_out)
         ])
 
         self.films_pitch = nn.ModuleList([
@@ -62,11 +52,9 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         ])
 
         self.up_blocks = nn.ModuleList([
-            UBlock(in_channels=channels_in,
-                   out_channels=channels_out,
-                   dilation=dilation)
-            for channels_in, channels_out, dilation in zip(
-                self.up_channels_in, self.up_channels_out, self.up_dilations)
+            UBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.up_channels_in,
+                                                 self.up_channels_out)
         ])
 
         self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
@@ -164,12 +152,12 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
 
         self.val_idx += 1
 
-        if self.val_idx % 50:
+        if self.val_idx % 100:
             return
 
         device = next(iter(self.parameters())).device
 
-        out = self.partial_denoising(cdt, cdt, 30)
+        out = self.sampling(cdt, cdt, 20)
 
         f0, lo = out[0].split(1, -1)
 
@@ -201,27 +189,9 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
                 16000,
             )
 
-    @torch.no_grad()
-    def sample(self, x, cdt):
-        x = torch.randn_like(x)
-        for i in range(self.n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i)
-        return x
-
-    @torch.no_grad()
-    def partial_denoising(self, x, cdt, n_step):
-        noise_level = self.sqrt_alph_cum_prev[n_step]
-        eps = torch.randn_like(x)
-        x = noise_level * x
-        x = x + math.sqrt(1 - noise_level**2) * eps
-
-        for i in range(n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i)
-        return x
-
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/new/')
 
     trainer = pl.Trainer(
         gpus=1,
@@ -239,24 +209,20 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16, 256, 512, 1024]
-    up_channels = [1024, 512, 256, 16, 2]
-    down_dilations = [2, 4, 6, 8]
-    up_dilations = [2, 3, 6, 9]
+    down_channels = [2, 16, 64, 256]
+    up_channels = [256, 128, 16, 2]
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = UNet_Diffusion(scalers=dataset.scalers,
                            down_channels=down_channels,
                            up_channels=up_channels,
-                           down_dilations=down_dilations,
-                           up_dilations=up_dilations,
                            ddsp=ddsp)
 
     model.set_noise_schedule()
 
     trainer.fit(
         model,
-        DataLoader(train, 64, True),
-        DataLoader(val, 64),
+        DataLoader(train, 32, True),
+        DataLoader(val, 32),
     )

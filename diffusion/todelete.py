@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 
 from torch import nn
-from utils import FiLM, Identity
+from utils import *
 from downsampling import DBlock
 from upsampling import UBlock
 from diffusion import DiffusionModel
@@ -14,116 +14,154 @@ import matplotlib.pyplot as plt
 import math
 
 
-class UNet_Diffusion(pl.LightningModule, DiffusionModel):
-    def __init__(self, down_channels, up_channels, down_dilations,
-                 up_dilations, scalers, ddsp):
+class DBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.lr = nn.LeakyReLU()
+        self.conv1 = ConvBlock(in_channels, out_channels)
+        self.conv2 = ConvBlock(out_channels, out_channels)
+        self.mp = nn.MaxPool1d(kernel_size=2)
+        pass
+
+    def forward(self, x):
+        x = self.conv1(x)
+        ctx = torch.clone(x)
+        x = self.conv2(x)
+        out = self.mp(x)
+        return out, ctx
+
+
+class Bottleneck(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv1 = ConvBlock(in_channels, out_channels)
+        self.conv2 = ConvBlock(out_channels, out_channels)
+        self.gru = nn.GRU(input_size=out_channels,
+                          hidden_size=out_channels,
+                          batch_first=True)
+
+    def forward(self, x):
+
+        x = self.conv1(x)
+
+        out = self.conv2(x)
+        return out
+
+
+class UBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv1 = ConvBlock(2 * out_channels, out_channels)
+        self.conv2 = ConvBlock(out_channels, out_channels)
+        self.up_conv = nn.Sequential(
+            nn.Upsample(scale_factor=2),
+            nn.ConvTranspose1d(in_channels=in_channels,
+                               out_channels=out_channels,
+                               stride=1,
+                               kernel_size=3,
+                               padding=1))
+        self.conv_ctx = nn.ConvTranspose1d(in_channels=in_channels,
+                                           out_channels=out_channels,
+                                           stride=1,
+                                           kernel_size=3,
+                                           padding=1)
+
+        self.lr = nn.LeakyReLU()
+
+    def add_ctx(self, x, ctx):
+        # # crop context (y)
+        # d_shape = (ctx.shape[-1] - x.shape[-1]) // 2
+        # crop = ctx[:, :, d_shape:d_shape + x.shape[2]]
+        # #concatenate
+        out = torch.cat([x, ctx], 1)
+        return out
+
+    def forward(self, x, ctx):
+        x = self.up_conv(x)
+        ctx = self.conv_ctx(ctx)
+        x = self.add_ctx(x, ctx)
+        x = self.conv1(x)
+        out = self.conv2(x)
+        return out
+
+
+class UNet(pl.LightningModule):
+    def __init__(self, channels, scalers, ddsp):
         super().__init__()
         #self.save_hyperparameters()
+
+        down_channels = channels
+        up_channels = channels[::-1]
+
         self.down_channels_in = down_channels[:-1]
         self.down_channels_out = down_channels[1:]
-        self.down_dilations = down_dilations
 
         self.up_channels_in = up_channels[:-1]
         self.up_channels_out = up_channels[1:]
-        self.up_dilations = up_dilations
 
         self.scalers = scalers
         self.ddsp = ddsp
         self.val_idx = 0
 
-        self.down_blocks_pitch = nn.ModuleList([
-            DBlock(in_channels=channels_in,
-                   out_channels=channels_out,
-                   dilation=dilation)
-            for channels_in, channels_out, dilation in zip(
-                self.down_channels_in, self.down_channels_out,
-                self.down_dilations)
+        self.down_blocks = nn.ModuleList([
+            DBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.down_channels_in,
+                                                 self.down_channels_out)
         ])
 
-        self.down_blocks_noisy = nn.ModuleList([
-            DBlock(in_channels=channels_in,
-                   out_channels=channels_out,
-                   dilation=dilation)
-            for channels_in, channels_out, dilation in zip(
-                self.down_channels_in, self.down_channels_out,
-                self.down_dilations)
-        ])
-
-        self.films_pitch = nn.ModuleList([
-            FiLM(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_in[::-1])
-        ])
-
-        self.films_noisy = nn.ModuleList([
-            FiLM(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_out,
-                                                 self.up_channels_in[::-1])
-        ])
+        self.bottleneck = Bottleneck(in_channels=self.down_channels_out[-1],
+                                     out_channels=self.up_channels_in[0])
 
         self.up_blocks = nn.ModuleList([
-            UBlock(in_channels=channels_in,
-                   out_channels=channels_out,
-                   dilation=dilation)
-            for channels_in, channels_out, dilation in zip(
-                self.up_channels_in, self.up_channels_out, self.up_dilations)
+            UBlock(in_channels=channels_in, out_channels=channels_out)
+            for channels_in, channels_out in zip(self.up_channels_in,
+                                                 self.up_channels_out)
         ])
 
-        self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
-                                  out_channels=self.up_channels_in[0],
-                                  kernel_size=3,
-                                  stride=1,
-                                  padding=1)
+    def down_sampling(self, x):
+        l_ctx = []
+        for i in range(len(self.down_blocks)):
+            x, ctx = self.down_blocks[i](x)
+            l_ctx = [ctx] + l_ctx
 
-    def down_sampling(self, list_blocks, x):
-        l_out = []
-        for i in range(len(list_blocks)):
-            x = list_blocks[i](x)
-            l_out = l_out + [x]
-        return l_out
+        return x, l_ctx
 
-    def up_sampling(self, x, l_film_pitch, l_film_noisy):
-        l_film_pitch = l_film_pitch[::-1]
-        l_film_noisy = l_film_noisy[::-1]
+    def up_sampling(self, x, l_ctx):
 
         for i in range(len(self.up_blocks)):
-            x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
+            x = self.up_blocks[i](x, l_ctx[i])
         return x
 
-    def film(self, list_films, l_out, noise_level):
-        l_film = []
-        for i in range(len(list_films)):
-            f = list_films[i](l_out[i], noise_level)
-            l_film = l_film + [f]
-        return l_film
-
-    def cat_hiddens(self, h_pitch, h_noisy):
-        hiddens = torch.cat((h_pitch, h_noisy), dim=1)
-        out = self.cat_conv(hiddens)
-        return out
-
-    def neural_pass(self, x, cdt, noise_level):
-
+    def forward(self, x):
         # permute from B, T, C -> B, C, T
-        noisy = x.permute(0, 2, 1)
-        pitch = cdt.permute(0, 2, 1)
-
-        l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
-        l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
-
-        l_film_pitch = self.film(self.films_pitch, l_out_pitch, noise_level)
-        l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
-
-        hiddens = self.cat_hiddens(l_out_pitch[-1], l_out_noisy[-1])
-        out = self.up_sampling(hiddens, l_film_pitch, l_film_noisy)
-
+        x = x.permute(0, 2, 1)
+        out, l_ctx = self.down_sampling(x)
+        out = self.bottleneck(out)
+        out = self.up_sampling(out, l_ctx)
         # permute from B, C, T -> B, T, C
         out = out.permute(0, 2, 1)
 
         return out
 
+
+class UNet_Diffusion(pl.LightningModule, DiffusionModel):
+    def __init__(self, channels, scalers, ddsp):
+        super().__init__()
+        #self.save_hyperparameters()
+        self.channels = channels
+
+        self.scalers = scalers
+        self.ddsp = ddsp
+        self.val_idx = 0
+
+        self.unet = UNet(channels, scalers, ddsp)
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), 1e-4)
+
+    def neural_pass(self, y, cdt, noise_level):
+        out = self.unet(y)
+        return out
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
@@ -239,24 +277,19 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16, 256, 512, 1024]
-    up_channels = [1024, 512, 256, 16, 2]
-    down_dilations = [2, 4, 6, 8]
-    up_dilations = [2, 3, 6, 9]
+    channels = [2, 8, 128, 512]
+    
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = UNet_Diffusion(scalers=dataset.scalers,
-                           down_channels=down_channels,
-                           up_channels=up_channels,
-                           down_dilations=down_dilations,
-                           up_dilations=up_dilations,
+                           channels = channels,
                            ddsp=ddsp)
 
     model.set_noise_schedule()
 
     trainer.fit(
         model,
-        DataLoader(train, 64, True),
-        DataLoader(val, 64),
+        DataLoader(train, 32, True),
+        DataLoader(val, 32),
     )
