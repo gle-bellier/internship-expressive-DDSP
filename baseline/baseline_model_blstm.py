@@ -36,6 +36,7 @@ class Model(pl.LightningModule):
         self.scalers = scalers
         self.ddsp = ddsp
         self.val_idx = 0
+        self.lr = nn.LeakyReLU()
 
         self.pre_gru = nn.Sequential(
             LinearBlock(in_size, hidden_size),
@@ -68,6 +69,7 @@ class Model(pl.LightningModule):
     def forward(self, x):
         x = self.pre_gru(x)
         x = self.gru(x)[0]
+        x = self.lr(x)
         x = self.post_gru(x)
         return x
 
