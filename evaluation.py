@@ -72,7 +72,7 @@ class Evaluator:
 
     def score_pitch(self, x, y, reduction="mean"):
         x, y = x.squeeze(), y.squeeze()
-        d_cents = 1200 * torch.log2(torch.abs(x / y))
+        d_cents = torch.abs(1200 * torch.log2(torch.abs(x / y)))
         d_cents[torch.isnan(d_cents)] = 0
         if reduction == "mean":
             return torch.mean(d_cents)
