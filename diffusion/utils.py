@@ -18,13 +18,15 @@ class Identity(BaseEstimator, TransformerMixin):
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, dilation):
         super().__init__()
         self.conv = nn.Conv1d(in_channels=in_channels,
                               out_channels=out_channels,
                               kernel_size=3,
-                              stride=1,
-                              padding=1)
+                              dilation=dilation,
+                              padding=dilation,
+                              stride=1)
+
         self.lr = nn.LeakyReLU()
 
     def forward(self, x):

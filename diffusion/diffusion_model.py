@@ -15,29 +15,38 @@ import math
 
 
 class UNet_Diffusion(pl.LightningModule, DiffusionModel):
-    def __init__(self, down_channels, up_channels, scalers, ddsp):
+    def __init__(self, down_channels, up_channels, down_dilations,
+                 up_dilations, scalers, ddsp):
         super().__init__()
         #self.save_hyperparameters()
         self.down_channels_in = down_channels[:-1]
         self.down_channels_out = down_channels[1:]
+        self.down_dilations = down_dilations
 
         self.up_channels_in = up_channels[:-1]
         self.up_channels_out = up_channels[1:]
+        self.up_dilations = up_dilations
 
         self.scalers = scalers
         self.ddsp = ddsp
         self.val_idx = 0
 
         self.down_blocks_pitch = nn.ModuleList([
-            DBlock(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_in,
-                                                 self.down_channels_out)
+            DBlock(in_channels=channels_in,
+                   out_channels=channels_out,
+                   dilation=dilation)
+            for channels_in, channels_out, dilation in zip(
+                self.down_channels_in, self.down_channels_out,
+                self.down_dilations)
         ])
 
         self.down_blocks_noisy = nn.ModuleList([
-            DBlock(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.down_channels_in,
-                                                 self.down_channels_out)
+            DBlock(in_channels=channels_in,
+                   out_channels=channels_out,
+                   dilation=dilation)
+            for channels_in, channels_out, dilation in zip(
+                self.down_channels_in, self.down_channels_out,
+                self.down_dilations)
         ])
 
         self.films_pitch = nn.ModuleList([
@@ -53,9 +62,11 @@ class UNet_Diffusion(pl.LightningModule, DiffusionModel):
         ])
 
         self.up_blocks = nn.ModuleList([
-            UBlock(in_channels=channels_in, out_channels=channels_out)
-            for channels_in, channels_out in zip(self.up_channels_in,
-                                                 self.up_channels_out)
+            UBlock(in_channels=channels_in,
+                   out_channels=channels_out,
+                   dilation=dilation)
+            for channels_in, channels_out, dilation in zip(
+                self.up_channels_in, self.up_channels_out, self.up_dilations)
         ])
 
         self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
@@ -230,12 +241,16 @@ if __name__ == "__main__":
 
     down_channels = [2, 16, 256, 512, 1024]
     up_channels = [1024, 512, 256, 16, 2]
+    down_dilations = [2, 4, 6, 8]
+    up_dilations = [2, 3, 6, 9]
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = UNet_Diffusion(scalers=dataset.scalers,
                            down_channels=down_channels,
                            up_channels=up_channels,
+                           down_dilations=down_dilations,
+                           up_dilations=up_dilations,
                            ddsp=ddsp)
 
     model.set_noise_schedule()

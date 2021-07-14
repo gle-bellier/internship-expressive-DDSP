@@ -5,15 +5,17 @@ from utils import FeatureWiseAffine, FiLM, PositionalEncoding, ConvBlock
 
 
 class Residual(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, dilation):
         super().__init__()
         self.lr = nn.LeakyReLU()
         self.up = nn.Upsample(scale_factor=2)
         self.conv1 = ConvBlock(in_channels=in_channels,
-                               out_channels=in_channels)
+                               out_channels=in_channels,
+                               dilation=dilation)
 
         self.conv2 = ConvBlock(in_channels=in_channels,
-                               out_channels=out_channels)
+                               out_channels=out_channels,
+                               dilation=dilation)
 
         self.fwa1 = FeatureWiseAffine()
         self.fwa2 = FeatureWiseAffine()
@@ -28,15 +30,16 @@ class Residual(nn.Module):
 
 
 class UBlock_Mid(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, dilation):
         super().__init__()
         self.block = nn.Sequential(
             nn.Upsample(scale_factor=2),
             nn.Conv1d(in_channels=in_channels,
                       out_channels=out_channels,
-                      kernel_size=1,
+                      kernel_size=3,
                       stride=1,
-                      padding=0))
+                      padding=dilation,
+                      dilation=dilation))
 
         self.lr = nn.LeakyReLU()
 
@@ -47,13 +50,16 @@ class UBlock_Mid(nn.Module):
 
 
 class UBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, dilation):
         super().__init__()
 
         self.main = UBlock_Mid(in_channels=in_channels,
-                               out_channels=out_channels)
+                               out_channels=out_channels,
+                               dilation=dilation)
+
         self.residual = Residual(in_channels=in_channels,
-                                 out_channels=out_channels)
+                                 out_channels=out_channels,
+                                 dilation=dilation)
 
     def forward(self, x, film_out_pitch, film_out_noisy):
         out = self.main(x)
