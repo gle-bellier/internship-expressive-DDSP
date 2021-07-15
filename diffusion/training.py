@@ -161,9 +161,10 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     down_channels = [2, 16, 256, 512, 1024]
-    up_channels = [1024, 512, 256, 16, 2]
+    up_channels = [1024, 512, 256, 16, 8,
+                   2]  # one more : last up_block without film
     down_dilations = [2, 4, 8, 16]
-    up_dilations = [1, 3, 9, 9]
+    up_dilations = [1, 3, 3, 9, 9]
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 

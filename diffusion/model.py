@@ -17,9 +17,13 @@ class UNet_Diffusion(pl.LightningModule):
         self.down_channels_out = down_channels[1:]
         self.down_dilations = down_dilations
 
-        self.up_channels_in = up_channels[:-1]
-        self.up_channels_out = up_channels[1:]
-        self.up_dilations = up_dilations
+        self.up_channels_in = up_channels[:-2]
+        self.up_channels_out = up_channels[1:-1]
+        self.up_dilations = up_dilations[:-1]
+
+        self.top_channels_in = up_channels[-2]
+        self.top_channels_out = up_channels[-1]
+        self.top_dilation = up_dilations[-1]
 
         self.scalers = scalers
         self.ddsp = ddsp
@@ -44,13 +48,13 @@ class UNet_Diffusion(pl.LightningModule):
         ])
 
         self.films_pitch = nn.ModuleList([
-            FiLM_RNN(in_channels=channels_in, out_channels=channels_out)
+            FiLM(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_out,
                                                  self.up_channels_in[::-1])
         ])
 
         self.films_noisy = nn.ModuleList([
-            FiLM_RNN(in_channels=channels_in, out_channels=channels_out)
+            FiLM(in_channels=channels_in, out_channels=channels_out)
             for channels_in, channels_out in zip(self.down_channels_out,
                                                  self.up_channels_in[::-1])
         ])
@@ -62,6 +66,11 @@ class UNet_Diffusion(pl.LightningModule):
             for channels_in, channels_out, dilation in zip(
                 self.up_channels_in, self.up_channels_out, self.up_dilations)
         ])
+
+        self.top = UBlock(in_channels=self.top_channels_in,
+                          out_channels=self.top_channels_out,
+                          dilation=self.top_dilation,
+                          last=True)
 
         self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
                                   out_channels=self.up_channels_in[0],
@@ -82,7 +91,9 @@ class UNet_Diffusion(pl.LightningModule):
 
         for i in range(len(self.up_blocks)):
             x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
-        return x
+
+        out = self.top(x, None, None)
+        return out
 
     def film(self, list_films, l_out, noise_level):
         l_film = []
