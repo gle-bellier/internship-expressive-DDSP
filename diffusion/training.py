@@ -162,8 +162,8 @@ if __name__ == "__main__":
 
     down_channels = [2, 16, 256, 512, 1024]
     up_channels = [1024, 512, 256, 16, 2]
-    down_dilations = [2, 4, 6, 8]
-    up_dilations = [2, 3, 6, 9]
+    down_dilations = [2, 4, 8, 16]
+    up_dilations = [1, 3, 9, 9]
 
     ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
