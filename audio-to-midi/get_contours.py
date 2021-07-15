@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
         print("Writing : \n")
 
-        with open("dataset/contours.csv", 'w') as csvfile:
+        with open("dataset/contours-article.csv", 'w') as csvfile:
             fieldnames = [
                 "u_f0", "u_loudness", "e_f0", "e_loudness", "e_f0_mean",
                 "e_f0_stddev", "f0_conf", "events"
