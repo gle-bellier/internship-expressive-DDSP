@@ -1,4 +1,3 @@
-from numba.cuda.api import event
 from extract_f0_confidence_loudness import Extractor
 
 import glob
@@ -13,7 +12,7 @@ import numpy as np
 import soundfile as sf
 import matplotlib.pyplot as plt
 import librosa as li
-import seaborn as sns
+#import seaborn as sns
 
 import pandas as pd
 import pretty_midi as pm
@@ -240,7 +239,6 @@ class ContoursGetter:
 
 
 if __name__ == '__main__':
-
     dataset_path = "dataset-midi-wav/"
     filenames = [
         file[len(dataset_path):-4]
