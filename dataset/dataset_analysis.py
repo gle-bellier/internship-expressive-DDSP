@@ -125,7 +125,7 @@ class Analyzer:
         return score_trans, score_frames
 
 
-path = "dataset/dataset-article.pickle"
+path = "dataset/dataset-diffusion.pickle"
 
 analyzer = Analyzer(path)
 trans, frames = analyzer.get_trans_frames()
