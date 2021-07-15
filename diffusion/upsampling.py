@@ -21,11 +21,11 @@ class Residual(nn.Module):
         self.fwa2 = FeatureWiseAffine()
 
     def forward(self, x, film_out_pitch, film_out_noisy):
+        x = self.up(x)
         x = self.fwa1(x, film_out_pitch)
         x = self.conv1(x)
         x = self.fwa2(x, film_out_noisy)
         out = self.conv2(x)
-        out = self.up(out)
         return out
 
 

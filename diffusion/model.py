@@ -80,10 +80,12 @@ class UNet_Diffusion(pl.LightningModule):
 
     def down_sampling(self, list_blocks, x):
         l_out = []
+        l_for_film = []
         for i in range(len(list_blocks)):
-            x = list_blocks[i](x)
-            l_out = l_out + [x]
-        return l_out
+            x, for_film = list_blocks[i](x)
+            l_for_film += [for_film]
+            l_out += [x]
+        return l_out, l_for_film
 
     def up_sampling(self, x, l_film_pitch, l_film_noisy):
         l_film_pitch = l_film_pitch[::-1]
@@ -109,11 +111,15 @@ class UNet_Diffusion(pl.LightningModule):
 
     def forward(self, noisy, pitch, noise_level):
 
-        l_out_pitch = self.down_sampling(self.down_blocks_pitch, pitch)
-        l_out_noisy = self.down_sampling(self.down_blocks_noisy, noisy)
+        l_out_pitch, l_in_film_pitch = self.down_sampling(
+            self.down_blocks_pitch, pitch)
+        l_out_noisy, l_in_film_noisy = self.down_sampling(
+            self.down_blocks_noisy, noisy)
 
-        l_film_pitch = self.film(self.films_pitch, l_out_pitch, noise_level)
-        l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
+        l_film_pitch = self.film(self.films_pitch, l_in_film_pitch,
+                                 noise_level)
+        l_film_noisy = self.film(self.films_noisy, l_in_film_noisy,
+                                 noise_level)
 
         hiddens = self.cat_hiddens(l_out_pitch[-1], l_out_noisy[-1])
         out = self.up_sampling(hiddens, l_film_pitch, l_film_noisy)
