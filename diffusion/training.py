@@ -17,19 +17,18 @@ import math
 
 class Network(pl.LightningModule, DiffusionModel):
     def __init__(self, down_channels, up_channels, down_dilations,
-                 up_dilations, scalers, ddsp):
+                 up_dilations, scalers):
         super().__init__()
-        #self.save_hyperparameters()
+        self.save_hyperparameters()
 
         self.model = UNet_Diffusion(scalers=scalers,
                                     down_channels=down_channels,
                                     up_channels=up_channels,
                                     down_dilations=down_dilations,
-                                    up_dilations=up_dilations,
-                                    ddsp=ddsp)
+                                    up_dilations=up_dilations)
 
         self.scalers = scalers
-        self.ddsp = ddsp
+        self.ddsp = None
         self.val_idx = 0
 
     def neural_pass(self, x, cdt, noise_level):
@@ -142,7 +141,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/rnn/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/')
 
     trainer = pl.Trainer(
         gpus=1,
@@ -160,22 +159,24 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16, 256, 512, 1024]
-    up_channels = [1024, 512, 256, 16, 8,
+    down_channels = [2, 8, 16, 64, 128, 256]
+    up_channels = [256, 128, 64, 16, 8, 4,
                    2]  # one more : last up_block without film
-    down_dilations = [2, 4, 8, 16]
-    up_dilations = [1, 3, 3, 9, 9]
-
-    ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    down_dilations = [1, 1, 2, 4, 2, 4]
+    up_dilations = [1, 1, 3, 3, 3, 9, 9]
 
     model = Network(scalers=dataset.scalers,
                     down_channels=down_channels,
                     up_channels=up_channels,
                     down_dilations=down_dilations,
-                    up_dilations=up_dilations,
-                    ddsp=ddsp)
-
-    model.set_noise_schedule()
+                    up_dilations=up_dilations)
+    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.set_noise_schedule(init=torch.linspace,
+                             init_kwargs={
+                                 "steps": 100,
+                                 "start": 1e-6,
+                                 "end": 1e-2
+                             })
 
     trainer.fit(
         model,
