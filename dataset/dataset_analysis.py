@@ -1,7 +1,9 @@
 import torch
 import pickle
-from utils import *
 import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import pandas as pd
 
 
 class Analyzer:
@@ -41,23 +43,98 @@ class Analyzer:
 
         return trans, frames
 
-    def get_notes(self, frames, f0, lo):
-        note = {"start": None, "end": None, "f0": None, "lo": None}
-        notes = []
-        onsets = self.get_onsets(frames)
-        for onset in onsets:
-            note["start"], note["end"] = onset["start"], onset["end"]
-            note["f0"] = torch.mean(f0[note["start"]:note["end"]])
-            note["lo"] = torch.mean(lo[note["start"]:note["end"]])
-            notes += [note]
-        return notes
-
     def get_all_notes(self):
         trans, frames = self.get_trans_frames()
-        midi = self.get_notes(frames, self.u_f0, self.u_lo)
-        target = self.get_notes(frames, self.e_f0, self.e_lo)
+        onsets = self.get_onsets(frames)
+
+        midi = []
+        target = []
+
+        for onset in onsets:
+            note_midi = {
+                "start": None,
+                "end": None,
+                "f0": None,
+                "lo": None,
+                "diff_cents": None,
+                "accurate": None
+            }
+            note_target = {
+                "start": None,
+                "end": None,
+                "f0": None,
+                "lo": None,
+                "diff_cents": None,
+                "accurate": None
+            }
+
+            # Set onsets
+            note_midi["start"], note_midi["end"] = onset["start"], onset["end"]
+            note_target["start"], note_target["end"] = onset["start"], onset[
+                "end"]
+
+            # MIDI
+            note_midi["f0"] = torch.mean(
+                self.u_f0[note_midi["start"]:note_midi["end"]])
+            note_midi["lo"] = torch.mean(
+                self.u_lo[note_midi["start"]:note_midi["end"]])
+
+            # Performance
+
+            note_target["f0"] = torch.mean(
+                self.e_f0[note_target["start"]:note_target["end"]])
+            note_target["lo"] = torch.mean(
+                self.e_lo[note_target["start"]:note_target["end"]])
+
+            # Compute accuracy
+
+            d_cents, accuracy = self.accuracy(note_midi["f0"],
+                                              note_target["f0"])
+
+            note_midi["diff_cents"] = d_cents
+            note_target["diff_cents"] = -d_cents
+            note_midi["accurate"] = note_target["accurate"] = accuracy
+
+            midi.append(note_midi)
+            target.append(note_target)
 
         return midi, target
+
+    def accuracy(self, pitch, f0):
+        d_cents = 1200 * torch.log2(torch.abs(pitch / f0))
+        return d_cents, d_cents < 50
+
+    def get_f0_l0_df(self):
+        pitch = []
+        loudness = []
+        cat = []
+        diff_cents = []
+        accuracy = []
+        midi, target = self.get_all_notes()
+
+        for note in midi:
+            pitch += [note["f0"]]
+            loudness += [note["lo"]]
+            diff_cents += [note["diff_cents"]]
+            accuracy += [note["accurate"]]
+            cat += ["midi"]
+
+        for note in target:
+            pitch += [note["f0"]]
+            loudness += [note["lo"]]
+            diff_cents += [note["diff_cents"]]
+            accuracy += [note["accurate"]]
+            cat += ["target"]
+
+        df = pd.DataFrame({
+            "pitch": pd.Series(pitch, dtype="float32"),
+            "loudness": pd.Series(loudness, dtype="float32"),
+            "diff_cents": pd.Series(diff_cents, dtype="float32"),
+            "accuracy": pd.Series(accuracy, dtype="bool"),
+            "cat": pd.Categorical(cat),
+        })
+
+        return df
 
     def get_onsets(self, frames):
         note = {"start": None, "end": None}
@@ -98,10 +175,43 @@ class Analyzer:
         return score_trans, score_frames
 
 
-path = "dataset/dataset-article.pickle"
+path = "dataset/dataset-diffusion.pickle"
 
 analyzer = Analyzer(path)
-trans, frames = analyzer.get_trans_frames()
-midi, target = analyzer.get_all_notes()
+# trans, frames = analyzer.get_trans_frames()
+# midi, target = analyzer.get_all_notes()
 
-print(analyzer.score())
+df = analyzer.get_f0_l0_df()
+print(df.dtypes)
+
+# sns.set_theme(style="darkgrid")
+
+# g = sns.jointplot(x="pitch",
+#                   y="loudness",
+#                   data=df,
+#                   kind="kde",
+#                   hue="cat",
+#                   alpha=.7)
+
+# g = sns.jointplot(x="pitch",
+#                   y="accuracy",
+#                   data=df,
+#                   kind="kde",
+#                   hue="cat",
+#                   alpha=.7)
+
+# g = sns.jointplot(x="pitch",
+#                   y="diff_cents",
+#                   data=df,
+#                   kind="kde",
+#                   hue="cat",
+#                   alpha=.7)
+
+g = sns.jointplot(x="loudness",
+                  y="diff_cents",
+                  data=df,
+                  kind="kde",
+                  hue="cat",
+                  alpha=.7)
+
+plt.show()

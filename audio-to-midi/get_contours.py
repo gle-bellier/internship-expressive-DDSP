@@ -1,4 +1,3 @@
-from numba.cuda.api import event
 from extract_f0_confidence_loudness import Extractor
 
 import glob
@@ -13,7 +12,7 @@ import numpy as np
 import soundfile as sf
 import matplotlib.pyplot as plt
 import librosa as li
-import seaborn as sns
+#import seaborn as sns
 
 import pandas as pd
 import pretty_midi as pm
@@ -72,7 +71,7 @@ class ContoursGetter:
                 notes_loudness[previous_i] = loudness[previous_i]
 
             if a != b:
-                notes_loudness[a:b] = np.max(loudness[a:b])
+                notes_loudness[a:b] = np.mean(loudness[a:b])
             else:
                 notes_loudness[a] = loudness[a]
 
@@ -240,8 +239,7 @@ class ContoursGetter:
 
 
 if __name__ == '__main__':
-
-    dataset_path = "dataset-article/dataset-midi-wav/"
+    dataset_path = "dataset-midi-wav/"
     filenames = [
         file[len(dataset_path):-4]
         for file in glob.glob(dataset_path + "*.mid")

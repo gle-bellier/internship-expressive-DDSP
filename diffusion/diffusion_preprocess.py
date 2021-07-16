@@ -45,6 +45,26 @@ def pctof(p, c):
     return mtof(m)
 
 
+def onsets_offsets(events):
+    note_on = False
+    onsets, offsets = np.zeros_like(events), np.zeros_like(events)
+    for i in range(len(events)):
+        if events[i] == -1:
+            note_on = False
+            offsets[i] = 1
+
+        elif events[i] == 1:
+            if note_on:
+                offsets[i - 1] = 1
+                onsets[i] = 1
+                note_on = True
+            else:
+                onsets[i] = 1
+                note_on = True
+
+    return onsets, offsets
+
+
 if __name__ == "__main__":
 
     u_f0 = []
@@ -72,6 +92,8 @@ if __name__ == "__main__":
     f0_conf = np.asarray(f0_conf).astype(float)
     events = np.asarray(events).astype(float)
 
+    onsets, offsets = onsets_offsets(events)
+
     # # # data augmentation
 
     e_f0_pitch, e_cents = ftopc(e_f0)
@@ -81,7 +103,8 @@ if __name__ == "__main__":
     u_loudness = np.tile(u_loudness, 3)
     e_loudness = np.tile(e_loudness, 3)
     f0_conf = np.tile(f0_conf, 3)
-    events = np.tile(events, 3)
+    onsets = np.tile(onsets, 3)
+    offsets = np.tile(offsets, 3)
 
     # 1 step above
     e_f0_a = e_f0_pitch + 1
@@ -108,7 +131,8 @@ if __name__ == "__main__":
         "e_f0": e_f0,
         "e_loudness": e_loudness,
         "f0_conf": f0_conf,
-        "events": events
+        "onsets": onsets,
+        "offsets": offsets
     }
 
     with open("dataset/dataset-diffusion.pickle", "wb") as file_out:

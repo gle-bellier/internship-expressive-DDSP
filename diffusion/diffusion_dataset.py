@@ -10,7 +10,7 @@ from random import randint
 
 class DiffusionDataset(Dataset):
     def __init__(self,
-                 path="dataset/dataset-diffusion.pickle",
+                 path="diffusion/dataset-diffusion.pickle",
                  n_sample=2048,
                  n_loudness=30,
                  list_transforms=None):
