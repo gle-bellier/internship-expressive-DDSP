@@ -6,11 +6,12 @@ from torch import nn
 from utils import FiLM, FiLM_RNN, Identity
 from downsampling import DBlock
 from upsampling import UBlock
+from bottleneck import Bottleneck
 
 
 class UNet_Diffusion(pl.LightningModule):
     def __init__(self, down_channels, up_channels, down_dilations,
-                 up_dilations, scalers, ddsp):
+                 up_dilations, scalers):
         super().__init__()
         #self.save_hyperparameters()
         self.down_channels_in = down_channels[:-1]
@@ -26,7 +27,6 @@ class UNet_Diffusion(pl.LightningModule):
         self.top_dilation = up_dilations[-1]
 
         self.scalers = scalers
-        self.ddsp = ddsp
         self.val_idx = 0
 
         first = [True] + [False] * (len(self.down_channels_in) - 1)
@@ -74,11 +74,13 @@ class UNet_Diffusion(pl.LightningModule):
                           dilation=self.top_dilation,
                           last=True)
 
-        self.cat_conv = nn.Conv1d(in_channels=self.down_channels_out[-1] * 2,
-                                  out_channels=self.up_channels_in[0],
-                                  kernel_size=3,
-                                  stride=1,
-                                  padding=1)
+        self.bottleneck_noisy = Bottleneck(
+            in_channels=self.down_channels_out[-1],
+            out_channels=self.up_channels_in[0] // 2)
+
+        self.bottleneck_pitch = Bottleneck(
+            in_channels=self.down_channels_out[-1],
+            out_channels=self.up_channels_in[0] // 2)
 
     def down_sampling(self, list_blocks, x):
         l_out = []
@@ -117,10 +119,12 @@ class UNet_Diffusion(pl.LightningModule):
         l_film_pitch = self.film(self.films_pitch, l_out_pitch, noise_level)
         l_film_noisy = self.film(self.films_noisy, l_out_noisy, noise_level)
 
-        for elt1, elt2 in zip(l_out_pitch, l_film_pitch):
-            print("Out {}, film {}".format(elt1.shape, elt2[0].shape))
+        out_bottleneck_noisy = self.bottleneck_noisy(l_out_noisy[-1])
+        out_bottleneck_pitch = self.bottleneck_pitch(l_out_pitch[-1])
 
-        hiddens = self.cat_hiddens(l_out_pitch[-1], l_out_noisy[-1])
+        hiddens = torch.cat((out_bottleneck_pitch, out_bottleneck_noisy),
+                            dim=1)
+
         out = self.up_sampling(hiddens, l_film_pitch, l_film_noisy)
 
         return out
