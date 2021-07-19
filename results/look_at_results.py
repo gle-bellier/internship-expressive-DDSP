@@ -1,32 +1,49 @@
+import io as io
+import scipy.io.wavfile as wav
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
+import soundfile as sf
 
-number_samples = 20
+#from get_datasets import get_datasets
 
-with open("results.npy", "rb") as f:
-    for i in range(number_samples):
-        try:
-            t = np.load(f)
-            u_f0 = np.load(f)
-            e_f0 = np.load(f)
-            out_f0 = np.load(f)
-            u_loudness = np.load(f)
-            e_loudness = np.load(f)
-            out_loudness = np.load(f)
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
+print('using', device)
 
-            fig, (ax1, ax2) = plt.subplots(2, 1)
+path = "results/diffusion/data/results.pickle"
+number_of_examples = 3
+# get data
 
-            ax1.plot(t, out_f0, label="Model")
-            ax1.plot(t, u_f0, label="Midi")
-            ax1.plot(t, e_f0, label="Performance")
-            ax1.legend()
+with open(path, "rb") as dataset:
+    dataset = pickle.load(dataset)
 
-            # ax2.plot(t, out_loudness, label = "Model")
-            # ax2.plot(t, u_loudness, label = "Midi")
-            # ax2.plot(t, e_loudness, label = "Performance")
-            # ax2.legend()
+ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-            plt.legend()
-            plt.show()
-        except:
-            break
+# Initialize data :
+
+n_sample = 2048
+
+for i in range(number_of_examples):
+    u_f0 = dataset["u_f0"][i:i + n_sample]
+    e_f0 = dataset["e_f0"][i:i + n_sample]
+    pred_f0 = dataset["pred_f0"][i:i + n_sample]
+
+    u_lo = dataset["u_lo"][i:i + n_sample]
+    e_lo = dataset["e_lo"][i:i + n_sample]
+    pred_lo = dataset["pred_lo"][i:i + n_sample]
+
+    plt.plot(u_f0)
+    plt.plot(e_f0)
+    plt.plot(pred_f0)
+
+    plt.show()
+
+    plt.plot(u_lo)
+    plt.plot(e_lo)
+    plt.plot(pred_lo)
+
+    plt.show()
