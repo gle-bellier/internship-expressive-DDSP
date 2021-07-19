@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import soundfile as sf
 
 #from get_datasets import get_datasets
 
@@ -13,32 +14,8 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-import argparse
-import os
-
-path = os.path.abspath('../dataset/contours.csv')
-
-parser = argparse.ArgumentParser(
-    description="Create wav file from results data")
-parser.add_argument("Path",
-                    metavar="PATH",
-                    type=str,
-                    help="path to the results data")
-parser.add_argument("Number",
-                    metavar="Number of examples whished",
-                    type=int,
-                    help="Number of examples to compute")
-
-args = parser.parse_args()
-
-model_path = args.Path
-number_of_examples = args.Number
-print(model_path)
-print(number_of_examples)
-
-if not os.path.isfile(model_path):
-    print('The file specified does not exist')
-
+path = "results/diffusion/data/results.pickle"
+number_of_examples = 3
 # get data
 
 with open(path, "rb") as dataset:
@@ -74,13 +51,13 @@ for i in range(number_of_examples):
     onsets = torch.from_numpy(onsets).reshape(1, -1, 1).float()
     offsets = torch.from_numpy(offsets).reshape(1, -1, 1).float()
 
-    midi = ddsp(u_f0, u_lo).reshape(-1).numpy()
-    target = ddsp(e_f0, e_lo).reshape(-1).numpy()
-    pred = ddsp(pred_f0, pred_lo).reshape(-1).numpy()
+    midi = ddsp(u_f0, u_lo).reshape(-1).detach().numpy()
+    target = ddsp(e_f0, e_lo).reshape(-1).detach().numpy()
+    pred = ddsp(pred_f0, pred_lo).reshape(-1).detach().numpy()
 
-    sf.write("results/diffusion/samples/sample{}-pred.wav".format(i), pred,
+    save_path = "/".join(path.split("/")[:2])
+
+    sf.write(save_path + "/samples/sample{}-pred.wav".format(i), pred, 16000)
+    sf.write(save_path + "/samples/sample{}-midi.wav".format(i), midi, 16000)
+    sf.write(save_path + "/samples/sample{}-resynth.wav".format(i), target,
              16000)
-    sf.write("results/diffusion/samples/sample{}-midi.wav".format(i), midi,
-             16000)
-    sf.write("results/diffusion/samples/sample{}-resynth.wav".format(i),
-             target, 16000)
