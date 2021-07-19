@@ -28,17 +28,17 @@ ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 n_sample = 2048
 
 for i in range(number_of_examples):
-    i *= n_sample
-    u_f0 = dataset["u_f0"][i:i + n_sample]
-    e_f0 = dataset["e_f0"][i:i + n_sample]
-    pred_f0 = dataset["pred_f0"][i:i + n_sample]
+    idx = i * n_sample
+    u_f0 = dataset["u_f0"][idx:idx + n_sample]
+    e_f0 = dataset["e_f0"][idx:idx + n_sample]
+    pred_f0 = dataset["pred_f0"][idx:idx + n_sample]
 
-    u_lo = dataset["u_lo"][i:i + n_sample]
-    e_lo = dataset["e_lo"][i:i + n_sample]
-    pred_lo = dataset["pred_lo"][i:i + n_sample]
+    u_lo = dataset["u_lo"][idx:idx + n_sample]
+    e_lo = dataset["e_lo"][idx:idx + n_sample]
+    pred_lo = dataset["pred_lo"][idx:idx + n_sample]
 
-    onsets = dataset["onsets"][i:i + n_sample]
-    offsets = dataset["offsets"][i:i + n_sample]
+    onsets = dataset["onsets"][idx:idx + n_sample]
+    offsets = dataset["offsets"][idx:idx + n_sample]
 
     u_f0 = torch.from_numpy(u_f0).reshape(1, -1, 1).float()
     u_lo = torch.from_numpy(u_lo).reshape(1, -1, 1).float()
