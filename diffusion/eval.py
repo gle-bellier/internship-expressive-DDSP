@@ -160,14 +160,8 @@ for i in range(N_EXAMPLE):
     out = model.sample(midi.unsqueeze(0), midi.unsqueeze(0))
     f0, lo = model.post_process(out)
 
-    midi_f0 = midi[..., 0].numpy()
-    midi_lo = midi[..., 1].numpy()
-
-    target_f0 = target[..., 0].numpy()
-    target_lo = target[..., 1].numpy()
-
-    #audio = model.ddsp(pred_f0, pred_lo).reshape(-1).numpy()
-    #sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
+    midi_f0, midi_lo = model.post_process(midi)
+    target_f0, target_lo = model.post_process(target)
 
     # add to results:
 
