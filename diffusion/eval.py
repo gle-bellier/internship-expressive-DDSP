@@ -131,43 +131,58 @@ list_transforms = [
 PATH = "dataset/dataset-diffusion.pickle"
 dataset = DataLoader(PATH, list_transforms=list_transforms)
 
-import matplotlib.pyplot as plt
+model = Network.load_from_checkpoint(
+    "logs/diffusion/default/version_2/checkpoints/epoch=19686-step=157495.ckpt",
+    strict=False).eval()
 
-for i in range(2):
+model.set_noise_schedule()
+model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+
+# Initialize data :
+
+u_f0 = np.empty()
+u_lo = np.empty()
+e_f0 = np.empty()
+e_lo = np.empty()
+pred_f0 = np.empty()
+pred_lo = np.empty()
+u_f0 = np.empty()
+
+N_EXAMPLE = 5
+for i in range(N_EXAMPLE):
     target, midi, onsets, offsets = dataset.get()
 
-    plt.plot(target[:, 0])
-    plt.plot(midi[:, 0])
-    plt.show()
+    midi = midi.unsqueeze(0)
 
-    plt.plot(target[:, 1])
-    plt.plot(midi[:, 1])
-    plt.show()
+    n_step = 10
+    out = model.sample(midi, midi)
+    f0, lo = model.post_process(out)
 
-    plt.plot(target[:, 0])
-    plt.plot(onsets)
-    plt.plot(offsets)
-    plt.show()
+    f0 = pred_f0.float()
+    lo = pred_lo.float()
 
-# model = Network.load_from_checkpoint(
-#     "logs/diffusion/default/version_2/checkpoints/epoch=19686-step=157495.ckpt",
-#     strict=False).eval()
+    midi_f0 = midi[..., 0]
+    midi_lo = midi[..., 1]
 
-# model.set_noise_schedule()
-# model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    target_f0 = target[..., 0]
+    target_lo = target[..., 1]
+    print(f0.shape)
+    print(midi_f0.shape)
+    print(target_f0.shape)
 
-# N_EXAMPLE = 5
-# for i in range(N_EXAMPLE):
-#     _, midi = dataset[randint(0, len(dataset))]
+    #audio = model.ddsp(pred_f0, pred_lo).reshape(-1).numpy()
+    #sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
 
-#     midi = midi.unsqueeze(0)
+out = {
+    "u_f0": u_f0,
+    "u_lo": u_lo,
+    "e_f0": e_f0,
+    "e_lo": e_lo,
+    "pred_f0": pred_f0,
+    "pred_lo": pred_lo,
+    "onsets": onsets,
+    "offsets": offsets
+}
 
-#     n_step = 10
-#     out = model.sample(midi, midi)
-#     f0, lo = model.post_process(out)
-
-#     f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-#     lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
-
-#     audio = ddsp(f0, lo).reshape(-1).numpy()
-#     sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
+with open("dataset/dataset-diffusion.pickle", "wb") as file_out:
+    pickle.dump(out, file_out)
