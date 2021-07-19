@@ -100,6 +100,7 @@ class DataLoader:
         e_f0 = torch.from_numpy(e_f0).float()
         e_l0 = torch.from_numpy(e_l0).float()
         onsets = torch.from_numpy(onsets).float()
+        offsets = torch.from_numpy(offsets).float()
 
         u_l0 = self.get_quantized_loudness(e_l0, onsets, offsets)
 
@@ -140,38 +141,44 @@ model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 # Initialize data :
 
-u_f0 = np.empty()
-u_lo = np.empty()
-e_f0 = np.empty()
-e_lo = np.empty()
-pred_f0 = np.empty()
-pred_lo = np.empty()
-u_f0 = np.empty()
+u_f0 = np.empty(0)
+u_lo = np.empty(0)
+e_f0 = np.empty(0)
+e_lo = np.empty(0)
+pred_f0 = np.empty(0)
+pred_lo = np.empty(0)
+onsets = np.empty(0)
+offsets = np.empty(0)
+
+# Prediction loops :
 
 N_EXAMPLE = 5
 for i in range(N_EXAMPLE):
-    target, midi, onsets, offsets = dataset.get()
-
-    midi = midi.unsqueeze(0)
+    target, midi, ons, offs = dataset.get()
 
     n_step = 10
-    out = model.sample(midi, midi)
+    out = model.sample(midi.unsqueeze(0), midi.unsqueeze(0))
     f0, lo = model.post_process(out)
 
-    f0 = pred_f0.float()
-    lo = pred_lo.float()
+    midi_f0 = midi[..., 0].numpy()
+    midi_lo = midi[..., 1].numpy()
 
-    midi_f0 = midi[..., 0]
-    midi_lo = midi[..., 1]
-
-    target_f0 = target[..., 0]
-    target_lo = target[..., 1]
-    print(f0.shape)
-    print(midi_f0.shape)
-    print(target_f0.shape)
+    target_f0 = target[..., 0].numpy()
+    target_lo = target[..., 1].numpy()
 
     #audio = model.ddsp(pred_f0, pred_lo).reshape(-1).numpy()
     #sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
+
+    # add to results:
+
+    u_f0 = np.concatenate((u_f0, midi_f0))
+    u_lo = np.concatenate((u_lo, midi_lo))
+
+    e_f0 = np.concatenate((e_f0, target_f0))
+    e_lo = np.concatenate((e_lo, target_lo))
+
+    pred_f0 = np.concatenate((pred_f0, f0))
+    pred_lo = np.concatenate((pred_lo, lo))
 
 out = {
     "u_f0": u_f0,
@@ -184,5 +191,5 @@ out = {
     "offsets": offsets
 }
 
-with open("dataset/dataset-diffusion.pickle", "wb") as file_out:
+with open("results/diffusion/data/results.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
