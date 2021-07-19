@@ -2,7 +2,6 @@ import torch
 
 torch.set_grad_enabled(False)
 from training import Network
-#import matplotlib.pyplot as plt
 import soundfile as sf
 
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -60,7 +59,10 @@ class DataLoader:
         return out
 
     def get_quantized_loudness(self, e_l0, onsets, offsets):
+        #compute sum of all events :
         e = torch.abs(onsets + offsets)
+        e = torch.tensor(
+            [e[i] if e[i + 1] != 1 else 0 for i in range(len(e) - 1)])
         u_l0 = torch.zeros_like(e_l0)
 
         # get indexes of events
@@ -76,8 +78,8 @@ class DataLoader:
     def __len__(self):
         return self.N // self.n_sample
 
-    def _get(self):
-        i = self.idx * self.sample
+    def get(self):
+        i = self.idx * self.n_sample
         # update counter
         self.idx += 1
 
@@ -126,33 +128,46 @@ list_transforms = [
     (QuantileTransformer, 30),
 ]
 
-dataset = DiffusionDataset(list_transforms=list_transforms)
-val_len = len(dataset) // 20
-train_len = len(dataset) - val_len
+PATH = "dataset/dataset-diffusion.pickle"
+dataset = DataLoader(PATH, list_transforms=list_transforms)
 
-train, val = random_split(dataset, [train_len, val_len])
+import matplotlib.pyplot as plt
 
-# load data :
+for i in range(2):
+    target, midi, onsets, offsets = dataset.get()
 
-model = Network.load_from_checkpoint(
-    "logs/diffusion/default/version_2/checkpoints/epoch=19686-step=157495.ckpt",
-    strict=False).eval()
+    plt.plot(target[:, 0])
+    plt.plot(midi[:, 0])
+    plt.show()
 
-model.set_noise_schedule()
-model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    plt.plot(target[:, 1])
+    plt.plot(midi[:, 1])
+    plt.show()
 
-N_EXAMPLE = 5
-for i in range(N_EXAMPLE):
-    _, midi = dataset[randint(0, len(dataset))]
+    plt.plot(target[:, 0])
+    plt.plot(onsets)
+    plt.plot(offsets)
+    plt.show()
 
-    midi = midi.unsqueeze(0)
+# model = Network.load_from_checkpoint(
+#     "logs/diffusion/default/version_2/checkpoints/epoch=19686-step=157495.ckpt",
+#     strict=False).eval()
 
-    n_step = 10
-    out = model.sample(midi, midi)
-    f0, lo = model.post_process(out)
+# model.set_noise_schedule()
+# model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-    f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-    lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+# N_EXAMPLE = 5
+# for i in range(N_EXAMPLE):
+#     _, midi = dataset[randint(0, len(dataset))]
 
-    audio = ddsp(f0, lo).reshape(-1).numpy()
-    sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
+#     midi = midi.unsqueeze(0)
+
+#     n_step = 10
+#     out = model.sample(midi, midi)
+#     f0, lo = model.post_process(out)
+
+#     f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
+#     lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+
+#     audio = ddsp(f0, lo).reshape(-1).numpy()
+#     sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
