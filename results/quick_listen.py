@@ -28,6 +28,7 @@ ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 n_sample = 2048
 
 for i in range(number_of_examples):
+    i *= n_sample
     u_f0 = dataset["u_f0"][i:i + n_sample]
     e_f0 = dataset["e_f0"][i:i + n_sample]
     pred_f0 = dataset["pred_f0"][i:i + n_sample]
