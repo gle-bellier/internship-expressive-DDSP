@@ -100,11 +100,65 @@ class Analyzer:
 
         return midi, target
 
+    def get_all_transitions(self):
+        trans, frames = self.get_trans_frames()
+        transitions = self.get_onsets(trans)
+
+        midi = []
+        target = []
+
+        for t in transitions:
+            trans_midi = {
+                "start": None,
+                "end": None,
+                "d_f0": None,
+                "d_lo": None,
+                "diff_cents": None,
+            }
+            trans_target = {
+                "start": None,
+                "end": None,
+                "d_f0": None,
+                "d_lo": None,
+                "diff_cents": None,
+            }
+
+            # Set onsets
+            trans_midi["start"], trans_midi["end"] = t["start"], t["end"]
+            trans_target["start"], trans_target["end"] = t["start"], t["end"]
+
+            # MIDI
+            trans_midi["d_f0"] = self.u_f0[trans_midi["end"]] - self.u_f0[
+                trans_midi["start"]]
+            trans_midi["d_lo"] = self.u_lo[trans_midi["end"]] - self.u_lo[
+                trans_midi["start"]]
+
+            # Performance
+
+            trans_target["d_f0"] = self.e_f0[trans_target["end"]] - self.e_f0[
+                trans_target["start"]]
+            trans_target["d_lo"] = self.e_lo[trans_target["end"]] - self.e_lo[
+                trans_target["start"]]
+
+            # Compute accuracy
+
+            d_cents = self.score_pitch(
+                self.e_f0[trans_target["start"]:trans_target["end"]],
+                self.u_f0[trans_target["start"]:trans_target["end"]])
+
+            trans_midi["diff_cents"] = d_cents
+            trans_target["diff_cents"] = d_cents
+
+            midi.append(trans_midi)
+            target.append(trans_target)
+
+        return midi, target
+
     def accuracy(self, pitch, f0):
         d_cents = 1200 * torch.log2(torch.abs(pitch / f0))
         return d_cents, d_cents < 50
 
-    def get_f0_l0_df(self):
+    def get_notes_df(self):
         pitch = []
         loudness = []
         cat = []
@@ -132,6 +186,34 @@ class Analyzer:
             "diff_cents": pd.Series(diff_cents, dtype="float32"),
             "accuracy": pd.Series(accuracy, dtype="bool"),
             "cat": pd.Categorical(cat),
+        })
+
+        return df
+
+    def get_transitions_df(self):
+        d_f0 = []
+        d_lo = []
+        diff_cents = []
+        cat = []
+        midi, target = self.get_all_transitions()
+
+        for note in midi:
+            d_f0 += [note["d_f0"]]
+            d_lo += [note["d_lo"]]
+            diff_cents += [note["diff_cents"]]
+            cat += ["midi"]
+
+        for note in target:
+            d_f0 += [note["d_f0"]]
+            d_lo += [note["d_lo"]]
+            diff_cents += [note["diff_cents"]]
+            cat += ["target"]
+
+        df = pd.DataFrame({
+            "d_f0": pd.Series(d_f0, dtype="float32"),
+            "d_lo": pd.Series(d_lo, dtype="float32"),
+            "diff_cents": pd.Series(diff_cents, dtype="float32"),
+            "cat": pd.Categorical(cat)
         })
 
         return df
@@ -181,7 +263,7 @@ analyzer = Analyzer(path)
 # trans, frames = analyzer.get_trans_frames()
 # midi, target = analyzer.get_all_notes()
 
-df = analyzer.get_f0_l0_df()
+df = analyzer.get_transitions_df()
 print(df.dtypes)
 
 # sns.set_theme(style="darkgrid")
@@ -207,7 +289,14 @@ print(df.dtypes)
 #                   hue="cat",
 #                   alpha=.7)
 
-g = sns.jointplot(x="loudness",
+# g = sns.jointplot(x="loudness",
+#                   y="diff_cents",
+#                   data=df,
+#                   kind="kde",
+#                   hue="cat",
+#                   alpha=.7)
+
+g = sns.jointplot(x="d_f0",
                   y="diff_cents",
                   data=df,
                   kind="kde",
