@@ -89,8 +89,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
         device = next(iter(self.parameters())).device
 
-        out = self.partial_denoising(cdt, cdt, 30)
-
+        out = self.sample(cdt, cdt)
         f0, lo = out[0].split(1, -1)
 
         plt.plot(f0.cpu())
@@ -159,11 +158,11 @@ if __name__ == "__main__":
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 8, 16, 64, 128, 256]
-    up_channels = [256, 128, 64, 16, 8, 4,
+    down_channels = [2, 8, 64, 128, 256]
+    up_channels = [256, 128, 64, 16, 8,
                    2]  # one more : last up_block without film
-    down_dilations = [1, 1, 2, 4, 2, 4]
-    up_dilations = [1, 1, 3, 3, 3, 9, 9]
+    down_dilations = [1, 1, 2, 4, 4]
+    up_dilations = [1, 1, 3, 3, 9, 9]
 
     model = Network(scalers=dataset.scalers,
                     down_channels=down_channels,

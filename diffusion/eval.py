@@ -1,8 +1,7 @@
 import torch
 
 torch.set_grad_enabled(False)
-from diffusion import DiffusionModel
-from diffusion_model import UNet_Diffusion
+from training import Network
 #import matplotlib.pyplot as plt
 import soundfile as sf
 
@@ -27,19 +26,16 @@ train_len = len(dataset) - val_len
 
 train, val = random_split(dataset, [train_len, val_len])
 
-down_channels = [2, 16, 256, 512, 1024]
-up_channels = [1024, 512, 256, 16, 2]
+# down_channels = [2, 16, 256, 512, 1024]
+# up_channels = [1024, 512, 256, 16, 2]
 ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-model = UNet_Diffusion.load_from_checkpoint(
-    "diffusion/lightning_logs/version_3/checkpoints/epoch=3739-step=56099.ckpt",
-    scalers=dataset.scalers,
-    down_channels=down_channels,
-    up_channels=up_channels,
-    ddsp=ddsp,
+model = Network.load_from_checkpoint(
+    "logs/diffusion/default/version_2/checkpoints/epoch=19686-step=157495.ckpt",
     strict=False).eval()
 
 model.set_noise_schedule()
+model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 N_EXAMPLE = 5
 for i in range(N_EXAMPLE):
@@ -48,7 +44,7 @@ for i in range(N_EXAMPLE):
     midi = midi.unsqueeze(0)
 
     n_step = 10
-    out = model.partial_denoising(midi, midi, 10)
+    out = model.sample(midi, midi)
     f0, lo = model.post_process(out)
 
     f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
