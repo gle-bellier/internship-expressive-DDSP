@@ -57,8 +57,10 @@ class DiffusionDataset(Dataset):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
 
-    def get_quantized_loudness(self, e_l0, events):
-        e = torch.abs(events)
+    def get_quantized_loudness(self, e_l0, onsets, offsets):
+        e = torch.abs(onsets + offsets)
+        e = torch.tensor(
+            [e[i] if e[i + 1] != 1 else 0 for i in range(len(e) - 1)])
         u_l0 = torch.zeros_like(e_l0)
 
         # get indexes of events
@@ -86,7 +88,8 @@ class DiffusionDataset(Dataset):
         u_f0 = self.dataset["u_f0"][idx:idx + self.n_sample]
         e_f0 = self.dataset["e_f0"][idx:idx + self.n_sample]
         e_l0 = self.dataset["e_loudness"][idx:idx + self.n_sample]
-        events = self.dataset["events"][idx:idx + self.n_sample]
+        onsets = self.dataset["onsets"][idx:idx + self.n_sample]
+        offsets = self.dataset["offsets"][idx:idx + self.n_sample]
 
         # Apply transforms :
 
@@ -97,9 +100,10 @@ class DiffusionDataset(Dataset):
         u_f0 = torch.from_numpy(u_f0).float()
         e_f0 = torch.from_numpy(e_f0).float()
         e_l0 = torch.from_numpy(e_l0).float()
-        events = torch.from_numpy(events).float()
+        onsets = torch.from_numpy(onsets).float()
+        offsets = torch.from_numpy(offsets).float()
 
-        u_l0 = self.get_quantized_loudness(e_l0, events)
+        u_l0 = self.get_quantized_loudness(e_l0, onsets, offsets)
 
         # Change ranges from [0, 1] -> [-1, 1]
 
