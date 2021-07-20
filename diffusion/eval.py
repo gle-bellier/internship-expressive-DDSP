@@ -58,6 +58,19 @@ class DataLoader:
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
 
+    def inverse_transform(self, out):
+        out = out / 2 + .5
+
+        f0, l0 = torch.split(out, 1, -1)
+        f0 = f0.reshape(-1, 1).cpu().numpy()
+        l0 = l0.reshape(-1, 1).cpu().numpy()
+
+        # Inverse transforms
+        f0 = self.scalers[0].inverse_transform(f0).reshape(-1)
+        l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
+
+        return f0, l0
+
     def get_quantized_loudness(self, e_l0, onsets, offsets):
         #compute sum of all events :
         e = torch.abs(onsets + offsets)
@@ -158,10 +171,10 @@ for i in range(N_EXAMPLE):
 
     n_step = 10
     out = model.sample(midi.unsqueeze(0), midi.unsqueeze(0))
-    f0, lo = model.post_process(out)
 
-    midi_f0, midi_lo = model.post_process(midi)
-    target_f0, target_lo = model.post_process(target)
+    f0, lo = dataset.inverse_transform(out)
+    midi_f0, midi_lo = dataset.inverse_transform(midi)
+    target_f0, target_lo = dataset.inverse_transform(target)
 
     # add to results:
 
