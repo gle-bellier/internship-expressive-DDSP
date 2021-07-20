@@ -172,10 +172,9 @@ for i in range(N_EXAMPLE):
     n_step = 10
     out = model.sample(midi.unsqueeze(0), midi.unsqueeze(0))
 
-    #f0, lo = model.post_process(out)
-    # f0, lo = dataset.inverse_transform(out)
-    # midi_f0, midi_lo = dataset.inverse_transform(midi)
-    # target_f0, target_lo = dataset.inverse_transform(target)
+    f0, lo = dataset.inverse_transform(out)
+    midi_f0, midi_lo = dataset.inverse_transform(midi)
+    target_f0, target_lo = dataset.inverse_transform(target)
 
     # add to results:
 
@@ -203,5 +202,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/diffusion/data/results-raw.pickle", "wb") as file_out:
+with open("results/diffusion/data/results.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
