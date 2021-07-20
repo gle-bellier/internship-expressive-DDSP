@@ -173,20 +173,24 @@ for i in range(N_EXAMPLE):
     out = model.sample(midi.unsqueeze(0), midi.unsqueeze(0))
 
     #f0, lo = model.post_process(out)
-    f0, lo = dataset.inverse_transform(out)
-    midi_f0, midi_lo = dataset.inverse_transform(midi)
-    target_f0, target_lo = dataset.inverse_transform(target)
+    # f0, lo = dataset.inverse_transform(out)
+    # midi_f0, midi_lo = dataset.inverse_transform(midi)
+    # target_f0, target_lo = dataset.inverse_transform(target)
 
     # add to results:
 
-    u_f0 = np.concatenate((u_f0, midi_f0))
-    u_lo = np.concatenate((u_lo, midi_lo))
+    f0, lo = out.split(1, -1)
+    midi_f0, midi_lo = midi.split(1, -1)
+    target_f0, target_lo = target.split(1, -1)
 
-    e_f0 = np.concatenate((e_f0, target_f0))
-    e_lo = np.concatenate((e_lo, target_lo))
+    u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
+    u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
 
-    pred_f0 = np.concatenate((pred_f0, f0))
-    pred_lo = np.concatenate((pred_lo, lo))
+    e_f0 = np.concatenate((e_f0, target_f0.squeeze()))
+    e_lo = np.concatenate((e_lo, target_lo.squeeze()))
+
+    pred_f0 = np.concatenate((pred_f0, f0.squeeze()))
+    pred_lo = np.concatenate((pred_lo, lo.squeeze()))
 
 out = {
     "u_f0": u_f0,
@@ -199,5 +203,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/diffusion/data/results.pickle", "wb") as file_out:
+with open("results/diffusion/data/results-raw.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
