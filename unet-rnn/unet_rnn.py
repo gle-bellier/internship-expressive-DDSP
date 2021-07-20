@@ -89,9 +89,9 @@ class UBlock(nn.Module):
 
 
 class UNet_RNN(pl.LightningModule):
-    def __init__(self, channels, scalers, ddsp):
+    def __init__(self, channels, scalers, None):
         super().__init__()
-        #self.save_hyperparameters()
+        self.save_hyperparameters()
 
         down_channels = channels
         up_channels = channels[::-1]
@@ -103,7 +103,7 @@ class UNet_RNN(pl.LightningModule):
         self.up_channels_out = up_channels[1:]
 
         self.scalers = scalers
-        self.ddsp = ddsp
+        self.ddsp = None
         self.val_idx = 0
 
         self.down_blocks = nn.ModuleList([
@@ -241,11 +241,10 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     down_channels = [2, 16, 512, 1024]
-    ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-    model = UNet_RNN(scalers=dataset.scalers,
-                     channels=down_channels,
-                     ddsp=ddsp)
+    model = UNet_RNN(scalers=dataset.scalers, channels=down_channels)
+
+    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
     tb_logger = pl_loggers.TensorBoardLogger('logs/unet-rnn/')
 
     trainer = pl.Trainer(

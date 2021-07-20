@@ -83,9 +83,9 @@ class UBlock(nn.Module):
 
 
 class UNet(pl.LightningModule):
-    def __init__(self, channels, scalers, ddsp):
+    def __init__(self, channels, scalers):
         super().__init__()
-        #self.save_hyperparameters()
+        self.save_hyperparameters()
 
         down_channels = channels
         up_channels = channels[::-1]
@@ -97,7 +97,7 @@ class UNet(pl.LightningModule):
         self.up_channels_out = up_channels[1:]
 
         self.scalers = scalers
-        self.ddsp = ddsp
+        self.ddsp = None
         self.val_idx = 0
 
         self.down_blocks = nn.ModuleList([
