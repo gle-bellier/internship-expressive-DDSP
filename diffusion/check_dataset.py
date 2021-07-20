@@ -11,11 +11,11 @@ from utils import *
 if __name__ == "__main__":
 
     list_transforms = [
-        (MinMaxScaler, ),
+        (QuantileTransformer, 100),
         (QuantileTransformer, 30),
     ]
 
-    dataset = DiffusionDataset(list_transforms=list_transforms)
+    dataset = DiffusionDataset(list_transforms=list_transforms, n_sample=20048)
 
     for i in range(2):
         model_input, cdt = dataset[i]

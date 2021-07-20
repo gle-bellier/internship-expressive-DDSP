@@ -22,13 +22,15 @@ class DiffusionDataset(Dataset):
         self.N = len(dataset["u_f0"])
         self.n_sample = n_sample
         self.n_loudness = n_loudness
-        if list_transforms is None:
-            self.list_transforms = [(StandardScaler, ),
-                                    (QuantileTransformer, 30)]
-        else:
-            self.list_transforms = list_transforms
+        self.list_transforms = list_transforms
 
         self.scalers = self.fit_transforms()
+
+    def mtof(self, m):
+        return 440 * 2**((m - 69) / 12)
+
+    def ftom(self, f):
+        return 12 * np.log2(f / 440) + 69
 
     def fit_transforms(self):
         scalers = []
@@ -37,6 +39,10 @@ class DiffusionDataset(Dataset):
 
         cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
         contour = cat.reshape(-1, 1)
+        contour = self.ftom(contour)
+
+        # go log scale :
+
         transform = self.list_transforms[0]
         sc = transform[0]
         sc = sc(*transform[1:]).fit(contour)
@@ -90,6 +96,11 @@ class DiffusionDataset(Dataset):
         e_l0 = self.dataset["e_loudness"][idx:idx + self.n_sample]
         onsets = self.dataset["onsets"][idx:idx + self.n_sample]
         offsets = self.dataset["offsets"][idx:idx + self.n_sample]
+
+        # Go log scale
+
+        u_f0 = self.ftom(u_f0)
+        e_f0 = self.ftom(e_f0)
 
         # Apply transforms :
 
