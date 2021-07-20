@@ -147,7 +147,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/quantile/')
 
     trainer = pl.Trainer(
         gpus=1,
@@ -155,7 +155,7 @@ if __name__ == "__main__":
         max_epochs=100000,
         logger=tb_logger)
     list_transforms = [
-        (MinMaxScaler, ),
+        (QuantileTransformer, 100),
         (QuantileTransformer, 30),
     ]
 
