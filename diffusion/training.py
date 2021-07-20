@@ -62,6 +62,9 @@ class Network(pl.LightningModule, DiffusionModel):
         # returns cdt for validation end epoch
         return cdt
 
+    def mtof(self, m):
+        return 440 * 2**((m - 69) / 12)
+
     def post_process(self, out):
 
         # change range [-1, 1] -> [0, 1]
@@ -75,6 +78,7 @@ class Network(pl.LightningModule, DiffusionModel):
         f0 = self.scalers[0].inverse_transform(f0).reshape(-1)
         l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
 
+        f0 = self.mtof(f0)
         return f0, l0
 
     def validation_epoch_end(self, cdt):
