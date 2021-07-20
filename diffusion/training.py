@@ -92,8 +92,12 @@ class Network(pl.LightningModule, DiffusionModel):
         out = self.sample(cdt, cdt)
         f0, lo = out[0].split(1, -1)
 
+        midi_f0, midi_lo = cdt[0].split(1, -1)
+
+        plt.plot(midi_f0.cpu())
         plt.plot(f0.cpu())
         self.logger.experiment.add_figure("pitch RAW", plt.gcf(), self.val_idx)
+        plt.plot(midi_lo.cpu())
         plt.plot(lo.cpu())
         self.logger.experiment.add_figure("loudness RAW", plt.gcf(),
                                           self.val_idx)
@@ -101,9 +105,12 @@ class Network(pl.LightningModule, DiffusionModel):
         # select first elt :
 
         f0, lo = self.post_process(out[0])
+        midi_f0, midi_lo = self.post_process(cdt[0])
 
+        plt.plot(midi_f0)
         plt.plot(f0)
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
+        plt.plot(midi_lo)
         plt.plot(lo)
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
