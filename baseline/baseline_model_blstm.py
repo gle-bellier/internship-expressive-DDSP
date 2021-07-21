@@ -30,11 +30,11 @@ class LinearBlock(nn.Module):
 
 
 class Model(pl.LightningModule):
-    def __init__(self, in_size, hidden_size, out_size, scalers, ddsp):
+    def __init__(self, in_size, hidden_size, out_size, scalers):
         super().__init__()
-        # self.save_hyperparameters()
+        self.save_hyperparameters()
         self.scalers = scalers
-        self.ddsp = ddsp
+        self.ddsp = None
         self.val_idx = 0
         self.lr = nn.LeakyReLU()
 
@@ -238,13 +238,13 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     down_channels = [2, 16, 512, 1024]
-    ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     model = Model(in_size=472,
                   hidden_size=512,
                   out_size=221,
-                  scalers=dataset.scalers,
-                  ddsp=ddsp)
+                  scalers=dataset.scalers)
+
+    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/blstm/')
     trainer = pl.Trainer(
