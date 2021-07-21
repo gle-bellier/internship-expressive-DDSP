@@ -3,6 +3,7 @@ import scipy.io.wavfile as wav
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import pickle
 import soundfile as sf
 
@@ -15,7 +16,6 @@ else:
 print('using', device)
 
 path = "results/diffusion/data/result.pickle"
-number_of_examples = 3
 # get data
 
 with open(path, "rb") as dataset:
@@ -27,24 +27,15 @@ ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 n_sample = 2048
 
-for i in range(number_of_examples):
-    i *= n_sample
-    u_f0 = dataset["u_f0"][i:i + n_sample]
-    e_f0 = dataset["e_f0"][i:i + n_sample]
-    pred_f0 = dataset["pred_f0"][i:i + n_sample]
+u_f0 = dataset["u_f0"]
+e_f0 = dataset["e_f0"]
+pred_f0 = dataset["pred_f0"]
 
-    u_lo = dataset["u_lo"][i:i + n_sample]
-    e_lo = dataset["e_lo"][i:i + n_sample]
-    pred_lo = dataset["pred_lo"][i:i + n_sample]
+u_lo = dataset["u_lo"]
+e_lo = dataset["e_lo"]
+pred_lo = dataset["pred_lo"]
 
-    plt.plot(u_f0)
-    plt.plot(e_f0)
-    plt.plot(pred_f0)
+shift = pred_f0 - u_f0
 
-    plt.show()
-
-    plt.plot(u_lo)
-    plt.plot(e_lo)
-    plt.plot(pred_lo)
-
-    plt.show()
+sns.displot(shift)
+plt.show()
