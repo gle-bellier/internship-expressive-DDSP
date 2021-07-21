@@ -58,6 +58,19 @@ class Baseline_Dataset(Dataset):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
 
+    def post_processing(self, p, c, lo):
+
+        p = torch.argmax(p, -1, keepdim=True) / 127
+        c = torch.argmax(c, -1, keepdim=True) / 100
+        lo = torch.argmax(lo, -1, keepdim=True) / 120
+
+        p = self.scalers[0].inverse_transform(p).reshape(-1)
+        lo = self.scalers[1].inverse_transform(lo).reshape(-1)
+        c = self.scalers[2].inverse_transform(c).reshape(-1)
+
+        f0 = pctof(p, c)
+        return f0, lo
+
     def get_quantized_loudness(self, e_l0, onsets, offsets):
         events = onsets + offsets
         e = torch.abs(events)
