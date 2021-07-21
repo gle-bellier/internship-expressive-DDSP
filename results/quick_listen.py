@@ -15,7 +15,7 @@ else:
 print('using', device)
 
 path = "results/diffusion/data/results.pickle"
-number_of_examples = 3
+number_of_examples = 5
 # get data
 
 with open(path, "rb") as dataset:
