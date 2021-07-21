@@ -56,9 +56,9 @@ for i in range(N_EXAMPLE):
 
     # add to results:
 
-    f0, lo = out.split(1, -1)
-    midi_f0, midi_lo = midi.split(1, -1)
-    target_f0, target_lo = target.split(1, -1)
+    # f0, lo = out.split(1, -1)
+    # midi_f0, midi_lo = midi.split(1, -1)
+    # target_f0, target_lo = target.split(1, -1)
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
     u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
