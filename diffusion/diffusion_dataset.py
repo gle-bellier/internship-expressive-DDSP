@@ -13,7 +13,8 @@ class DiffusionDataset(Dataset):
                  path="dataset/dataset-diffusion.pickle",
                  n_sample=2048,
                  n_loudness=30,
-                 list_transforms=None):
+                 list_transforms=None,
+                 eval=False):
 
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
@@ -39,9 +40,9 @@ class DiffusionDataset(Dataset):
 
         cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
         contour = cat.reshape(-1, 1)
-        contour = self.ftom(contour)
 
         # go log scale :
+        contour = self.ftom(contour)
 
         transform = self.list_transforms[0]
         sc = transform[0]
@@ -62,6 +63,21 @@ class DiffusionDataset(Dataset):
     def apply_transform(self, x, scaler):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
+
+    def inverse_transform(self, x):
+        # change range [-1, 1] -> [0, 1]
+        x = x / 2 + .5
+
+        f0, l0 = torch.split(x, 1, -1)
+        f0 = f0.reshape(-1, 1).cpu().numpy()
+        l0 = l0.reshape(-1, 1).cpu().numpy()
+
+        # Inverse transforms
+        f0 = self.scalers[0].inverse_transform(f0).reshape(-1)
+        l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
+
+        f0 = self.mtof(f0)
+        return f0, l0
 
     def get_quantized_loudness(self, e_l0, onsets, offsets):
         e = torch.abs(onsets + offsets)
@@ -132,5 +148,7 @@ class DiffusionDataset(Dataset):
             u_f0.unsqueeze(-1),
             u_l0.unsqueeze(-1),
         ], -1)
+        if eval:
+            return model_input, cdt, onsets, offsets
 
         return model_input, cdt
