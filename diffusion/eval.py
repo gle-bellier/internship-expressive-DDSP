@@ -1,4 +1,5 @@
 import torch
+from torch.utils import data
 
 torch.set_grad_enabled(False)
 from training import Network
@@ -43,7 +44,7 @@ offsets = np.empty(0)
 
 # Prediction loops :
 
-N_EXAMPLE = 5
+N_EXAMPLE = 20
 for i in range(N_EXAMPLE):
     target, midi, ons, offs = dataset[i]
 
@@ -55,10 +56,6 @@ for i in range(N_EXAMPLE):
     target_f0, target_lo = dataset.inverse_transform(target)
 
     # add to results:
-
-    # f0, lo = out.split(1, -1)
-    # midi_f0, midi_lo = midi.split(1, -1)
-    # target_f0, target_lo = target.split(1, -1)
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
     u_lo = np.concatenate((u_lo, midi_lo.squeeze()))

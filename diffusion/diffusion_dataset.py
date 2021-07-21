@@ -69,16 +69,16 @@ class DiffusionDataset(Dataset):
         # change range [-1, 1] -> [0, 1]
         x = x / 2 + .5
 
-        f0, l0 = torch.split(x, 1, -1)
+        f0, lo = torch.split(x, 1, -1)
         f0 = f0.reshape(-1, 1).cpu().numpy()
-        l0 = l0.reshape(-1, 1).cpu().numpy()
+        lo = lo.reshape(-1, 1).cpu().numpy()
 
         # Inverse transforms
         f0 = self.scalers[0].inverse_transform(f0).reshape(-1)
-        l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
+        lo = self.scalers[1].inverse_transform(lo).reshape(-1)
 
         #f0 = self.mtof(f0)
-        return f0, l0
+        return f0, lo
 
     def get_quantized_loudness(self, e_l0, onsets, offsets):
         e = torch.abs(onsets + offsets)
