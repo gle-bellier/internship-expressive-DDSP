@@ -80,5 +80,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/diffusion/data/results2.pickle", "wb") as file_out:
+with open("results/diffusion/data/result.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
