@@ -43,7 +43,7 @@ class Network(pl.LightningModule, DiffusionModel):
         return out
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), 1e-4)
+        return torch.optim.Adam(self.model.parameters(), 1e-4)
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
@@ -119,8 +119,8 @@ class Network(pl.LightningModule, DiffusionModel):
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
         if self.ddsp is not None:
-            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1).to("cuda")
-            lo = torch.from_numpy(lo).float().reshape(1, -1, 1).to("cuda")
+            f0 = torch.from_numpy(f0).float().reshape(1, -1, 1).to(device)
+            lo = torch.from_numpy(lo).float().reshape(1, -1, 1).to(device)
             signal = self.ddsp(f0, lo)
             signal = signal.reshape(-1).cpu().numpy()
 
