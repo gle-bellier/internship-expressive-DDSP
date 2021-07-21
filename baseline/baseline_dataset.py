@@ -68,7 +68,7 @@ class Baseline_Dataset(Dataset):
         lo = self.scalers[1].inverse_transform(lo).reshape(-1)
         c = self.scalers[2].inverse_transform(c).reshape(-1)
 
-        f0 = pctof(p, c)
+        f0 = pctof(p, c - .5)
         return f0, lo
 
     def get_quantized_loudness(self, e_l0, onsets, offsets):
