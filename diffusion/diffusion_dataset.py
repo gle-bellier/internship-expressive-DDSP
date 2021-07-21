@@ -26,6 +26,7 @@ class DiffusionDataset(Dataset):
         self.list_transforms = list_transforms
 
         self.scalers = self.fit_transforms()
+        self.eval = eval
 
     def mtof(self, m):
         return 440 * 2**((m - 69) / 12)
@@ -42,7 +43,7 @@ class DiffusionDataset(Dataset):
         contour = cat.reshape(-1, 1)
 
         # go log scale :
-        contour = self.ftom(contour)
+        # contour = self.ftom(contour)
 
         transform = self.list_transforms[0]
         sc = transform[0]
@@ -115,8 +116,8 @@ class DiffusionDataset(Dataset):
 
         # Go log scale
 
-        u_f0 = self.ftom(u_f0)
-        e_f0 = self.ftom(e_f0)
+        # u_f0 = self.ftom(u_f0)
+        # e_f0 = self.ftom(e_f0)
 
         # Apply transforms :
 
@@ -148,7 +149,7 @@ class DiffusionDataset(Dataset):
             u_f0.unsqueeze(-1),
             u_l0.unsqueeze(-1),
         ], -1)
-        if eval:
+        if self.eval:
             return model_input, cdt, onsets, offsets
 
         return model_input, cdt
