@@ -15,7 +15,7 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-path = "results/diffusion/data/results-raw.pickle"
+path = "results/diffusion/data/results.pickle"
 # get data
 
 with open(path, "rb") as dataset:
