@@ -146,7 +146,7 @@ PATH = "dataset/dataset-diffusion.pickle"
 dataset = DataLoader(PATH, list_transforms=list_transforms)
 
 model = Network.load_from_checkpoint(
-    "logs/diffusion/default/version_2/checkpoints/epoch=19686-step=157495.ckpt",
+    "logs/diffusion/default/version_3/checkpoints/epoch=70510-step=564087.ckpt",
     strict=False).eval()
 
 model.set_noise_schedule()
