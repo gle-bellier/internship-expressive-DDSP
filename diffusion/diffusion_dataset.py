@@ -77,7 +77,7 @@ class DiffusionDataset(Dataset):
         f0 = self.scalers[0].inverse_transform(f0).reshape(-1)
         l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
 
-        f0 = self.mtof(f0)
+        #f0 = self.mtof(f0)
         return f0, l0
 
     def get_quantized_loudness(self, e_l0, onsets, offsets):
