@@ -16,6 +16,10 @@ from diffusion_dataset import DiffusionDataset
 import matplotlib.pyplot as plt
 import math
 
+import warnings
+
+warnings.filterwarnings('ignore')
+
 
 class Network(pl.LightningModule, DiffusionModel):
     def __init__(self, down_channels, up_channels, down_dilations,
@@ -139,7 +143,7 @@ class Network(pl.LightningModule, DiffusionModel):
     def sample(self, x, cdt):
         x = torch.randn_like(x)
         for i in range(self.n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i)
+            x = self.inverse_dynamics(x, cdt, i, clip=False)
         return x
 
     @torch.no_grad()
@@ -150,7 +154,7 @@ class Network(pl.LightningModule, DiffusionModel):
         x = x + math.sqrt(1 - noise_level**2) * eps
 
         for i in range(n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i)
+            x = self.inverse_dynamics(x, cdt, i, clip=False)
         return x
 
 
