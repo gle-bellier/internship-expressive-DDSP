@@ -11,8 +11,8 @@ from utils import *
 if __name__ == "__main__":
 
     list_transforms = [
-        (QuantileTransformer, 100),
-        (QuantileTransformer, 30),
+        (QuantileTransformer, {"n_quantile":100, "output_distribution": "normal"}),
+        (QuantileTransformer, {"n_quantile":30, "output_distribution": "normal"}),
     ]
 
     dataset = DiffusionDataset(list_transforms=list_transforms, n_sample=20048)

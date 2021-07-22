@@ -46,8 +46,9 @@ class DiffusionDataset(Dataset):
         # contour = self.ftom(contour)
 
         transform = self.list_transforms[0]
+
         sc = transform[0]
-        sc = sc(*transform[1:]).fit(contour)
+        sc = sc(**transform[1]).fit(contour)
         scalers.append(sc)
 
         # loudness
@@ -95,6 +96,10 @@ class DiffusionDataset(Dataset):
             u_l0[indexes[i]:indexes[i + 1]] = torch.mean(
                 e_l0[indexes[i]:indexes[i + 1]])
         return u_l0
+
+
+
+
 
     def __len__(self):
         return self.N // self.n_sample
