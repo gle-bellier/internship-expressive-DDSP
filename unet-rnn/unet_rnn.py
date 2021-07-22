@@ -10,6 +10,10 @@ from unet_dataset import UNet_Dataset
 import matplotlib.pyplot as plt
 import os, sys
 
+import warnings
+
+warnings.filterwarnings('ignore')
+
 
 class DBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
