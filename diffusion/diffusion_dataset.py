@@ -71,25 +71,17 @@ class DiffusionDataset(Dataset):
         e_f0 = self.apply_transform(e_f0, self.scalers[0])
         e_lo = self.apply_transform(e_lo, self.scalers[1])
 
-        u_f0 = torch.from_numpy(u_f0).float()
-        e_f0 = torch.from_numpy(e_f0).float()
-        e_lo = torch.from_numpy(e_lo).float()
-        u_lo = self.get_quantized_loudness(e_lo, self.onsets, self.offsets)
-
-        # Change ranges from [0, 1] -> [-1, 1]
-
-        self.u_f0 = 2 * (u_f0 - .5)
-        self.u_lo = 2 * (u_lo - .5)
-        self.e_f0 = 2 * (e_f0 - .5)
-        self.e_lo = 2 * (e_lo - .5)
+        self.u_f0 = torch.from_numpy(u_f0).float()
+        self.e_f0 = torch.from_numpy(e_f0).float()
+        self.e_lo = torch.from_numpy(e_lo).float()
+        self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
+                                                self.offsets)
 
     def apply_transform(self, x, scaler):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
 
     def inverse_transform(self, x):
-        # change range [-1, 1] -> [0, 1]
-        x = x / 2 + .5
 
         f0, lo = torch.split(x, 1, -1)
         f0 = f0.reshape(-1, 1).cpu().numpy()
