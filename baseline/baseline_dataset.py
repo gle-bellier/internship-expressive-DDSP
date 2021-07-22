@@ -33,7 +33,7 @@ class Baseline_Dataset(Dataset):
         contour = cat.reshape(-1, 1)
         transform = self.list_transforms[0]
         sc = transform[0]
-        sc = sc(*transform[1:]).fit(contour)
+        sc = sc(**transform[1]).fit(contour)
         scalers.append(sc)
 
         # loudness
@@ -42,7 +42,7 @@ class Baseline_Dataset(Dataset):
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[1]
         sc = transform[0]
-        sc = sc(*transform[1:]).fit(contour)
+        sc = sc(**transform[1]).fit(contour)
         scalers.append(sc)
 
         # cents
@@ -51,7 +51,7 @@ class Baseline_Dataset(Dataset):
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[2]
         sc = transform[0]
-        sc = sc(*transform[1:]).fit(contour)
+        sc = sc(**transform[1]).fit(contour)
         scalers.append(sc)
 
         return scalers
