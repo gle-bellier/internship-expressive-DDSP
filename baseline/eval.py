@@ -88,5 +88,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/baseline/data/results-raw.pickle", "wb") as file_out:
+with open("results/baseline/data/results.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
