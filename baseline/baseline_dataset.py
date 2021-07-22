@@ -25,7 +25,6 @@ class Baseline_Dataset(Dataset):
         self.scalers = self.fit_transforms()
         self.eval = eval
 
-
     def fit_transforms(self):
         scalers = []
         # pitch :
@@ -66,9 +65,6 @@ class Baseline_Dataset(Dataset):
         c = torch.argmax(c, -1, keepdim=True) / 100
         lo = torch.argmax(lo, -1, keepdim=True) / 120
         p = torch.argmax(p, -1, keepdim=True) / 127
-
-        print(c.shape)
-
 
         p = self.scalers[0].inverse_transform(p.squeeze(0))
         lo = self.scalers[1].inverse_transform(lo.squeeze(0))
@@ -162,6 +158,5 @@ class Baseline_Dataset(Dataset):
         ], -1)
         if self.eval:
             return model_input, target, onsets, offsets
-
 
         return model_input, target
