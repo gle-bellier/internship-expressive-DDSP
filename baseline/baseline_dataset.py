@@ -13,7 +13,8 @@ class Baseline_Dataset(Dataset):
     def __init__(self,
                  list_transforms,
                  path="dataset/dataset-article.pickle",
-                 n_sample=2050):
+                 n_sample=2048,
+                 eval=False):
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
 
@@ -22,6 +23,8 @@ class Baseline_Dataset(Dataset):
         self.list_transforms = list_transforms
         self.n_sample = n_sample
         self.scalers = self.fit_transforms()
+        self.eval = eval
+
 
     def fit_transforms(self):
         scalers = []
@@ -60,15 +63,22 @@ class Baseline_Dataset(Dataset):
 
     def post_processing(self, p, c, lo):
 
-        p = torch.argmax(p, -1, keepdim=True) / 127
         c = torch.argmax(c, -1, keepdim=True) / 100
         lo = torch.argmax(lo, -1, keepdim=True) / 120
+        p = torch.argmax(p, -1, keepdim=True) / 127
 
-        p = self.scalers[0].inverse_transform(p).reshape(-1)
-        lo = self.scalers[1].inverse_transform(lo).reshape(-1)
-        c = self.scalers[2].inverse_transform(c).reshape(-1)
+        print(c.shape)
 
-        f0 = pctof(p, c - .5)
+
+        p = self.scalers[0].inverse_transform(p.squeeze(0))
+        lo = self.scalers[1].inverse_transform(lo.squeeze(0))
+        c = self.scalers[2].inverse_transform(c.squeeze(0))
+
+        # Change range [0, 1] -> [-0.5, 0.5]
+        c -= 0.5
+
+        f0 = pctof(p, c)
+
         return f0, lo
 
     def get_quantized_loudness(self, e_l0, onsets, offsets):
@@ -150,5 +160,8 @@ class Baseline_Dataset(Dataset):
             torch.argmax(e_cents[1:], -1, keepdim=True),
             torch.argmax(e_lo[1:], -1, keepdim=True),
         ], -1)
+        if self.eval:
+            return model_input, target, onsets, offsets
+
 
         return model_input, target

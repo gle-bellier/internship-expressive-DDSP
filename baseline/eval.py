@@ -7,24 +7,27 @@ import numpy as np
 
 torch.set_grad_enabled(False)
 from baseline_model import Model
+from baseline_dataset import Baseline_Dataset
+
 
 from random import randint
 import pickle
 
-#TODO : make dataloader heee
+
 list_transforms = [
-    (MinMaxScaler, ),
-    (QuantileTransformer, 30),
+    (MinMaxScaler, ),  # pitch
+    (QuantileTransformer, 120),  # lo
+    (QuantileTransformer, 100),  # cents
 ]
 
 PATH = "dataset/dataset-diffusion.pickle"
-dataset = DataLoader(PATH, list_transforms=list_transforms)
+dataset = Baseline_Dataset(list_transforms=list_transforms, eval=True)
 
 down_channels = [2, 16, 512, 1024]
 ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 model = Model.load_from_checkpoint(
-    "logs/baseline/default/version_1/checkpoints/epoch=114-step=1694.ckpt",
+    "logs/baseline/default/version_0/checkpoints/epoch=547-step=2739.ckpt",
     scalers=dataset.scalers,
     channels=down_channels,
     ddsp=ddsp,
@@ -47,21 +50,12 @@ offsets = np.empty(0)
 
 N_EXAMPLE = 5
 for i in range(N_EXAMPLE):
-    model_input, target, ons, offs = dataset.get()
+    model_input, target, ons, offs = dataset[i]
+
+
 
     n_step = 10
-    out = model.generation_loop(model_input)
-
-    model_input = torch.cat(
-        [
-            u_f0[1:],
-            u_lo[1:],
-            e_cents[:-1],  # one step behind
-            e_lo[:-1],  # one step behind
-            onsets[:-1],
-            offsets[:-1]
-        ],
-        -1)
+    out = model(model_input.unsqueeze(0))
 
     midi_p = model_input[..., :1]
     midi_cents = torch.zeros_like(midi_p)
@@ -97,5 +91,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/unet-rnn/data/results-raw.pickle", "wb") as file_out:
+with open("results/baseline/data/results-raw.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
