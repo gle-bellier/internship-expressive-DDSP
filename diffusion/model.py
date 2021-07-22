@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 
 from torch import nn
-from utils import FiLM, FiLM_RNN, Identity
+from utils import FiLM, FiLM_RNN
 from downsampling import DBlock
 from upsampling import UBlock
 from bottleneck import Bottleneck

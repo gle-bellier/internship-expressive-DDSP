@@ -3,13 +3,15 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 
 from torch import nn
-from utils import FiLM, Identity
+from utils import FiLM
 from downsampling import DBlock
 from upsampling import UBlock
 from diffusion import DiffusionModel
 from torch.utils.data import DataLoader, Dataset, random_split
-from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from model import UNet_Diffusion
+
+from sklearn.preprocessing import QuantileTransformer
+from transforms import PitchTransformer, LoudnessTransformer
 from diffusion_dataset import DiffusionDataset
 import matplotlib.pyplot as plt
 import math
@@ -90,7 +92,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
         self.val_idx += 1
 
-        if self.val_idx % 50:
+        if self.val_idx % 1:
             return
 
         device = next(iter(self.parameters())).device
@@ -160,11 +162,17 @@ if __name__ == "__main__":
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
         max_epochs=100000,
         logger=tb_logger)
-    list_transforms = [
-        (QuantileTransformer, 100),
-        (QuantileTransformer, 30),
-    ]
 
+    list_transforms = [
+        (PitchTransformer, {
+            "n_quantiles": 100,
+            "output_distribution": "normal"
+        }),
+        (LoudnessTransformer, {
+            "n_quantiles": 30,
+            "output_distribution": "normal"
+        }),
+    ]
     dataset = DiffusionDataset(list_transforms=list_transforms)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
@@ -182,6 +190,7 @@ if __name__ == "__main__":
                     up_channels=up_channels,
                     down_dilations=down_dilations,
                     up_dilations=up_dilations)
+
     model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
     model.set_noise_schedule(init=torch.linspace,
                              init_kwargs={
