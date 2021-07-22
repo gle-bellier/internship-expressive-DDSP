@@ -53,15 +53,15 @@ for i in range(N_EXAMPLE):
     n_step = 10
     out = model(model_input.unsqueeze(0))
 
-    s_u_p = model_input[..., :1]
+    s_u_p = model_input[..., :128]
     s_u_cents = torch.zeros_like(s_u_p)
-    s_u_lo = model_input[..., 1:2]
+    s_u_lo = model_input[..., 128:149]
 
-    s_e_cents = model_input[..., 2:3]
-    s_e_lo = model_input[..., 3:4]
+    s_e_cents = model_input[..., 149:250]
+    s_e_lo = model_input[..., 250:271]
 
-    s_pred_cents = out[..., :1]
-    s_pred_lo = out[..., 1:2]
+    s_pred_cents = out[..., :128]
+    s_pred_lo = out[..., 128:149]
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
                                                    s_pred_lo)
