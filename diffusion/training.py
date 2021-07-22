@@ -96,7 +96,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
         self.val_idx += 1
 
-        if self.val_idx % 1:
+        if self.val_idx % 100:
             return
 
         device = next(iter(self.parameters())).device
