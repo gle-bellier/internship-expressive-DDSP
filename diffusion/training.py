@@ -75,9 +75,6 @@ class Network(pl.LightningModule, DiffusionModel):
 
     def post_process(self, out):
 
-        # change range [-1, 1] -> [0, 1]
-        out = out / 2 + .5
-
         f0, l0 = torch.split(out, 1, -1)
         f0 = f0.reshape(-1, 1).cpu().numpy()
         l0 = l0.reshape(-1, 1).cpu().numpy()
@@ -85,8 +82,6 @@ class Network(pl.LightningModule, DiffusionModel):
         # Inverse transforms
         f0 = self.scalers[0].inverse_transform(f0).reshape(-1)
         l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
-
-        f0 = self.mtof(f0)
         return f0, l0
 
     def validation_epoch_end(self, cdt):
