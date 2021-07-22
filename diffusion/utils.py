@@ -3,7 +3,12 @@ import torch.nn as nn
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, dilation, norm=True):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 dilation,
+                 norm=True,
+                 dropout=0.2):
         super().__init__()
         self.norm = norm
         self.conv = nn.Conv1d(in_channels=in_channels,
@@ -15,11 +20,13 @@ class ConvBlock(nn.Module):
 
         self.lr = nn.LeakyReLU()
         self.bn = nn.BatchNorm1d(out_channels)
+        self.dp = nn.Dropout(dropout)
 
     def forward(self, x):
         x = self.conv(x)
         if self.norm:
             x = self.bn(x)
+        x = self.dp(x)
         out = self.lr(x)
         return out
 
