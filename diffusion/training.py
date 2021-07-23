@@ -70,9 +70,6 @@ class Network(pl.LightningModule, DiffusionModel):
         # returns cdt for validation end epoch
         return cdt
 
-    def mtof(self, m):
-        return 440 * 2**((m - 69) / 12)
-
     def post_process(self, out):
 
         f0, l0 = torch.split(out, 1, -1)
