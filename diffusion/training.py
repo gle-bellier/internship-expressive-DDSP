@@ -71,6 +71,9 @@ class Network(pl.LightningModule, DiffusionModel):
 
     def post_process(self, out):
 
+        # change range [-1, 1] -> [0, 1]
+        out = out / 2 + .5
+
         f0, l0 = torch.split(out, 1, -1)
         f0 = f0.reshape(-1, 1).cpu().numpy()
         l0 = l0.reshape(-1, 1).cpu().numpy()
@@ -159,10 +162,8 @@ if __name__ == "__main__":
         logger=tb_logger)
 
     list_transforms = [
-        (MinMaxScaler, {}),
-        (QuantileTransformer, {
-            "n_quantiles": 30
-        }),
+        (PitchTransformer, {}),
+        (LoudnessTransformer, {}),
     ]
     dataset = DiffusionDataset(list_transforms=list_transforms)
     val_len = len(dataset) // 20

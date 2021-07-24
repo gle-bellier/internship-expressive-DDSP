@@ -77,6 +77,14 @@ class DiffusionDataset(Dataset):
         self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
                                                 self.offsets)
 
+
+        # Change range [0; 1] -> [-1; 1]
+        self.u_f0 = (self.u_f0 - .5) * 2
+        self.u_lo = (self.u_lo - .5) * 2
+        self.e_f0 = (self.e_f0 - .5) * 2
+        self.e_lo = (self.e_lo - .5) * 2 
+
+
     def apply_transform(self, x, scaler):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
