@@ -8,7 +8,7 @@ class ConvBlock(nn.Module):
                  out_channels,
                  dilation,
                  norm=True,
-                 dropout=0.2):
+                 dropout=0.01):
         super().__init__()
         self.norm = norm
         self.conv = nn.Conv1d(in_channels=in_channels,

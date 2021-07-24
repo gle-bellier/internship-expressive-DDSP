@@ -10,7 +10,7 @@ from diffusion import DiffusionModel
 from torch.utils.data import DataLoader, Dataset, random_split
 from model import UNet_Diffusion
 
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import QuantileTransformer, MinMaxScaler
 from transforms import PitchTransformer, LoudnessTransformer
 from diffusion_dataset import DiffusionDataset
 import matplotlib.pyplot as plt
@@ -69,9 +69,6 @@ class Network(pl.LightningModule, DiffusionModel):
 
         # returns cdt for validation end epoch
         return cdt
-
-    def mtof(self, m):
-        return 440 * 2**((m - 69) / 12)
 
     def post_process(self, out):
 
@@ -138,7 +135,7 @@ class Network(pl.LightningModule, DiffusionModel):
     def sample(self, x, cdt):
         x = torch.randn_like(x)
         for i in range(self.n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i, clip=False)
+            x = self.inverse_dynamics(x, cdt, i)
         return x
 
     @torch.no_grad()
@@ -149,7 +146,7 @@ class Network(pl.LightningModule, DiffusionModel):
         x = x + math.sqrt(1 - noise_level**2) * eps
 
         for i in range(n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i, clip=False)
+            x = self.inverse_dynamics(x, cdt, i)
         return x
 
 
@@ -163,13 +160,9 @@ if __name__ == "__main__":
         logger=tb_logger)
 
     list_transforms = [
-        (PitchTransformer, {
-            "n_quantiles": 100,
-            "output_distribution": "normal"
-        }),
-        (LoudnessTransformer, {
-            "n_quantiles": 30,
-            "output_distribution": "normal"
+        (MinMaxScaler, {}),
+        (QuantileTransformer, {
+            "n_quantiles": 30
         }),
     ]
     dataset = DiffusionDataset(list_transforms=list_transforms)

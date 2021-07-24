@@ -56,24 +56,24 @@ class DiffusionDataset(Dataset):
         return scalers
 
     def transform(self):
-        u_f0 = self.dataset["u_f0"]
-        e_f0 = self.dataset["e_f0"]
-        e_lo = self.dataset["e_loudness"]
-        onsets = self.dataset["onsets"]
-        offsets = self.dataset["offsets"]
+        self.u_f0 = self.dataset["u_f0"]
+        self.e_f0 = self.dataset["e_f0"]
+        self.e_lo = self.dataset["e_loudness"]
+        self.onsets = self.dataset["onsets"]
+        self.offsets = self.dataset["offsets"]
 
-        self.onsets = torch.from_numpy(onsets).float()
-        self.offsets = torch.from_numpy(offsets).float()
+        self.onsets = torch.from_numpy(self.onsets).float()
+        self.offsets = torch.from_numpy(self.offsets).float()
 
         # Apply transforms :
 
-        u_f0 = self.apply_transform(u_f0, self.scalers[0])
-        e_f0 = self.apply_transform(e_f0, self.scalers[0])
-        e_lo = self.apply_transform(e_lo, self.scalers[1])
+        self.u_f0 = self.apply_transform(self.u_f0, self.scalers[0])
+        self.e_f0 = self.apply_transform(self.e_f0, self.scalers[0])
+        self.e_lo = self.apply_transform(self.e_lo, self.scalers[1])
 
-        self.u_f0 = torch.from_numpy(u_f0).float()
-        self.e_f0 = torch.from_numpy(e_f0).float()
-        self.e_lo = torch.from_numpy(e_lo).float()
+        self.u_f0 = torch.from_numpy(self.u_f0).float()
+        self.e_f0 = torch.from_numpy(self.e_f0).float()
+        self.e_lo = torch.from_numpy(self.e_lo).float()
         self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
                                                 self.offsets)
 

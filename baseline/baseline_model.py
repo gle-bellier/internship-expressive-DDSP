@@ -11,6 +11,9 @@ import pickle
 import matplotlib.pyplot as plt
 from random import randint, sample
 from utils import *
+import warnings
+
+warnings.filterwarnings('ignore')
 
 
 class LinearBlock(nn.Module):
@@ -226,9 +229,13 @@ class Model(pl.LightningModule):
 if __name__ == "__main__":
 
     list_transforms = [
-        (MinMaxScaler, ),  # pitch
-        (QuantileTransformer, 120),  # lo
-        (QuantileTransformer, 100),  # cents
+        (MinMaxScaler, {}),  # pitch
+        (QuantileTransformer, {
+            "n_quantiles": 120
+        }),  # lo
+        (QuantileTransformer, {
+            "n_quantiles": 100
+        }),  # cents
     ]
 
     dataset = Baseline_Dataset(list_transforms=list_transforms, n_sample=2048)
