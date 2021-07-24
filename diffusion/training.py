@@ -50,8 +50,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(),
-                                lr=1e-4,
-                                weight_decay=0.1)
+                                lr=1e-4)  #weight_decay=0.1)
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
