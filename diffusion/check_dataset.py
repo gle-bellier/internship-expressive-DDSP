@@ -13,11 +13,11 @@ if __name__ == "__main__":
     list_transforms = [
         (PitchTransformer, {
             "n_quantiles": 100,
-            "output_distribution": "normal"
+            "output_distribution": "uniform"
         }),
         (LoudnessTransformer, {
             "n_quantiles": 30,
-            "output_distribution": "normal"
+            "output_distribution": "uniform"
         }),
     ]
 
