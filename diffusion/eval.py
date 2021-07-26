@@ -11,13 +11,14 @@ from random import randint
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from diffusion_dataset import DiffusionDataset
+from transforms import PitchTransformer, LoudnessTransformer
 import numpy as np
 
 import pickle
 
 list_transforms = [
-    (MinMaxScaler, ),  #(QuantileTransformer, 100),
-    (QuantileTransformer, 30),
+    (PitchTransformer, {}),
+    (LoudnessTransformer, {}),
 ]
 PATH = "dataset/dataset-diffusion.pickle"
 dataset = DiffusionDataset(path=PATH,
@@ -25,7 +26,7 @@ dataset = DiffusionDataset(path=PATH,
                            eval=True)
 
 model = Network.load_from_checkpoint(
-    "logs/diffusion/default/version_3/checkpoints/epoch=70510-step=564087.ckpt",
+    "logs/diffusion/quantile/default/version_8/checkpoints/epoch=64455-step=515647.ckpt",
     strict=False).eval()
 
 model.set_noise_schedule()
@@ -77,5 +78,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/diffusion/data/results.pickle", "wb") as file_out:
+with open("results/diffusion/data/results-normal.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
