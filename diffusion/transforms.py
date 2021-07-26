@@ -62,14 +62,19 @@ class LoudnessTransformer(BaseEstimator, TransformerMixin):
         self.sc1 = QuantileTransformer(n_quantiles=n_quantiles,
                                        output_distribution=output_distribution)
 
+        self.sc2 = MinMaxScaler()
+
     def fit(self, X, y=None):
-        self.sc1.fit(X)
+        X = self.sc1.fit_transform(X)
+        self.sc2.fit(X)
         return self
 
     def transform(self, X, y=None):
-        out = self.sc1.transform(X)
+        X = self.sc1.transform(X)
+        out = self.sc2.transform(X)
         return out
 
     def inverse_transform(self, X, y=None):
+        X = self.sc2.inverse_transform(X)
         out = self.sc1.inverse_transform(X)
         return out
