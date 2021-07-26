@@ -14,7 +14,7 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-path = "results/diffusion/data/results.pickle"
+path = "results/diffusion/data/results-normal.pickle"
 number_of_examples = 5
 # get data
 
@@ -56,9 +56,11 @@ for i in range(number_of_examples):
     target = ddsp(e_f0, e_lo).reshape(-1).detach().numpy()
     pred = ddsp(pred_f0, pred_lo).reshape(-1).detach().numpy()
 
-    save_path = "/".join(path.split("/")[:2])
+    l = path.split("/")
+    save_path = "/".join(l[:2])
+    name = l[-1].split(".")[0] + str(i)
 
-    sf.write(save_path + "/samples/sample{}-pred.wav".format(i), pred, 16000)
-    sf.write(save_path + "/samples/sample{}-midi.wav".format(i), midi, 16000)
-    sf.write(save_path + "/samples/sample{}-resynth.wav".format(i), target,
+    sf.write("{}/samples/{}-pred.wav".format(save_path, name), pred, 16000)
+    sf.write("{}/samples/{}-midi.wav".format(save_path, name), midi, 16000)
+    sf.write("{}/samples/{}-resynth.wav".format(save_path, name), target,
              16000)
