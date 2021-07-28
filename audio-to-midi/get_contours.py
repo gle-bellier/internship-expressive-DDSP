@@ -239,7 +239,7 @@ class ContoursGetter:
 
 
 if __name__ == '__main__':
-    dataset_path = "dataset-midi-wav/"
+    dataset_path = "flute/"
     filenames = [
         file[len(dataset_path):-4]
         for file in glob.glob(dataset_path + "*.mid")
@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
         print("Writing : \n")
 
-        with open("dataset/contours-article.csv", 'w') as csvfile:
+        with open("dataset/contours-flute.csv", 'w') as csvfile:
             fieldnames = [
                 "u_f0", "u_loudness", "e_f0", "e_loudness", "e_f0_mean",
                 "e_f0_stddev", "f0_conf", "events"
