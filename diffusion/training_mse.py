@@ -136,7 +136,7 @@ class Network(pl.LightningModule, DiffusionModel):
     def sample(self, x, cdt):
         x = torch.randn_like(x)
         for i in range(self.n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i)
+            x = self.inverse_dynamics(x, cdt, i, clip=False)
         return x
 
     @torch.no_grad()
@@ -147,12 +147,12 @@ class Network(pl.LightningModule, DiffusionModel):
         x = x + math.sqrt(1 - noise_level**2) * eps
 
         for i in range(n_step)[::-1]:
-            x = self.inverse_dynamics(x, cdt, i)
+            x = self.inverse_dynamics(x, cdt, i, clip=False)
         return x
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/weightdecay/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/fix/')
 
     trainer = pl.Trainer(
         gpus=1,

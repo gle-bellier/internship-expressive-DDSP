@@ -26,8 +26,6 @@ class PitchTransformer(BaseEstimator, TransformerMixin):
         self.sc1 = QuantileTransformer(n_quantiles=n_quantiles,
                                        output_distribution=output_distribution)
 
-        self.sc2 = MinMaxScaler()
-
     def mtof(self, m):
         return 440 * 2**((m - 69) / 12)
 
@@ -38,23 +36,15 @@ class PitchTransformer(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         X = self.ftom(X)
-
-        X = self.sc1.fit_transform(X)
-        self.sc2.fit(X)
+        self.sc1.fit(X)
         return self
 
     def transform(self, X, y=None):
         X = self.ftom(X)
-        X = self.sc1.transform(X)
-        X = self.sc2.transform(X)
-
-        out = (X - 0.5) * 2
+        out = self.sc1.transform(X)
         return out
 
     def inverse_transform(self, X, y=None):
-
-        X = (X / 2) + .5
-        X = self.sc2.inverse_transform(X)
         X = self.sc1.inverse_transform(X)
         out = self.mtof(X)
         return out
@@ -69,21 +59,14 @@ class LoudnessTransformer(BaseEstimator, TransformerMixin):
         self.sc1 = QuantileTransformer(n_quantiles=n_quantiles,
                                        output_distribution=output_distribution)
 
-        self.sc2 = MinMaxScaler()
-
     def fit(self, X, y=None):
-        X = self.sc1.fit_transform(X)
-        self.sc2.fit(X)
+        X = self.sc1.fit(X)
         return self
 
     def transform(self, X, y=None):
-        X = self.sc1.transform(X)
-        X = self.sc2.transform(X)
-        out = (X - .5) * 2
+        out = self.sc1.transform(X)
         return out
 
     def inverse_transform(self, X, y=None):
-        X = (X / 2) + .5
-        X = self.sc2.inverse_transform(X)
         out = self.sc1.inverse_transform(X)
         return out
