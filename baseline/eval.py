@@ -29,7 +29,7 @@ down_channels = [2, 16, 512, 1024]
 ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 model = Model.load_from_checkpoint(
-    "logs/baseline/default/version_0/checkpoints/epoch=547-step=2739.ckpt",
+    "logs/baseline/blstm/default/version_1/checkpoints/epoch=2529-step=12649.ckpt",
     scalers=dataset.scalers,
     channels=down_channels,
     ddsp=ddsp,
@@ -59,13 +59,12 @@ for i in range(N_EXAMPLE):
 
     s_u_p = model_input[..., :128]
     s_u_cents = torch.zeros_like(s_u_p)
-    s_u_lo = model_input[..., 128:149]
+    s_u_lo = model_input[..., 128:249]
 
-    s_e_cents = model_input[..., 149:250]
-    s_e_lo = model_input[..., 250:271]
+    s_e_cents = model_input[..., 249:349]
+    s_e_lo = model_input[..., 349:470]
 
-    s_pred_cents = out[..., :128]
-    s_pred_lo = out[..., 128:149]
+    s_pred_cents, s_pred_lo = model.split_predictions(out)
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
                                                    s_pred_lo)
@@ -92,5 +91,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/baseline/data/results.pickle", "wb") as file_out:
+with open("results/baseline/data/results-blstm.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
