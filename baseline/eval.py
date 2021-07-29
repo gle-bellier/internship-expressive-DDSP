@@ -13,9 +13,13 @@ from random import randint
 import pickle
 
 list_transforms = [
-    (MinMaxScaler, ),  # pitch
-    (QuantileTransformer, 120),  # lo
-    (QuantileTransformer, 100),  # cents
+    (MinMaxScaler, {}),  # pitch
+    (QuantileTransformer, {
+        "n_quantiles": 120
+    }),  # lo
+    (QuantileTransformer, {
+        "n_quantiles": 100
+    }),  # cents
 ]
 
 PATH = "dataset/dataset-diffusion.pickle"
