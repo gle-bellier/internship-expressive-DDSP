@@ -2,7 +2,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
-PATH = "dataset/contours-article.csv"
+PATH = "dataset/contours-flute.csv"
 
 u_f0 = []
 u_loudness = []
@@ -35,8 +35,8 @@ f0_conf = np.array(f0_conf)
 events = np.array(events)
 
 fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1)
-ax1.plot(u_f0.squeeze()[8000:10000], label="u_f0")
-ax1.plot(e_f0.squeeze()[8000:10000], label="e_f0")
+ax1.plot(u_f0.squeeze(), label="u_f0")
+ax1.plot(e_f0.squeeze(), label="e_f0")
 ax1.legend()
 
 ax2.plot(u_loudness.squeeze()[8000:14000], label="u_loudness")

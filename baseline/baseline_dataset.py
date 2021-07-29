@@ -13,7 +13,8 @@ class Baseline_Dataset(Dataset):
     def __init__(self,
                  list_transforms,
                  path="dataset/dataset-article.pickle",
-                 n_sample=2050):
+                 n_sample=2048,
+                 eval=False):
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
 
@@ -22,6 +23,7 @@ class Baseline_Dataset(Dataset):
         self.list_transforms = list_transforms
         self.n_sample = n_sample
         self.scalers = self.fit_transforms()
+        self.eval = eval
 
     def fit_transforms(self):
         scalers = []
@@ -31,7 +33,7 @@ class Baseline_Dataset(Dataset):
         contour = cat.reshape(-1, 1)
         transform = self.list_transforms[0]
         sc = transform[0]
-        sc = sc(*transform[1:]).fit(contour)
+        sc = sc(**transform[1]).fit(contour)
         scalers.append(sc)
 
         # loudness
@@ -40,7 +42,7 @@ class Baseline_Dataset(Dataset):
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[1]
         sc = transform[0]
-        sc = sc(*transform[1:]).fit(contour)
+        sc = sc(**transform[1]).fit(contour)
         scalers.append(sc)
 
         # cents
@@ -49,7 +51,7 @@ class Baseline_Dataset(Dataset):
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[2]
         sc = transform[0]
-        sc = sc(*transform[1:]).fit(contour)
+        sc = sc(**transform[1]).fit(contour)
         scalers.append(sc)
 
         return scalers
@@ -57,6 +59,23 @@ class Baseline_Dataset(Dataset):
     def apply_transform(self, x, scaler):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
+
+    def post_processing(self, p, c, lo):
+
+        c = torch.argmax(c, -1, keepdim=True) / 100
+        lo = torch.argmax(lo, -1, keepdim=True) / 120
+        p = torch.argmax(p, -1, keepdim=True) / 127
+
+        p = self.scalers[0].inverse_transform(p.squeeze(0))
+        lo = self.scalers[1].inverse_transform(lo.squeeze(0))
+        c = self.scalers[2].inverse_transform(c.squeeze(0))
+
+        # Change range [0, 1] -> [-0.5, 0.5]
+        c -= 0.5
+
+        f0 = pctof(p, c)
+
+        return f0, lo
 
     def get_quantized_loudness(self, e_l0, onsets, offsets):
         events = onsets + offsets
@@ -137,5 +156,7 @@ class Baseline_Dataset(Dataset):
             torch.argmax(e_cents[1:], -1, keepdim=True),
             torch.argmax(e_lo[1:], -1, keepdim=True),
         ], -1)
+        if self.eval:
+            return model_input, target, onsets, offsets
 
         return model_input, target

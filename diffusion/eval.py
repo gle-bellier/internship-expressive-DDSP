@@ -1,9 +1,8 @@
 import torch
+from torch.utils import data
 
 torch.set_grad_enabled(False)
-from diffusion import DiffusionModel
-from diffusion_model import UNet_Diffusion
-#import matplotlib.pyplot as plt
+from training import Network
 import soundfile as sf
 
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -12,47 +11,72 @@ from random import randint
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 from diffusion_dataset import DiffusionDataset
+from transforms import PitchTransformer, LoudnessTransformer
 import numpy as np
 
 import pickle
 
 list_transforms = [
-    (MinMaxScaler, ),
-    (QuantileTransformer, 30),
+    (PitchTransformer, {}),
+    (LoudnessTransformer, {}),
 ]
+PATH = "dataset/dataset-diffusion.pickle"
+dataset = DiffusionDataset(path=PATH,
+                           list_transforms=list_transforms,
+                           eval=True)
 
-dataset = DiffusionDataset(list_transforms=list_transforms)
-val_len = len(dataset) // 20
-train_len = len(dataset) - val_len
-
-train, val = random_split(dataset, [train_len, val_len])
-
-down_channels = [2, 16, 256, 512, 1024]
-up_channels = [1024, 512, 256, 16, 2]
-ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
-
-model = UNet_Diffusion.load_from_checkpoint(
-    "diffusion/lightning_logs/version_3/checkpoints/epoch=3739-step=56099.ckpt",
-    scalers=dataset.scalers,
-    down_channels=down_channels,
-    up_channels=up_channels,
-    ddsp=ddsp,
+model = Network.load_from_checkpoint(
+    "logs/diffusion/quantile/default/version_8/checkpoints/epoch=64455-step=515647.ckpt",
     strict=False).eval()
 
 model.set_noise_schedule()
+model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-N_EXAMPLE = 5
+# Initialize data :
+
+u_f0 = np.empty(0)
+u_lo = np.empty(0)
+e_f0 = np.empty(0)
+e_lo = np.empty(0)
+pred_f0 = np.empty(0)
+pred_lo = np.empty(0)
+onsets = np.empty(0)
+offsets = np.empty(0)
+
+# Prediction loops :
+
+N_EXAMPLE = 20
 for i in range(N_EXAMPLE):
-    _, midi = dataset[randint(0, len(dataset))]
-
-    midi = midi.unsqueeze(0)
+    target, midi, ons, offs = dataset[i]
 
     n_step = 10
-    out = model.partial_denoising(midi, midi, 10)
-    f0, lo = model.post_process(out)
+    out = model.sample(midi.unsqueeze(0), midi.unsqueeze(0))
 
-    f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-    lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+    f0, lo = dataset.inverse_transform(out)
+    midi_f0, midi_lo = dataset.inverse_transform(midi)
+    target_f0, target_lo = dataset.inverse_transform(target)
 
-    audio = ddsp(f0, lo).reshape(-1).numpy()
-    sf.write("results/diffusion/samples/sample{}.wav".format(i), audio, 16000)
+    # add to results:
+
+    u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
+    u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
+
+    e_f0 = np.concatenate((e_f0, target_f0.squeeze()))
+    e_lo = np.concatenate((e_lo, target_lo.squeeze()))
+
+    pred_f0 = np.concatenate((pred_f0, f0.squeeze()))
+    pred_lo = np.concatenate((pred_lo, lo.squeeze()))
+
+out = {
+    "u_f0": u_f0,
+    "u_lo": u_lo,
+    "e_f0": e_f0,
+    "e_lo": e_lo,
+    "pred_f0": pred_f0,
+    "pred_lo": pred_lo,
+    "onsets": onsets,
+    "offsets": offsets
+}
+
+with open("results/diffusion/data/results-normal.pickle", "wb") as file_out:
+    pickle.dump(out, file_out)

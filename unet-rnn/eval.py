@@ -1,52 +1,87 @@
 import torch
-
-torch.set_grad_enabled(False)
-
-#import matplotlib.pyplot as plt
-import soundfile as sf
-from UNet_RNN import UNet_RNN
-
 from pytorch_lightning.callbacks import ModelCheckpoint
-from random import randint
-
-from torch.utils.data import DataLoader, Dataset, random_split
+from unet_dataset import UNet_Dataset
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
-from UNet_dataset import UNet_Dataset
 import numpy as np
 
+torch.set_grad_enabled(False)
+from unet import UNet
+from unet_dataset import UNet_Dataset
+
+from random import randint
 import pickle
 
 list_transforms = [
-    (MinMaxScaler, ),
-    (QuantileTransformer, 30),
+    (MinMaxScaler, {}),
+    (QuantileTransformer, {
+        "n_quantiles": 30
+    }),
 ]
 
-dataset = UNet_Dataset(list_transforms=list_transforms)
-val_len = len(dataset) // 20
-train_len = len(dataset) - val_len
-train, val = random_split(dataset, [train_len, val_len])
+PATH = "dataset/dataset-diffusion.pickle"
+dataset = UNet_Dataset(PATH, list_transforms=list_transforms, eval=True)
 
 down_channels = [2, 16, 512, 1024]
 ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-model = UNet_RNN.load_from_checkpoint(
-    "unet_rnn/lightning_logs/version_7/checkpoints/epoch=9518-step=142784.ckpt",
+model = UNet.load_from_checkpoint(
+    "logs/unet/default/version_1/checkpoints/epoch=9074-step=136124.ckpt",
     scalers=dataset.scalers,
     channels=down_channels,
     ddsp=ddsp,
     strict=False).eval()
 
-NB_EXAMPLES = 5
+#model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-for i in range(NB_EXAMPLES):
-    model_input, target = dataset[randint(0, len(dataset))]
+# Initialize data :
 
-    model_input = model_input.unsqueeze(0)
-    pred = model(model_input)
-    f0, lo = model.post_process(pred)
+u_f0 = np.empty(0)
+u_lo = np.empty(0)
+e_f0 = np.empty(0)
+e_lo = np.empty(0)
+pred_f0 = np.empty(0)
+pred_lo = np.empty(0)
+onsets = np.empty(0)
+offsets = np.empty(0)
 
-    f0 = torch.from_numpy(f0).float().reshape(1, -1, 1)
-    lo = torch.from_numpy(lo).float().reshape(1, -1, 1)
+# Prediction loops :
 
-    audio = ddsp(f0, lo).reshape(-1).numpy()
-    sf.write("results/unet-rnn/samples/sample{}.wav".format(i), audio, 16000)
+N_EXAMPLE = 5
+for i in range(N_EXAMPLE):
+    midi, target, ons, offs = dataset[i]
+
+    n_step = 10
+    out = model(midi.unsqueeze(0))
+
+    f0, lo = dataset.inverse_transform(out)
+    midi_f0, midi_lo = dataset.inverse_transform(midi)
+    target_f0, target_lo = dataset.inverse_transform(target)
+
+    # # add to results:
+
+    # f0, lo = out.split(1, -1)
+    # midi_f0, midi_lo = midi.split(1, -1)
+    # target_f0, target_lo = target.split(1, -1)
+
+    u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
+    u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
+
+    e_f0 = np.concatenate((e_f0, target_f0.squeeze()))
+    e_lo = np.concatenate((e_lo, target_lo.squeeze()))
+
+    pred_f0 = np.concatenate((pred_f0, f0.squeeze()))
+    pred_lo = np.concatenate((pred_lo, lo.squeeze()))
+
+out = {
+    "u_f0": u_f0,
+    "u_lo": u_lo,
+    "e_f0": e_f0,
+    "e_lo": e_lo,
+    "pred_f0": pred_f0,
+    "pred_lo": pred_lo,
+    "onsets": onsets,
+    "offsets": offsets
+}
+
+with open("results/unet-rnn/data/results.pickle", "wb") as file_out:
+    pickle.dump(out, file_out)

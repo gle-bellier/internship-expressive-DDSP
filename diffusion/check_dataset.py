@@ -6,18 +6,24 @@ from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxSca
 import pytorch_lightning as pl
 from diffusion_dataset import DiffusionDataset
 import matplotlib.pyplot as plt
-from utils import *
+from transforms import PitchTransformer, LoudnessTransformer
 
 if __name__ == "__main__":
 
     list_transforms = [
-        (MinMaxScaler, ),
-        (QuantileTransformer, 30),
+        (PitchTransformer, {
+            "n_quantiles": 127,
+            "output_distribution": "normal"
+        }),
+        (LoudnessTransformer, {
+            "n_quantiles": 30,
+            "output_distribution": "normal"
+        }),
     ]
 
-    dataset = DiffusionDataset(list_transforms=list_transforms)
+    dataset = DiffusionDataset(list_transforms=list_transforms, n_sample=20048)
 
-    for i in range(2):
+    for i in range(5):
         model_input, cdt = dataset[i]
 
         e_f0 = model_input[:, 0].squeeze()
@@ -35,6 +41,25 @@ if __name__ == "__main__":
 
         ax2.plot(u_l0, label="Midi")
         ax2.plot(e_l0, label="Target")
+        ax2.set_title("Loudness")
+        ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.show()
+
+        f0, lo = dataset.inverse_transform(model_input)
+        u_f0, u_lo = dataset.inverse_transform(cdt)
+
+        fig, (ax1, ax2) = plt.subplots(2)
+        fig.suptitle("Dataset")
+
+        ax1.plot(u_f0, label="Midi")
+        ax1.plot(f0, label="Target")
+        ax1.set_title("Frequency")
+        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        ax2.plot(u_lo, label="Midi")
+        ax2.plot(lo, label="Target")
         ax2.set_title("Loudness")
         ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 

@@ -7,7 +7,7 @@ from utils import FeatureWiseAffine, FiLM, PositionalEncoding, ConvBlock
 class Residual(nn.Module):
     def __init__(self, in_channels, out_channels, dilation):
         super().__init__()
-        self.lr = nn.LeakyReLU()
+        self.lr = nn.LeakyReLU(.2)
         self.up = nn.Upsample(scale_factor=2)
         self.conv1 = ConvBlock(in_channels=in_channels,
                                out_channels=in_channels,
@@ -41,13 +41,15 @@ class UBlock_Mid(nn.Module):
                               padding=dilation,
                               dilation=dilation)
 
-        self.lr = nn.LeakyReLU()
+        self.lr = nn.LeakyReLU(.2)
 
     def forward(self, x):
         if not self.last:
             x = self.up(x)
-        out = self.conv(x)
-        out = self.lr(out)
+            x = self.conv(x)
+            out = self.lr(x)
+        else:
+            out = self.conv(x)
         return out
 
 
