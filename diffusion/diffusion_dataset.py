@@ -29,7 +29,7 @@ class DiffusionDataset(Dataset):
         self.scalers = self.fit_transforms()
         self.transform()
         self.eval = eval
-        print("Dataset loaded.")
+        print("Dataset loaded. Length : {}s".format(self.N // 100))
 
     def fit_transforms(self):
         scalers = []
