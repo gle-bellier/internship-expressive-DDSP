@@ -105,10 +105,6 @@ class DiffusionModel(nn.Module):
         # diffusion loss
         y_noise, eps, noise_level = self.q_sample(y)
         pred_noise = self.neural_pass(y_noise, cdt, noise_level)
-        diffusion_loss = (eps - pred_noise).abs().mean()
+        loss = (eps - pred_noise).abs().mean()
 
-        # mse loss
-        out = self.sample(cdt, cdt)
-        mse_loss = nn.functional.mse_loss(out, y)
-
-        return diffusion_loss, mse_loss
+        return loss

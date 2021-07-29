@@ -50,32 +50,23 @@ class Network(pl.LightningModule, DiffusionModel):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(),
-                                lr=1e-4)  #weight_decay=0.1)
+                                lr=1e-4,
+                                weight_decay=0.1)
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
-        diffusion_loss, mse_loss = self.compute_loss(model_input, cdt)
-        loss = diffusion_loss + mse_loss
-
-        self.log("diffusion_loss", diffusion_loss)
-        self.log("mse_loss", mse_loss)
+        loss = self.compute_loss(model_input, cdt)
         self.log("loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
 
-        # loss = self.compute_loss(batch, batch_idx) Why ??
-
         model_input, cdt = batch
-        diffusion_loss, mse_loss = self.compute_loss(model_input, cdt)
-        loss = diffusion_loss + mse_loss
-
-        self.log("val_diffusion_loss", diffusion_loss)
-        self.log("val_mse_loss", mse_loss)
+        loss = self.compute_loss(model_input, cdt)
         self.log("val_loss", loss)
 
         # returns cdt for validation end epoch
-        return cdt
+        return (model_input, cdt)
 
     def post_process(self, out):
 
@@ -88,10 +79,10 @@ class Network(pl.LightningModule, DiffusionModel):
         l0 = self.scalers[1].inverse_transform(l0).reshape(-1)
         return f0, l0
 
-    def validation_epoch_end(self, cdt):
+    def validation_epoch_end(self, outs):
 
         # test for last cdt
-        cdt = cdt[-1]
+        model_input, cdt = outs[-1]
 
         self.val_idx += 1
 
@@ -104,6 +95,10 @@ class Network(pl.LightningModule, DiffusionModel):
         f0, lo = out[0].split(1, -1)
 
         midi_f0, midi_lo = cdt[0].split(1, -1)
+
+        # mse loss
+        mse_loss = nn.functional.mse_loss(out, model_input)
+        self.log("val_mse_loss", mse_loss)
 
         plt.plot(midi_f0.cpu())
         plt.plot(f0.cpu())
@@ -158,7 +153,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/quantile/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/weightdecay/')
 
     trainer = pl.Trainer(
         gpus=1,
@@ -170,7 +165,8 @@ if __name__ == "__main__":
         (PitchTransformer, {}),
         (LoudnessTransformer, {}),
     ]
-    dataset = DiffusionDataset(list_transforms=list_transforms)
+    dataset = DiffusionDataset(list_transforms=list_transforms,
+                               path="dataset/dataset-diffusion.pickle")
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
