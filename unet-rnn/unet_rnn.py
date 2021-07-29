@@ -93,7 +93,7 @@ class UBlock(nn.Module):
 
 
 class UNet_RNN(pl.LightningModule):
-    def __init__(self, channels, scalers, None):
+    def __init__(self, channels, scalers):
         super().__init__()
         self.save_hyperparameters()
 
