@@ -55,16 +55,15 @@ for i in range(N_EXAMPLE):
     model_input, target, ons, offs = dataset[i]
 
     n_step = 10
-    out = model(model_input.unsqueeze(0))
-
-    s_u_p = model_input[..., :128]
-    s_u_cents = torch.zeros_like(s_u_p)
-    s_u_lo = model_input[..., 128:249]
-
-    s_e_cents = model_input[..., 249:349]
-    s_e_lo = model_input[..., 349:470]
-
+    out = model.generation_loop(model_input.unsqueeze(0))
     s_pred_cents, s_pred_lo = model.split_predictions(out)
+
+    s_u_p = model_input[1:, :128]
+    s_u_cents = torch.zeros_like(s_u_p)
+    s_u_lo = model_input[1:, 128:249]
+
+    s_e_cents = model_input[1:, 249:349]
+    s_e_lo = model_input[1:, 349:470]
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
                                                    s_pred_lo)
