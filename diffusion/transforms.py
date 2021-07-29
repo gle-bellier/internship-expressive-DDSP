@@ -32,10 +32,13 @@ class PitchTransformer(BaseEstimator, TransformerMixin):
         return 440 * 2**((m - 69) / 12)
 
     def ftom(self, f):
-        return 12 * np.log2(f / 440) + 69
+        m = 12 * np.log2(f / 440) + 69
+        m = m.clip(0, 128)
+        return m
 
     def fit(self, X, y=None):
         X = self.ftom(X)
+
         X = self.sc1.fit_transform(X)
         self.sc2.fit(X)
         return self
