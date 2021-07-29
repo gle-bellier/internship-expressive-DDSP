@@ -29,7 +29,7 @@ down_channels = [2, 16, 512, 1024]
 ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 model = Model.load_from_checkpoint(
-    "logs/baseline/blstm/default/version_1/checkpoints/epoch=2529-step=12649.ckpt",
+    "logs/baseline/default/version_0/checkpoints/epoch=547-step=2739.ckpt",
     scalers=dataset.scalers,
     channels=down_channels,
     ddsp=ddsp,
@@ -90,5 +90,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/baseline/data/results-blstm.pickle", "wb") as file_out:
+with open("results/baseline/data/results.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
