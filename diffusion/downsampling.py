@@ -46,8 +46,6 @@ class DBlock(nn.Module):
                           dilation=1),
             )
 
-        self.lr = nn.LeakyReLU()
-
     def forward(self, x):
         out1 = self.b1(x)
         out2 = self.b2(x)

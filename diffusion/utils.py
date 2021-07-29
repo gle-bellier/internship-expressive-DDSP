@@ -18,7 +18,7 @@ class ConvBlock(nn.Module):
                               padding=dilation,
                               stride=1)
 
-        self.lr = nn.LeakyReLU()
+        self.lr = nn.LeakyReLU(.2)
         self.bn = nn.BatchNorm1d(out_channels)
         self.dp = nn.Dropout(dropout)
 
@@ -26,8 +26,8 @@ class ConvBlock(nn.Module):
         x = self.conv(x)
         if self.norm:
             x = self.bn(x)
-        x = self.lr(x)
-        out = self.dp(x)
+        out = self.lr(x)
+        #out = self.dp(x)
         return out
 
 
