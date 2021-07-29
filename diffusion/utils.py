@@ -20,13 +20,13 @@ class ConvBlock(nn.Module):
 
         self.lr = nn.LeakyReLU()
         self.bn = nn.BatchNorm1d(out_channels)
-        #self.dp = nn.Dropout(dropout)
+        self.dp = nn.Dropout(dropout)
 
     def forward(self, x):
         x = self.conv(x)
         if self.norm:
             x = self.bn(x)
-        #x = self.dp(x)
+        x = self.dp(x)
         out = self.lr(x)
         return out
 
