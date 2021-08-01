@@ -152,7 +152,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/fix/')
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/flute/')
 
     trainer = pl.Trainer(
         gpus=1,
@@ -165,17 +165,17 @@ if __name__ == "__main__":
         (LoudnessTransformer, {}),
     ]
     dataset = DiffusionDataset(list_transforms=list_transforms,
-                               path="dataset/dataset-diffusion.pickle")
+                               path="dataset/violin-train.pickle")
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 8, 64, 128, 256]
-    up_channels = [256, 128, 64, 16, 8,
+    down_channels = [2, 8, 64, 128, 256, 512]
+    up_channels = [512, 256, 128, 64, 16, 8,
                    2]  # one more : last up_block without film
-    down_dilations = [1, 1, 2, 4, 4]
-    up_dilations = [1, 1, 3, 3, 9, 9]
+    down_dilations = [1, 1, 2, 2, 4, 4]
+    up_dilations = [1, 1, 3, 3, 3, 9, 9]
 
     model = Network(scalers=dataset.scalers,
                     down_channels=down_channels,
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
     model.set_noise_schedule(init=torch.linspace,
                              init_kwargs={
-                                 "steps": 100,
+                                 "steps": 50,
                                  "start": 1e-6,
                                  "end": 1e-2
                              })

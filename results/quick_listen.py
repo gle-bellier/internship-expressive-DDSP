@@ -14,7 +14,7 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-path = "results/diffusion/data/results-normal.pickle"
+path = "results/baseline/data/results-blstm.pickle"
 number_of_examples = 5
 # get data
 

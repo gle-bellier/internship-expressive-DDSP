@@ -63,6 +63,9 @@ for i in range(N_EXAMPLE):
     s_u_lo = model_input[1:, 128:249]
 
     s_e_cents = model_input[1:, 249:349]
+
+    print(s_e_cents.shape)
+    print(s_e_cents == np.zeros_like(s_e_cents))
     s_e_lo = model_input[1:, 349:470]
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
@@ -90,5 +93,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/baseline/data/results.pickle", "wb") as file_out:
-    pickle.dump(out, file_out)
+# with open("results/baseline/data/results.pickle", "wb") as file_out:
+#     pickle.dump(out, file_out)

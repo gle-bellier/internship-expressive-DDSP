@@ -67,3 +67,20 @@ def mtof(m):
     converts midi note to frequency
     """
     return 440 * 2**((m - 69) / 12)
+
+
+def ftopc(f):
+    """
+    converts frequency to pitch / cent
+    """
+    m_float = ftom(f)
+    m_int = np.round(m_float).astype(int)
+    c_float = m_float - m_int
+    return m_int, c_float
+
+
+def ftom(f):
+    """
+    converts frequency to midi note
+    """
+    return 12 * (np.log(f) - np.log(440)) / np.log(2) + 69

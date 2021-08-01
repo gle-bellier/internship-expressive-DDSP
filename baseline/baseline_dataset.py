@@ -22,14 +22,17 @@ class Baseline_Dataset(Dataset):
         self.N = len(dataset["u_f0"])
         self.list_transforms = list_transforms
         self.n_sample = n_sample
+        self.load()
         self.scalers = self.fit_transforms()
+        self.transform()
         self.eval = eval
+        print("Dataset loaded. Length : {}min".format(self.N // 6000))
 
     def fit_transforms(self):
         scalers = []
         # pitch :
 
-        cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
+        cat = np.concatenate((self.u_f0, self.e_f0))
         contour = cat.reshape(-1, 1)
         transform = self.list_transforms[0]
         sc = transform[0]
@@ -38,7 +41,7 @@ class Baseline_Dataset(Dataset):
 
         # loudness
 
-        contour = self.dataset["e_loudness"]
+        contour = self.e_lo
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[1]
         sc = transform[0]
@@ -47,7 +50,7 @@ class Baseline_Dataset(Dataset):
 
         # cents
 
-        contour = self.dataset["e_cents"]
+        contour = self.e_cents
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[2]
         sc = transform[0]
@@ -59,6 +62,45 @@ class Baseline_Dataset(Dataset):
     def apply_transform(self, x, scaler):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
         return out
+
+    def load(self):
+        self.u_f0 = self.dataset["u_f0"]
+        self.e_f0 = self.dataset["e_f0"]
+        self.e_lo = self.dataset["e_loudness"]
+        self.onsets = self.dataset["onsets"]
+        self.offsets = self.dataset["offsets"]
+
+        # split pitch and cents :
+
+        self.e_f0, self.e_cents = ftopc(self.e_f0)
+        self.u_f0, _ = ftopc(self.u_f0)
+
+        self.e_f0 = np.clip(self.e_f0, 0, 127)
+        self.u_f0 = np.clip(self.u_f0, 0, 127)
+        self.e_cents = np.clip(self.e_cents, -50, 50)
+
+        # add shift
+        self.e_cents += .5
+
+    def transform(self):
+
+        # apply transforms :
+
+        self.u_f0 = self.apply_transform(self.u_f0, self.scalers[0])
+        self.e_f0 = self.apply_transform(self.e_f0, self.scalers[0])
+        self.e_lo = self.apply_transform(self.e_lo, self.scalers[1])
+        self.e_cents = self.apply_transform(self.e_cents, self.scalers[2])
+
+        self.u_f0 = torch.from_numpy(self.u_f0).float()
+        self.e_f0 = torch.from_numpy(self.e_f0).float()
+        self.e_lo = torch.from_numpy(self.e_lo).float()
+        self.e_cents = torch.from_numpy(self.e_cents).float()
+        self.onsets = torch.from_numpy(self.onsets).float()
+        self.offsets = torch.from_numpy(self.offsets).float()
+
+        # compute u_lo
+        self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
+                                                self.offsets)
 
     def post_processing(self, p, c, lo):
 
@@ -104,27 +146,13 @@ class Baseline_Dataset(Dataset):
         idx = max(idx, 0)
         idx = min(idx, len(self) * self.n_sample - self.n_sample)
 
-        u_f0 = self.dataset["u_f0"][idx:idx + self.n_sample]
-        e_f0 = self.dataset["e_f0"][idx:idx + self.n_sample]
-        e_cents = self.dataset["e_cents"][idx:idx + self.n_sample]
-        e_lo = self.dataset["e_loudness"][idx:idx + self.n_sample]
-        onsets = self.dataset["onsets"][idx:idx + self.n_sample]
-        offsets = self.dataset["offsets"][idx:idx + self.n_sample]
-        # Apply transforms :
-
-        u_f0 = self.apply_transform(u_f0, self.scalers[0])
-        e_f0 = self.apply_transform(e_f0, self.scalers[0])
-        e_lo = self.apply_transform(e_lo, self.scalers[1])
-        e_cents = self.apply_transform(e_cents, self.scalers[2])
-
-        u_f0 = torch.from_numpy(u_f0).float()
-        e_f0 = torch.from_numpy(e_f0).float()
-        e_lo = torch.from_numpy(e_lo).float()
-        e_cents = torch.from_numpy(e_cents).float()
-        onsets = torch.from_numpy(onsets).float()
-        offsets = torch.from_numpy(offsets).float()
-
-        u_lo = self.get_quantized_loudness(e_lo, onsets, offsets)
+        u_f0 = self.u_f0[idx:idx + self.n_sample]
+        u_lo = self.u_lo[idx:idx + self.n_sample]
+        e_f0 = self.e_f0[idx:idx + self.n_sample]
+        e_cents = self.e_cents[idx:idx + self.n_sample]
+        e_lo = self.e_lo[idx:idx + self.n_sample]
+        onsets = self.onsets[idx:idx + self.n_sample]
+        offsets = self.offsets[idx:idx + self.n_sample]
 
         u_f0 = (127 * u_f0).long()
         u_f0 = nn.functional.one_hot(u_f0, 128)
