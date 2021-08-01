@@ -239,7 +239,9 @@ if __name__ == "__main__":
         }),  # cents
     ]
 
-    dataset = Baseline_Dataset(list_transforms=list_transforms, n_sample=2048)
+    dataset = Baseline_Dataset(list_transforms=list_transforms,
+                               n_sample=2048,
+                               path="dataset/flute-train.pickle")
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
