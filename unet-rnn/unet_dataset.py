@@ -29,7 +29,7 @@ class UNet_Dataset(Dataset):
         self.scalers = self.fit_transforms()
         self.transform()
         self.eval = eval
-        print("Dataset loaded. Length : {}min".format(self.N // 3600))
+        print("Dataset loaded. Length : {}min".format(self.N // 6000))
 
     def fit_transforms(self):
         scalers = []
