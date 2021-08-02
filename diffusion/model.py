@@ -3,10 +3,10 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 
 from torch import nn
-from .utils import FiLM, FiLM_RNN, get_padding
-from .downsampling import DBlock
-from .upsampling import UBlock
-from .bottleneck import Bottleneck
+from utils import FiLM, FiLM_RNN, get_padding
+from downsampling import DBlock
+from upsampling import UBlock
+from bottleneck import Bottleneck
 
 
 class UNet_Diffusion(pl.LightningModule):
