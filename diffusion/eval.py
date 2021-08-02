@@ -2,7 +2,7 @@ import torch
 from torch.utils import data
 
 torch.set_grad_enabled(False)
-from training import Network
+from training_mse import Network
 import soundfile as sf
 
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -70,7 +70,6 @@ for i in tqdm(range(N_EXAMPLE)):
     sample = np.concatenate((sample, sample_idx))
     time = np.concatenate((time, t))
 
-
     # add to results:
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
@@ -85,8 +84,9 @@ for i in tqdm(range(N_EXAMPLE)):
     onsets = np.concatenate((onsets, ons.squeeze()))
     offsets = np.concatenate((onsets, offs.squeeze()))
 
-
 out = {
+    "sample": sample,
+    "time": time,
     "u_f0": u_f0,
     "u_lo": u_lo,
     "e_f0": e_f0,
