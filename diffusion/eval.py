@@ -82,7 +82,7 @@ for i in tqdm(range(N_EXAMPLE)):
     pred_lo = np.concatenate((pred_lo, lo.squeeze()))
 
     onsets = np.concatenate((onsets, ons.squeeze()))
-    offsets = np.concatenate((onsets, offs.squeeze()))
+    offsets = np.concatenate((offsets, offs.squeeze()))
 
 out = {
     "sample": sample,
