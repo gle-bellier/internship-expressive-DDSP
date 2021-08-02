@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxSca
 from diffusion_dataset import DiffusionDataset
 from transforms import PitchTransformer, LoudnessTransformer
 import numpy as np
+from tqdm import tqdm
 
 import pickle
 
@@ -20,7 +21,7 @@ list_transforms = [
     (PitchTransformer, {}),
     (LoudnessTransformer, {}),
 ]
-PATH = "dataset/dataset-diffusion.pickle"
+PATH = "dataset/violin-test.pickle"
 dataset = DiffusionDataset(path=PATH,
                            list_transforms=list_transforms,
                            eval=True)
@@ -51,7 +52,7 @@ offsets = np.empty(0)
 # Prediction loops :
 
 N_EXAMPLE = 20
-for i in range(N_EXAMPLE):
+for i in tqdm(range(N_EXAMPLE)):
     target, midi, ons, offs = dataset[i]
 
     n_step = 10
