@@ -65,7 +65,7 @@ for i in tqdm(range(N_EXAMPLE)):
     # sample information
 
     sample_idx = np.ones_like(f0) * 0
-    t = np.arange(len(u_f0)) / 100  # sr = 100
+    t = np.arange(len(f0)) / 100  # sr = 100
 
     sample = np.concatenate((sample, sample_idx))
     time = np.concatenate((time, t))
