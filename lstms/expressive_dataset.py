@@ -286,8 +286,6 @@ class ExpressiveDatasetPitchContinuous(Dataset):
 
     def post_processing(self, p, c, lo):
 
-        c = torch.argmax(c, -1, keepdim=True) / 100
-        lo = torch.argmax(lo, -1, keepdim=True) / 120
         p = torch.argmax(p, -1, keepdim=True) / 127
 
         p = self.scalers[0].inverse_transform(p.squeeze(0))
