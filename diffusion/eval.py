@@ -67,6 +67,10 @@ for i in tqdm(range(N_EXAMPLE)):
     sample_idx = np.ones_like(f0) * 0
     t = np.arange(len(u_f0)) / 100  # sr = 100
 
+    sample = np.concatenate((sample, sample_idx))
+    time = np.concatenate((time, t))
+
+
     # add to results:
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
@@ -80,6 +84,7 @@ for i in tqdm(range(N_EXAMPLE)):
 
     onsets = np.concatenate((onsets, ons.squeeze()))
     offsets = np.concatenate((onsets, offs.squeeze()))
+
 
 out = {
     "u_f0": u_f0,

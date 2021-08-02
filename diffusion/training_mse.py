@@ -153,7 +153,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
 if __name__ == "__main__":
 
-    inst = "flute"  # "violin"
+    inst = "violin"  #"flute"  #
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/{}/'.format(inst))
 
