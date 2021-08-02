@@ -141,8 +141,9 @@ class ExpressiveDataset(Dataset):
         N = self.n_sample
         idx *= N
 
-        jitter = randint(0, N // 10)
-        idx += jitter
+        # add jitter during training only
+        if not self.eval:
+            idx += randint(0, N // 10)
         idx = max(idx, 0)
         idx = min(idx, len(self) * self.n_sample - self.n_sample)
 
@@ -321,8 +322,9 @@ class ExpressiveDatasetPitchContinuous(Dataset):
         N = self.n_sample
         idx *= N
 
-        jitter = randint(0, N // 10)
-        idx += jitter
+        # add jitter during training only
+        if not self.eval:
+            idx += randint(0, N // 10)
         idx = max(idx, 0)
         idx = min(idx, len(self) * self.n_sample - self.n_sample)
 
