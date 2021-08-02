@@ -1,7 +1,7 @@
 import torch
 import pytorch_lightning as pl
 from torch import nn
-from utils import FeatureWiseAffine, FiLM, PositionalEncoding, ConvBlock
+from .utils import FeatureWiseAffine, FiLM, PositionalEncoding, ConvBlock, get_padding
 
 
 class Residual(nn.Module):
@@ -38,7 +38,7 @@ class UBlock_Mid(nn.Module):
                               out_channels=out_channels,
                               kernel_size=3,
                               stride=1,
-                              padding=dilation,
+                              padding=get_padding(3,1,dilation),
                               dilation=dilation)
 
         self.lr = nn.LeakyReLU(.2)
