@@ -1,9 +1,12 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from expressive_dataset import ExpressiveDatasetPitchContinuous
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
+
 import pickle
 from random import randint, sample
 from utils import *
@@ -30,8 +33,8 @@ class ModelContinuousPitch(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.scalers = scalers
-        self.loudness_nbins = 30
-        self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
+        self.loudness_nbins = 100
+        self.ddsp = None
 
         self.pre_lstm = nn.Sequential(
             LinearBlock(in_size, hidden_size),
@@ -216,32 +219,36 @@ class ModelContinuousPitch(pl.LightningModule):
                 }, i)
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     trainer = pl.Trainer(
-#         gpus=1,
-#         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
-#         max_epochs=50000,
-#     )
-#     list_transforms = [
-#         (MinMaxScaler, ),  # u_f0
-#         (MinMaxScaler, ),  # u_loudness
-#         (MinMaxScaler, ),  # e_f0
-#         (Identity, ),  # e_cents
-#         (MinMaxScaler, ),  # e_loudness
-#     ]
+    tb_logger = pl_loggers.TensorBoardLogger('logs/lstm/continuous')
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
+        max_epochs=10000,
+        logger=tb_logger)
 
-#     dataset = ExpressiveDatasetPitchContinuous(n_sample=512,
-#                                                list_transforms=list_transforms)
-#     val_len = len(dataset) // 20
-#     train_len = len(dataset) - val_len
+    list_transforms = [
+        (MinMaxScaler, {}),  # pitch
+        (QuantileTransformer, {
+            "n_quantiles": 120
+        }),  # lo
+        (QuantileTransformer, {
+            "n_quantiles": 100
+        }),  # cents
+    ]
 
-#     train, val = random_split(dataset, [train_len, val_len])
+    dataset = ExpressiveDatasetPitchContinuous(
+        list_transforms=list_transforms, path="dataset/flute-train.pickle")
+    val_len = len(dataset) // 20
+    train_len = len(dataset) - val_len
+    train, val = random_split(dataset, [train_len, val_len])
 
-#     model = ModelContinuousPitch(63, 1024, 32, scalers=dataset.scalers)
+    model = ModelContinuousPitch(245, 1024, 124, scalers=dataset.scalers)
+    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-#     trainer.fit(
-#         model,
-#         DataLoader(train, 32, True),
-#         DataLoader(val, 32),
-#     )
+    trainer.fit(
+        model,
+        DataLoader(train, 64, True),
+        DataLoader(val, 64),
+    )

@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
 from expressive_dataset import ExpressiveDataset
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
+
 import pickle
 import matplotlib.pyplot as plt
 from random import randint, sample
@@ -139,7 +141,7 @@ class ModelCategorical(pl.LightningModule):
             if infer_pitch:
                 f0 = self.sample_one_hot(pred_f0)
             else:
-                f0 = x[:, i + 1:i + 2, :100].float()
+                f0 = x[:, i + 1:i + 2, :128].float()
 
             cents = self.sample_one_hot(pred_cents)
             loudness = self.sample_one_hot(pred_loudness)
@@ -224,11 +226,13 @@ class ModelCategorical(pl.LightningModule):
 
 if __name__ == "__main__":
 
+    tb_logger = pl_loggers.TensorBoardLogger('logs/lstm/categorical')
     trainer = pl.Trainer(
         gpus=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
-        max_epochs=50000,
-    )
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
+        max_epochs=10000,
+        logger=tb_logger)
+
     list_transforms = [
         (MinMaxScaler, {}),  # pitch
         (QuantileTransformer, {
