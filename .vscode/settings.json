@@ -1,4 +1,5 @@
 {
     "jupyter.jupyterServerType": "local",
-    "python.pythonPath": "/home/erik/miniconda3/bin/python"
+    "python.pythonPath": "/home/erik/miniconda3/bin/python",
+    "editor.formatOnSave": true
 }

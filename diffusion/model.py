@@ -3,10 +3,10 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 
 from torch import nn
-from utils import FiLM, FiLM_RNN
-from downsampling import DBlock
-from upsampling import UBlock
-from bottleneck import Bottleneck
+from .utils import FiLM, FiLM_RNN, get_padding
+from .downsampling import DBlock
+from .upsampling import UBlock
+from .bottleneck import Bottleneck
 
 
 class UNet_Diffusion(pl.LightningModule):
@@ -84,26 +84,27 @@ class UNet_Diffusion(pl.LightningModule):
 
     def down_sampling(self, list_blocks, x):
         l_out = []
-        for i in range(len(list_blocks)):
-            x = list_blocks[i](x)
-            l_out += [x]
+        for block in list_blocks:
+            x = block(x)
+            l_out.append(x)
         return l_out
 
     def up_sampling(self, x, l_film_pitch, l_film_noisy):
         l_film_pitch = l_film_pitch[::-1]
         l_film_noisy = l_film_noisy[::-1]
 
-        for i in range(len(self.up_blocks)):
-            x = self.up_blocks[i](x, l_film_pitch[i], l_film_noisy[i])
+        for b, p, n in zip(self.up_blocks, l_film_pitch, l_film_noisy):
+            x = b(x, p, n)
 
         out = self.top(x, None, None)
         return out
 
     def film(self, list_films, l_out, noise_level):
         l_film = []
-        for i in range(len(list_films)):
-            f = list_films[i](l_out[i], noise_level)
-            l_film = l_film + [f]
+
+        for film, out in zip(list_films, l_out):
+            l_film.append(film(out, noise_level))
+
         return l_film
 
     def cat_hiddens(self, h_pitch, h_noisy):
