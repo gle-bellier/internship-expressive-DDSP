@@ -74,7 +74,7 @@ if __name__ == "__main__":
     f0_conf = []
     events = []
 
-    with open("dataset/contours.csv", "r") as contour:
+    with open("dataset/contours-flute.csv", "r") as contour:
         contour = csv.DictReader(contour)
 
         for row in contour:
@@ -135,5 +135,5 @@ if __name__ == "__main__":
         "offsets": offsets
     }
 
-    with open("dataset/dataset-diffusion.pickle", "wb") as file_out:
+    with open("dataset/dataset-flute-diffusion.pickle", "wb") as file_out:
         pickle.dump(out, file_out)
