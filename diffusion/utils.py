@@ -134,8 +134,5 @@ class FeatureWiseAffine(nn.Module):
 
 
 def get_padding(kernel_size, stride=1, dilation=1):
-    if kernel_size == 1: return (0, 0)
-    p = (kernel_size - 1) * dilation + 1 - stride
-    p_right = p // 2
-    p_left = p - p_right
-    return (p_left, p_right)
+    full_kernel = (kernel_size - 1) * dilation + 1
+    return full_kernel // 2
