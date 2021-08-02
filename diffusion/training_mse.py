@@ -152,7 +152,10 @@ class Network(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/flute/')
+
+    inst = "flute"  # "violin"
+
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/{}/'.format(inst))
 
     trainer = pl.Trainer(
         gpus=1,
@@ -165,7 +168,7 @@ if __name__ == "__main__":
         (LoudnessTransformer, {}),
     ]
     dataset = DiffusionDataset(list_transforms=list_transforms,
-                               path="dataset/violin-train.pickle")
+                               path="dataset/{}-train.pickle".format(inst))
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
