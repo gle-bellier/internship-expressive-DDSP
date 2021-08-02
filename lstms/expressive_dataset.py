@@ -13,7 +13,7 @@ class ExpressiveDataset(Dataset):
     def __init__(self,
                  list_transforms,
                  path="dataset/dataset-article.pickle",
-                 n_sample=2048,
+                 n_sample=2050,
                  eval=False):
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
@@ -160,14 +160,14 @@ class ExpressiveDataset(Dataset):
         u_lo = (120 * u_lo).long()
         u_lo = nn.functional.one_hot(u_lo, 121)
 
+        e_f0 = (127 * e_f0).long()
+        e_f0 = nn.functional.one_hot(e_f0, 128)
+
         e_cents = (99 * e_cents).long()
         e_cents = nn.functional.one_hot(e_cents, 100)
 
         e_lo = (120 * e_lo).long()
         e_lo = nn.functional.one_hot(e_lo, 121)
-
-        onsets = onsets.reshape(-1, 1)
-        offsets = offsets.reshape(-1, 1)
 
         model_input = torch.cat(
             [
@@ -195,7 +195,7 @@ class ExpressiveDatasetPitchContinuous(Dataset):
     def __init__(self,
                  list_transforms,
                  path="dataset/dataset-article.pickle",
-                 n_sample=2048,
+                 n_sample=2050,
                  eval=False):
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
@@ -358,8 +358,7 @@ class ExpressiveDatasetPitchContinuous(Dataset):
             -1)
 
         target = torch.cat([
-            e_f0[2:],
-            e_cents[1:-1],
+            e_f0[2:], e_cents[1:-1],
             torch.argmax(e_lo[2:], -1, keepdim=True)
         ], -1)
 

@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
+from expressive_dataset import ExpressiveDataset
 import pytorch_lightning as pl
 import pickle
 import matplotlib.pyplot as plt
@@ -31,8 +32,8 @@ class ModelCategorical(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.scalers = scalers
-        self.loudness_nbins = 30
-        self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
+        self.loudness_nbins = 100
+        self.ddsp = None
         self.val_idx = 0
 
         self.pre_lstm = nn.Sequential(
@@ -71,9 +72,9 @@ class ModelCategorical(pl.LightningModule):
         return x
 
     def split_predictions(self, prediction):
-        pred_f0 = prediction[..., :100]
-        pred_cents = prediction[..., 100:200]
-        pred_loudness = prediction[..., 200:]
+        pred_f0 = prediction[..., :128]
+        pred_cents = prediction[..., 128:228]
+        pred_loudness = prediction[..., 228:]
         return pred_f0, pred_cents, pred_loudness
 
     def cross_entropy(self, pred_f0, pred_cents, pred_loudness, target_f0,
@@ -221,31 +222,34 @@ class ModelCategorical(pl.LightningModule):
             tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     trainer = pl.Trainer(
-#         gpus=1,
-#         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
-#         max_epochs=50000,
-#     )
-#     list_transforms = [
-#         (Identity, ),  # u_f0
-#         (MinMaxScaler, ),  # u_loudness
-#         (Identity, ),  # e_f0
-#         (Identity, ),  # e_cents
-#         (MinMaxScaler, ),  # e_loudness
-#     ]
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
+        max_epochs=50000,
+    )
+    list_transforms = [
+        (MinMaxScaler, {}),  # pitch
+        (QuantileTransformer, {
+            "n_quantiles": 120
+        }),  # lo
+        (QuantileTransformer, {
+            "n_quantiles": 100
+        }),  # cents
+    ]
 
-#     dataset = ExpressiveDataset(n_sample=512, list_transforms=list_transforms)
-#     val_len = len(dataset) // 20
-#     train_len = len(dataset) - val_len
+    dataset = ExpressiveDataset(list_transforms=list_transforms,
+                                path="dataset/flute-train.pickle")
+    val_len = len(dataset) // 20
+    train_len = len(dataset) - val_len
+    train, val = random_split(dataset, [train_len, val_len])
 
-#     train, val = random_split(dataset, [train_len, val_len])
+    model = ModelCategorical(598, 1024, 349, scalers=dataset.scalers)
+    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
-#     model = ModelCategorical(360, 1024, 230, scalers=dataset.scalers)
-
-#     trainer.fit(
-#         model,
-#         DataLoader(train, 32, True),
-#         DataLoader(val, 32),
-#     )
+    trainer.fit(
+        model,
+        DataLoader(train, 64, True),
+        DataLoader(val, 64),
+    )
