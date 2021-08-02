@@ -2,12 +2,17 @@ import torch
 import torch.nn as nn
 
 
+def get_padding(kernel_size, stride=1, dilation=1):
+    full_kernel = (kernel_size - 1) * dilation + 1
+    return full_kernel // 2
+
+
 class ConvBlock(nn.Module):
     def __init__(self,
                  in_channels,
                  out_channels,
                  dilation,
-                 norm=True,
+                 norm=False,
                  dropout=0.1):
         super().__init__()
         self.norm = norm
@@ -15,7 +20,7 @@ class ConvBlock(nn.Module):
                               out_channels=out_channels,
                               kernel_size=3,
                               dilation=dilation,
-                              padding=dilation,
+                              padding=get_padding(3, 1, dilation),
                               stride=1)
 
         self.lr = nn.LeakyReLU(.2)
