@@ -34,6 +34,11 @@ model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
 
 # Initialize data :
 
+sample = np.empty(0)
+time = np.empty(0)
+
+# samples data
+
 u_f0 = np.empty(0)
 u_lo = np.empty(0)
 e_f0 = np.empty(0)
@@ -56,6 +61,11 @@ for i in range(N_EXAMPLE):
     midi_f0, midi_lo = dataset.inverse_transform(midi)
     target_f0, target_lo = dataset.inverse_transform(target)
 
+    # sample information
+
+    sample_idx = np.ones_like(f0) * 0
+    t = np.arange(len(u_f0)) / 100  # sr = 100
+
     # add to results:
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
@@ -66,6 +76,9 @@ for i in range(N_EXAMPLE):
 
     pred_f0 = np.concatenate((pred_f0, f0.squeeze()))
     pred_lo = np.concatenate((pred_lo, lo.squeeze()))
+
+    onsets = np.concatenate((onsets, ons.squeeze()))
+    offsets = np.concatenate((onsets, offs.squeeze()))
 
 out = {
     "u_f0": u_f0,
@@ -78,5 +91,5 @@ out = {
     "offsets": offsets
 }
 
-with open("results/diffusion/data/results-normal.pickle", "wb") as file_out:
+with open("results/diffusion/data/results.pickle", "wb") as file_out:
     pickle.dump(out, file_out)
