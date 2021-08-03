@@ -76,7 +76,7 @@ if __name__ == "__main__":
     f0_conf = []
     events = []
 
-    with open("dataset/all-violin-contours.csv", "r") as contour:
+    with open("dataset/all-violin-contours-updated.csv", "r") as contour:
         contour = csv.DictReader(contour)
 
         for row in contour:
