@@ -21,7 +21,7 @@ number_of_examples = 5
 with open(path, "rb") as dataset:
     dataset = pickle.load(dataset)
 
-ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 

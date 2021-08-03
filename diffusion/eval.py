@@ -31,7 +31,7 @@ model = Network.load_from_checkpoint(
     strict=False).eval()
 
 model.set_noise_schedule()
-model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 

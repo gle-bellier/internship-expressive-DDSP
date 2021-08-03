@@ -245,7 +245,7 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     model = ModelContinuousPitch(245, 1024, 124, scalers=dataset.scalers)
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
     trainer.fit(
         model,

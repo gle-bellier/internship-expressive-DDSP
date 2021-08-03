@@ -186,7 +186,7 @@ if __name__ == "__main__":
                     down_dilations=down_dilations,
                     up_dilations=up_dilations)
 
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
     model.set_noise_schedule(init=torch.linspace,
                              init_kwargs={
                                  "steps": 50,

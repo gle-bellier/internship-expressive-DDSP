@@ -250,7 +250,7 @@ if __name__ == "__main__":
                   hidden_size=512,
                   out_size=221,
                   scalers=dataset.scalers)
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/')
     trainer = pl.Trainer(

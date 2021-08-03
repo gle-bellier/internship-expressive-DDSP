@@ -31,7 +31,7 @@ model = ModelCategorical.load_from_checkpoint(
     scalers=dataset.scalers,
     strict=False).eval()
 
-model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 

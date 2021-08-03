@@ -32,7 +32,7 @@ sns.lineplot(x="time", y="u_f0", hue="sample", data=df[df["sample"] == 0])
 sns.lineplot(x="time", y="e_f0", hue="sample", data=df[df["sample"] == 0])
 plt.show()
 
-# ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+# ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # # Initialize data :
 

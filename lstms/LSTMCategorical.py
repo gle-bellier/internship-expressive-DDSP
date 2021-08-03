@@ -250,7 +250,7 @@ if __name__ == "__main__":
     train, val = random_split(dataset, [train_len, val_len])
 
     model = ModelCategorical(598, 1024, 349, scalers=dataset.scalers)
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
     trainer.fit(
         model,

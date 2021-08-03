@@ -241,7 +241,7 @@ if __name__ == "__main__":
     down_channels = [2, 16, 512, 1024]
 
     model = UNet(scalers=dataset.scalers, channels=down_channels)
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/unet/')
     trainer = pl.Trainer(
