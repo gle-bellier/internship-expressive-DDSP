@@ -239,7 +239,7 @@ class ContoursGetter:
 
 
 if __name__ == '__main__':
-    dataset_path = "flute/"
+    dataset_path = "violin/"
     filenames = [
         file[len(dataset_path):-4]
         for file in glob.glob(dataset_path + "*.mid")
@@ -268,7 +268,7 @@ if __name__ == '__main__':
                 sampling_rate=16000,
                 block_size=160,
                 max_silence_duration=3,
-                verbose=False)
+                verbose=True)
 
             u_f0 = np.concatenate((u_f0, u_f0_track))
             u_loudness = np.concatenate((u_loudness, u_loudness_track))
@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
         print("Writing : \n")
 
-        with open("dataset/contours-flute.csv", 'w') as csvfile:
+        with open("dataset/contours-violin-update.csv", 'w') as csvfile:
             fieldnames = [
                 "u_f0", "u_loudness", "e_f0", "e_loudness", "e_f0_mean",
                 "e_f0_stddev", "f0_conf", "events"
