@@ -75,8 +75,8 @@ if __name__ == "__main__":
     e_loudness = []
     f0_conf = []
     events = []
-
-    with open("dataset/all-violin-contours-updated.csv", "r") as contour:
+    print("Loading")
+    with open("dataset/violin-contours-update.csv", "r") as contour:
         contour = csv.DictReader(contour)
 
         for row in contour:
@@ -123,6 +123,7 @@ if __name__ == "__main__":
     onsets, offsets = onsets[cut_idx:], offsets[cut_idx:]
 
     e_f0_pitch, e_cents = ftopc(e_f0)
+    u_f0_pitch, u_cents = ftopc(u_f0)
 
     # Replicate arrays that stay the same
 
@@ -136,30 +137,34 @@ if __name__ == "__main__":
 
     # 1 step above
     e_f0_1a = e_f0_pitch + 1
-    u_f0_1a = u_f0 + 1
+    u_f0_1a = u_f0_pitch + 1
 
     # 1 step below
     e_f0_1b = e_f0_pitch - 1
-    u_f0_1b = u_f0 - 1
+    u_f0_1b = u_f0_pitch - 1
 
     # add cents to quantized contours :
 
     e_f0_1a = pctof(e_f0_1a, e_cents)
     e_f0_1b = pctof(e_f0_1b, e_cents)
+    u_f0_1a = pctof(u_f0_1a, u_cents)
+    u_f0_1b = pctof(u_f0_1b, u_cents)
 
     # 2 STEP ABOVE BELOW
 
     # 2 step above
     e_f0_2a = e_f0_pitch + 2
-    u_f0_2a = u_f0 + 2
+    u_f0_2a = u_f0_pitch + 2
 
     # 2 step below
     e_f0_2b = e_f0_pitch - 2
-    u_f0_2b = u_f0 - 2
+    u_f0_2b = u_f0_pitch - 2
 
     # add cents to quantized contours :
     e_f0_2a = pctof(e_f0_2a, e_cents)
     e_f0_2b = pctof(e_f0_2b, e_cents)
+    u_f0_2a = pctof(u_f0_2a, u_cents)
+    u_f0_2b = pctof(u_f0_2b, u_cents)
 
     e_f0 = np.concatenate((e_f0, e_f0_1a))
     u_f0 = np.concatenate((u_f0, u_f0_1a))
