@@ -157,39 +157,33 @@ class ModelCategorical(pl.LightningModule):
         pred = x[..., -ndim:]
         pred_f0, pred_cents, pred_loudness = self.split_predictions(pred)
 
-        pred_f0 = pred_f0[:, 1:]
-        pred_loudness = pred_loudness[:, 1:]
-        pred_cents = pred_cents[:, :-1]
-
-        out = map(lambda x: torch.argmax(x, -1),
-                  [pred_f0, pred_cents, pred_loudness])
-
-        return list(out)
-
-    def apply_inverse_transform(self, x, idx):
-        scaler = self.scalers[idx]
-        x = x.cpu()
-        out = scaler.inverse_transform(x.reshape(-1, 1))
-        out = torch.from_numpy(out).to("cuda")
-        out = out.unsqueeze(0)
-        return out.float()
+        return [pred_f0, pred_cents, pred_loudness]
 
     def get_audio(self, model_input, target):
 
         model_input = model_input.unsqueeze(0).float()
-        f0, cents, loudness = self.generation_loop(model_input)
-        cents = cents / 100 - .5
+        pitch, cents, loudness = self.generation_loop(model_input)
 
-        f0 = pctof(f0, cents)
+        c = torch.argmax(cents, -1, keepdim=True) / 100
+        lo = torch.argmax(loudness, -1, keepdim=True) / 120
+        p = torch.argmax(pitch, -1, keepdim=True) / 127
 
-        loudness = loudness / (self.loudness_nbins - 1)
-        f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
-        loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
-        y = self.ddsp(f0, loudness)
+        p = self.scalers[0].inverse_transform(p.squeeze(0).cpu())
+        lo = self.scalers[1].inverse_transform(lo.squeeze(0).cpu())
+        c = self.scalers[2].inverse_transform(c.squeeze(0).cpu())
+
+        # Change range [0, 1] -> [-0.5, 0.5]
+        c -= 0.5
+
+        f0 = pctof(p, c)
+        f0 = torch.Tensor(f0).to("cuda")
+        lo = torch.Tensor(lo).to("cuda")
+
+        y = self.ddsp(f0.unsqueeze(0), lo.unsqueeze(0))
 
         plt.plot(f0.squeeze().cpu())
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
-        plt.plot(loudness.squeeze().cpu())
+        plt.plot(lo.squeeze().cpu())
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
         return y
@@ -214,11 +208,11 @@ class ModelCategorical(pl.LightningModule):
         self.log("val_loss_f0", loss_f0)
         self.log("val_loss_cents", loss_cents)
         self.log("val_loss_loudness", loss_loudness)
-        self.log("val_total", loss_f0 + loss_cents + loss_loudness)
+        self.log("val_loss", loss_f0 + loss_cents + loss_loudness)
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 20 == 0:
+        if self.val_idx % 20 == 0:
 
             audio = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard
@@ -260,6 +254,6 @@ if __name__ == "__main__":
 
     trainer.fit(
         model,
-        DataLoader(train, 32, True),
-        DataLoader(val, 32),
+        DataLoader(train, 16, True),
+        DataLoader(val, 16),
     )
