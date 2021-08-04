@@ -54,6 +54,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
+
         loss = self.compute_loss(model_input, cdt)
         self.log("loss", loss)
         return loss
@@ -94,6 +95,7 @@ class Network(pl.LightningModule, DiffusionModel):
         f0, lo = out[0].split(1, -1)
 
         midi_f0, midi_lo = cdt[0].split(1, -1)
+        e_f0, e_lo = model_input[0].split(1, -1)
 
         # mse loss
         mse_loss = nn.functional.mse_loss(out, model_input)
@@ -101,9 +103,11 @@ class Network(pl.LightningModule, DiffusionModel):
 
         plt.plot(midi_f0.cpu())
         plt.plot(f0.cpu())
+        plt.plot(e_f0.cpu())
         self.logger.experiment.add_figure("pitch RAW", plt.gcf(), self.val_idx)
         plt.plot(midi_lo.cpu())
         plt.plot(lo.cpu())
+        plt.plot(e_lo.cpu())
         self.logger.experiment.add_figure("loudness RAW", plt.gcf(),
                                           self.val_idx)
 
@@ -165,7 +169,9 @@ if __name__ == "__main__":
 
     list_transforms = [
         (PitchTransformer, {}),
-        (LoudnessTransformer, {}),
+        (LoudnessTransformer, {
+            "output_distribution": "uniform"
+        }),
     ]
     dataset = DiffusionDataset(list_transforms=list_transforms,
                                path="dataset/{}-train.pickle".format(inst))
@@ -186,7 +192,7 @@ if __name__ == "__main__":
                     down_dilations=down_dilations,
                     up_dilations=up_dilations)
 
-    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
     model.set_noise_schedule(init=torch.linspace,
                              init_kwargs={
                                  "steps": 50,
