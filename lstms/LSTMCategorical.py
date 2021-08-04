@@ -208,17 +208,20 @@ class ModelCategorical(pl.LightningModule):
         self.log("val_loss_f0", loss_f0)
         self.log("val_loss_cents", loss_cents)
         self.log("val_loss_loudness", loss_loudness)
-        self.log("val_loss", loss_f0 + loss_cents + loss_loudness)
+        self.log("val_loss", loss_cents + loss_loudness)
 
         ## Every 100 epochs : produce audio
 
         if self.val_idx % 20 == 0:
 
-            audio = self.get_audio(model_input[0], target[0])
+            signal = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard
-            tb = self.logger.experiment
-            n = "Epoch={}".format(self.current_epoch)
-            tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
+            self.logger.experiment.add_audio(
+                "generation",
+                signal,
+                self.val_idx,
+                16000,
+            )
 
 
 if __name__ == "__main__":
