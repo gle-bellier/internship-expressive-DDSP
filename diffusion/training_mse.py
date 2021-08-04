@@ -169,9 +169,7 @@ if __name__ == "__main__":
 
     list_transforms = [
         (PitchTransformer, {}),
-        (LoudnessTransformer, {
-            "output_distribution": "uniform"
-        }),
+        (LoudnessTransformer, {}),
     ]
     dataset = DiffusionDataset(list_transforms=list_transforms,
                                path="dataset/{}-train.pickle".format(inst))
