@@ -11,6 +11,9 @@ import pickle
 import matplotlib.pyplot as plt
 from random import randint, sample
 from utils import *
+import warnings
+
+warnings.filterwarnings('ignore')
 
 
 class LinearBlock(nn.Module):
@@ -226,7 +229,10 @@ class ModelCategorical(pl.LightningModule):
 
 if __name__ == "__main__":
 
-    tb_logger = pl_loggers.TensorBoardLogger('logs/lstm/categorical')
+    inst = "flute"
+
+    tb_logger = pl_loggers.TensorBoardLogger(
+        'logs/lstm/categorical/{}/'.format(inst))
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
@@ -244,16 +250,16 @@ if __name__ == "__main__":
     ]
 
     dataset = ExpressiveDataset(list_transforms=list_transforms,
-                                path="dataset/flute-train.pickle")
+                                path="dataset/{}-train.pickle".format(inst))
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
     train, val = random_split(dataset, [train_len, val_len])
 
     model = ModelCategorical(598, 1024, 349, scalers=dataset.scalers)
-    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
 
     trainer.fit(
         model,
-        DataLoader(train, 64, True),
-        DataLoader(val, 64),
+        DataLoader(train, 32, True),
+        DataLoader(val, 32),
     )

@@ -10,6 +10,9 @@ from pytorch_lightning import loggers as pl_loggers
 import pickle
 from random import randint, sample
 from utils import *
+import warnings
+
+warnings.filterwarnings('ignore')
 
 
 class LinearBlock(nn.Module):
