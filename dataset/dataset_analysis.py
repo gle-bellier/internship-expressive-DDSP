@@ -257,13 +257,15 @@ class Analyzer:
         return score_trans, score_frames
 
 
-path = "dataset/dataset-diffusion.pickle"
+path = "dataset/violin-train.pickle"
 
 analyzer = Analyzer(path)
 # trans, frames = analyzer.get_trans_frames()
 # midi, target = analyzer.get_all_notes()
 
-df = analyzer.get_transitions_df()
+#df = analyzer.get_transitions_df()
+
+df = analyzer.get_notes_df()
 print(df.dtypes)
 
 # sns.set_theme(style="darkgrid")
@@ -296,11 +298,13 @@ print(df.dtypes)
 #                   hue="cat",
 #                   alpha=.7)
 
-g = sns.jointplot(x="d_f0",
-                  y="diff_cents",
-                  data=df,
-                  kind="kde",
-                  hue="cat",
-                  alpha=.7)
+#g = sns.relplot(x=df["loudness"], y=df["diff_cents"].abs())
+
+# g = sns.jointplot(x="d_f0",
+#                   y="diff_cents",
+#                   data=df,
+#                   kind="kde",
+#                   hue="cat",
+#                   alpha=.7)
 
 plt.show()
