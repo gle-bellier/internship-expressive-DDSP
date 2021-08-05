@@ -247,7 +247,7 @@ if __name__ == "__main__":
     ]
 
     dataset = ExpressiveDataset(list_transforms=list_transforms,
-                                path="dataset/{}-train.pickle".format(inst))
+                                path="dataset/{}-train.pickle".format(inst[0]))
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
     train, val = random_split(dataset, [train_len, val_len])

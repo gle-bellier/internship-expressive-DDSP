@@ -159,7 +159,8 @@ if __name__ == "__main__":
 
     inst = "violin"  #"flute"  #
 
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/{}/'.format(inst))
+    tb_logger = pl_loggers.TensorBoardLogger(
+        'logs/diffusion/{}/no10/'.format(inst))
 
     trainer = pl.Trainer(
         gpus=1,
@@ -172,7 +173,7 @@ if __name__ == "__main__":
         (LoudnessTransformer, {}),
     ]
     dataset = DiffusionDataset(list_transforms=list_transforms,
-                               path="dataset/{}-train.pickle".format(inst))
+                               path="dataset/{}-train.pickle".format(inst[0]))
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
