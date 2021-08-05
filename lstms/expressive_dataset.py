@@ -11,13 +11,19 @@ from utils import *
 
 class ExpressiveDataset(Dataset):
     def __init__(self,
-                 list_transforms,
-                 path="dataset/dataset-article.pickle",
-                 n_sample=2050,
+                 instrument,
+                 data_augmentation=False,
+                 n_sample=2048,
+                 list_transforms=None,
                  eval=False):
+
+        da = "-da" if data_augmentation else ""
+        type_set = "test" if eval else "train"
+        path = "dataset/{}-{}{}.pickle".format(instrument[0], type_set, da)
+
+        print("Loading Dataset...")
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
-
         self.dataset = dataset
         self.N = len(dataset["u_f0"])
         self.list_transforms = list_transforms

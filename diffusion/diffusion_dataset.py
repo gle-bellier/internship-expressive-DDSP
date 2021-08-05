@@ -10,11 +10,15 @@ from random import randint
 
 class DiffusionDataset(Dataset):
     def __init__(self,
-                 path="dataset/dataset-diffusion.pickle",
+                 instrument,
+                 data_augmentation=False,
                  n_sample=2048,
-                 n_loudness=30,
                  list_transforms=None,
                  eval=False):
+
+        da = "-da" if data_augmentation else ""
+        type_set = "test" if eval else "train"
+        path = "dataset/{}-{}{}.pickle".format(instrument[0], type_set, da)
 
         print("Loading Dataset...")
         with open(path, "rb") as dataset:
@@ -23,7 +27,6 @@ class DiffusionDataset(Dataset):
         self.dataset = dataset
         self.N = len(dataset["u_f0"])
         self.n_sample = n_sample
-        self.n_loudness = n_loudness
         self.list_transforms = list_transforms
 
         self.scalers = self.fit_transforms()
