@@ -21,13 +21,15 @@ list_transforms = [
     (PitchTransformer, {}),
     (LoudnessTransformer, {}),
 ]
-PATH = "dataset/violin-test.pickle"
-dataset = DiffusionDataset(path=PATH,
+
+inst = "violin"
+dataset = DiffusionDataset(instrument=inst,
+                           data_augmentation=False,
                            list_transforms=list_transforms,
                            eval=True)
 
 model = Network.load_from_checkpoint(
-    "logs/diffusion/quantile/default/version_8/checkpoints/epoch=64455-step=515647.ckpt",
+    "logs/diffusion/violin/default/version_10/checkpoints/epoch=20738-step=373301.ckpt",
     strict=False).eval()
 
 model.set_noise_schedule()
