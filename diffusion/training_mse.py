@@ -172,8 +172,9 @@ if __name__ == "__main__":
         (PitchTransformer, {}),
         (LoudnessTransformer, {}),
     ]
-    dataset = DiffusionDataset(list_transforms=list_transforms,
-                               path="dataset/{}-train.pickle".format(inst[0]))
+    dataset = DiffusionDataset(instrument=inst,
+                               data_augmentation=False,
+                               list_transforms=list_transforms)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 

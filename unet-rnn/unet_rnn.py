@@ -238,7 +238,11 @@ if __name__ == "__main__":
         (QuantileTransformer, 30),
     ]
 
-    dataset = UNet_Dataset(list_transforms=list_transforms, n_sample=2048)
+    inst = "flute"
+    dataset = UNet_Dataset(instrument=inst,
+                           data_augmentation=False,
+                           list_transforms=list_transforms,
+                           n_sample=2048)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 

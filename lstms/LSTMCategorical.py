@@ -246,7 +246,9 @@ if __name__ == "__main__":
         }),  # cents
     ]
 
-    dataset = ExpressiveDataset(list_transforms=list_transforms,
+    dataset = ExpressiveDataset(instrument=inst,
+                                data_augmentation=False,
+                                list_transforms=list_transforms,
                                 path="dataset/{}-train.pickle".format(inst[0]))
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len

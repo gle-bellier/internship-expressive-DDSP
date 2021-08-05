@@ -240,9 +240,10 @@ if __name__ == "__main__":
             "n_quantiles": 100
         }),  # cents
     ]
-
-    dataset = ExpressiveDatasetPitchContinuous(
-        list_transforms=list_transforms, path="dataset/flute-train.pickle")
+    inst = "violin"  #"flute"  #
+    dataset = ExpressiveDatasetPitchContinuous(instrument=inst,
+                                               data_augmentation=False,
+                                               list_transforms=list_transforms)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
     train, val = random_split(dataset, [train_len, val_len])
