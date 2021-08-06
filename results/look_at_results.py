@@ -26,11 +26,11 @@ df = pd.DataFrame(dataset)
 print(df)
 
 # sns.set_theme(style="darkgrid")
+for i in range(number_of_examples):
+    sns.lineplot(x="time", y="u_f0", hue="sample", data=df[df["sample"] == i])
 
-sns.lineplot(x="time", y="u_f0", hue="sample", data=df[df["sample"] == 0])
-
-sns.lineplot(x="time", y="e_f0", hue="sample", data=df[df["sample"] == 0])
-plt.show()
+    sns.lineplot(x="time", y="e_f0", hue="sample", data=df[df["sample"] == i])
+    plt.show()
 
 # ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
