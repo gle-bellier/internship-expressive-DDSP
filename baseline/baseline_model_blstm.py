@@ -223,7 +223,7 @@ class Model(pl.LightningModule):
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 100 == 0:
+        if self.val_idx % 10 == 0:
             self.get_audio(model_input[0], target[0])
 
 
@@ -239,24 +239,26 @@ if __name__ == "__main__":
         }),  # cents
     ]
 
-    dataset = Baseline_Dataset(list_transforms=list_transforms,
-                               n_sample=2048,
-                               path="dataset/flute-train.pickle")
+    inst = "flute"
+    dataset = Baseline_Dataset(instrument=inst,
+                               data_augmentation=False,
+                               list_transforms=list_transforms,
+                               n_sample=2048)
+
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
     train, val = random_split(dataset, [train_len, val_len])
 
-    down_channels = [2, 16, 512, 1024]
-
     model = Model(in_size=472,
-                  hidden_size=512,
+                  hidden_size=1024,
                   out_size=221,
                   scalers=dataset.scalers)
 
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
 
-    tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/blstm/')
+    tb_logger = pl_loggers.TensorBoardLogger(
+        'logs/baseline/blstm/{}/'.format(inst))
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],

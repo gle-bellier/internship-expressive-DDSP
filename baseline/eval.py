@@ -26,7 +26,7 @@ PATH = "dataset/dataset-diffusion.pickle"
 dataset = Baseline_Dataset(list_transforms=list_transforms, eval=True)
 
 down_channels = [2, 16, 512, 1024]
-ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 model = Model.load_from_checkpoint(
     "logs/baseline/default/version_0/checkpoints/epoch=547-step=2739.ckpt",
@@ -35,7 +35,7 @@ model = Model.load_from_checkpoint(
     ddsp=ddsp,
     strict=False).eval()
 
-#model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+#model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 

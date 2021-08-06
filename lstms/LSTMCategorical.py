@@ -3,11 +3,17 @@ import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler, MinMaxScaler
+from expressive_dataset import ExpressiveDataset
 import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
+
 import pickle
 import matplotlib.pyplot as plt
 from random import randint, sample
 from utils import *
+import warnings
+
+warnings.filterwarnings('ignore')
 
 
 class LinearBlock(nn.Module):
@@ -31,8 +37,8 @@ class ModelCategorical(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.scalers = scalers
-        self.loudness_nbins = 30
-        self.ddsp = torch.jit.load("results/ddsp_debug_pretrained.ts").eval()
+        self.loudness_nbins = 100
+        self.ddsp = None
         self.val_idx = 0
 
         self.pre_lstm = nn.Sequential(
@@ -61,7 +67,7 @@ class ModelCategorical(pl.LightningModule):
         return torch.optim.Adam(
             self.parameters(),
             lr=1e-4,
-            weight_decay=.01,
+            weight_decay=1e-2,
         )
 
     def forward(self, x):
@@ -71,9 +77,9 @@ class ModelCategorical(pl.LightningModule):
         return x
 
     def split_predictions(self, prediction):
-        pred_f0 = prediction[..., :100]
-        pred_cents = prediction[..., 100:200]
-        pred_loudness = prediction[..., 200:]
+        pred_f0 = prediction[..., :128]
+        pred_cents = prediction[..., 128:228]
+        pred_loudness = prediction[..., 228:]
         return pred_f0, pred_cents, pred_loudness
 
     def cross_entropy(self, pred_f0, pred_cents, pred_loudness, target_f0,
@@ -138,7 +144,7 @@ class ModelCategorical(pl.LightningModule):
             if infer_pitch:
                 f0 = self.sample_one_hot(pred_f0)
             else:
-                f0 = x[:, i + 1:i + 2, :100].float()
+                f0 = x[:, i + 1:i + 2, :128].float()
 
             cents = self.sample_one_hot(pred_cents)
             loudness = self.sample_one_hot(pred_loudness)
@@ -151,39 +157,33 @@ class ModelCategorical(pl.LightningModule):
         pred = x[..., -ndim:]
         pred_f0, pred_cents, pred_loudness = self.split_predictions(pred)
 
-        pred_f0 = pred_f0[:, 1:]
-        pred_loudness = pred_loudness[:, 1:]
-        pred_cents = pred_cents[:, :-1]
-
-        out = map(lambda x: torch.argmax(x, -1),
-                  [pred_f0, pred_cents, pred_loudness])
-
-        return list(out)
-
-    def apply_inverse_transform(self, x, idx):
-        scaler = self.scalers[idx]
-        x = x.cpu()
-        out = scaler.inverse_transform(x.reshape(-1, 1))
-        out = torch.from_numpy(out).to("cuda")
-        out = out.unsqueeze(0)
-        return out.float()
+        return [pred_f0, pred_cents, pred_loudness]
 
     def get_audio(self, model_input, target):
 
         model_input = model_input.unsqueeze(0).float()
-        f0, cents, loudness = self.generation_loop(model_input)
-        cents = cents / 100 - .5
+        pitch, cents, loudness = self.generation_loop(model_input)
 
-        f0 = pctof(f0, cents)
+        c = torch.argmax(cents, -1, keepdim=True) / 100
+        lo = torch.argmax(loudness, -1, keepdim=True) / 120
+        p = torch.argmax(pitch, -1, keepdim=True) / 127
 
-        loudness = loudness / (self.loudness_nbins - 1)
-        f0 = self.apply_inverse_transform(f0.squeeze(0), 0)
-        loudness = self.apply_inverse_transform(loudness.squeeze(0), 1)
-        y = self.ddsp(f0, loudness)
+        p = self.scalers[0].inverse_transform(p.squeeze(0).cpu())
+        lo = self.scalers[1].inverse_transform(lo.squeeze(0).cpu())
+        c = self.scalers[2].inverse_transform(c.squeeze(0).cpu())
+
+        # Change range [0, 1] -> [-0.5, 0.5]
+        c -= 0.5
+
+        f0 = pctof(p, c)
+        f0 = torch.Tensor(f0).to("cuda")
+        lo = torch.Tensor(lo).to("cuda")
+
+        y = self.ddsp(f0.unsqueeze(0), lo.unsqueeze(0))
 
         plt.plot(f0.squeeze().cpu())
         self.logger.experiment.add_figure("pitch", plt.gcf(), self.val_idx)
-        plt.plot(loudness.squeeze().cpu())
+        plt.plot(lo.squeeze().cpu())
         self.logger.experiment.add_figure("loudness", plt.gcf(), self.val_idx)
 
         return y
@@ -208,44 +208,58 @@ class ModelCategorical(pl.LightningModule):
         self.log("val_loss_f0", loss_f0)
         self.log("val_loss_cents", loss_cents)
         self.log("val_loss_loudness", loss_loudness)
-        self.log("val_total", loss_f0 + loss_cents + loss_loudness)
+        self.log("val_loss", loss_cents + loss_loudness)
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 20 == 0:
+        if self.val_idx % 20 == 0:
 
-            audio = self.get_audio(model_input[0], target[0])
+            signal = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard
-            tb = self.logger.experiment
-            n = "Epoch={}".format(self.current_epoch)
-            tb.add_audio(tag=n, snd_tensor=audio, sample_rate=16000)
+            self.logger.experiment.add_audio(
+                "generation",
+                signal,
+                self.val_idx,
+                16000,
+            )
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     trainer = pl.Trainer(
-#         gpus=1,
-#         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_total")],
-#         max_epochs=50000,
-#     )
-#     list_transforms = [
-#         (Identity, ),  # u_f0
-#         (MinMaxScaler, ),  # u_loudness
-#         (Identity, ),  # e_f0
-#         (Identity, ),  # e_cents
-#         (MinMaxScaler, ),  # e_loudness
-#     ]
+    inst = "violin"  #"flute"
 
-#     dataset = ExpressiveDataset(n_sample=512, list_transforms=list_transforms)
-#     val_len = len(dataset) // 20
-#     train_len = len(dataset) - val_len
+    tb_logger = pl_loggers.TensorBoardLogger(
+        'logs/lstm/categorical/{}/'.format(inst))
+    trainer = pl.Trainer(
+        gpus=1,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
+        max_epochs=10000,
+        logger=tb_logger)
 
-#     train, val = random_split(dataset, [train_len, val_len])
+    list_transforms = [
+        (MinMaxScaler, {}),  # pitch
+        (QuantileTransformer, {
+            "n_quantiles": 120
+        }),  # lo
+        (QuantileTransformer, {
+            "n_quantiles": 100
+        }),  # cents
+    ]
 
-#     model = ModelCategorical(360, 1024, 230, scalers=dataset.scalers)
+    train = ExpressiveDataset(instrument=inst,
+                              type_set="train",
+                              data_augmentation=True,
+                              list_transforms=list_transforms)
+    test = ExpressiveDataset(instrument=inst,
+                             type_set="test",
+                             data_augmentation=False,
+                             list_transforms=list_transforms)
 
-#     trainer.fit(
-#         model,
-#         DataLoader(train, 32, True),
-#         DataLoader(val, 32),
-#     )
+    model = ModelCategorical(598, 1024, 349, scalers=test.scalers)
+    model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
+
+    trainer.fit(
+        model,
+        DataLoader(train, 16, True),
+        DataLoader(test, 16),
+    )

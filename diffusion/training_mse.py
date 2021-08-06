@@ -49,11 +49,13 @@ class Network(pl.LightningModule, DiffusionModel):
         return out
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=1e-4)
-        #weight_decay=0.01)
+        return torch.optim.Adam(self.model.parameters(),
+                                lr=1e-4,
+                                weight_decay=1e-4)
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
+
         loss = self.compute_loss(model_input, cdt)
         self.log("loss", loss)
         return loss
@@ -94,6 +96,7 @@ class Network(pl.LightningModule, DiffusionModel):
         f0, lo = out[0].split(1, -1)
 
         midi_f0, midi_lo = cdt[0].split(1, -1)
+        e_f0, e_lo = model_input[0].split(1, -1)
 
         # mse loss
         mse_loss = nn.functional.mse_loss(out, model_input)
@@ -101,9 +104,11 @@ class Network(pl.LightningModule, DiffusionModel):
 
         plt.plot(midi_f0.cpu())
         plt.plot(f0.cpu())
+        plt.plot(e_f0.cpu())
         self.logger.experiment.add_figure("pitch RAW", plt.gcf(), self.val_idx)
         plt.plot(midi_lo.cpu())
         plt.plot(lo.cpu())
+        plt.plot(e_lo.cpu())
         self.logger.experiment.add_figure("loudness RAW", plt.gcf(),
                                           self.val_idx)
 
@@ -152,7 +157,10 @@ class Network(pl.LightningModule, DiffusionModel):
 
 
 if __name__ == "__main__":
-    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/flute/')
+
+    inst = "violin"  #"flute"  #
+
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/{}/'.format(inst))
 
     trainer = pl.Trainer(
         gpus=1,
@@ -164,12 +172,14 @@ if __name__ == "__main__":
         (PitchTransformer, {}),
         (LoudnessTransformer, {}),
     ]
-    dataset = DiffusionDataset(list_transforms=list_transforms,
-                               path="dataset/violin-train.pickle")
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
-
-    train, val = random_split(dataset, [train_len, val_len])
+    train = DiffusionDataset(instrument=inst,
+                             type_set="train",
+                             data_augmentation=True,
+                             list_transforms=list_transforms)
+    test = DiffusionDataset(instrument=inst,
+                            type_set="test",
+                            data_augmentation=False,
+                            list_transforms=list_transforms)
 
     down_channels = [2, 8, 64, 128, 256, 512]
     up_channels = [512, 256, 128, 64, 16, 8,
@@ -177,13 +187,13 @@ if __name__ == "__main__":
     down_dilations = [1, 1, 2, 2, 4, 4]
     up_dilations = [1, 1, 3, 3, 3, 9, 9]
 
-    model = Network(scalers=dataset.scalers,
+    model = Network(scalers=test.scalers,
                     down_channels=down_channels,
                     up_channels=up_channels,
                     down_dilations=down_dilations,
                     up_dilations=up_dilations)
 
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
     model.set_noise_schedule(init=torch.linspace,
                              init_kwargs={
                                  "steps": 50,
@@ -194,5 +204,5 @@ if __name__ == "__main__":
     trainer.fit(
         model,
         DataLoader(train, 64, True),
-        DataLoader(val, 64),
+        DataLoader(test, 64),
     )

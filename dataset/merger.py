@@ -2,7 +2,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
-PATHS = ["dataset/contours.csv", "dataset/contours-violin.csv"]
+PATHS = ["dataset/contours.csv", "dataset/contours-violin-update.csv"]
 
 u_f0 = []
 u_loudness = []
@@ -38,7 +38,8 @@ events = np.array(events)
 print("Dataset length : {}min {}s".format((len(u_f0) // 100) // 60,
                                           (len(u_f0) // 100) % 60))
 
-with open('dataset/all-violin-contours.csv', 'w', newline='') as csvfile:
+with open('dataset/all-violin-contours-updated.csv', 'w',
+          newline='') as csvfile:
     fieldnames = [
         "u_f0", "u_loudness", "e_f0", "e_loudness", "e_f0_mean", "e_f0_stddev",
         "f0_conf", "events"

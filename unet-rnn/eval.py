@@ -22,7 +22,7 @@ PATH = "dataset/dataset-diffusion.pickle"
 dataset = UNet_Dataset(PATH, list_transforms=list_transforms, eval=True)
 
 down_channels = [2, 16, 512, 1024]
-ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 model = UNet.load_from_checkpoint(
     "logs/unet/default/version_1/checkpoints/epoch=9074-step=136124.ckpt",
@@ -31,7 +31,7 @@ model = UNet.load_from_checkpoint(
     ddsp=ddsp,
     strict=False).eval()
 
-#model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+#model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 

@@ -237,8 +237,11 @@ if __name__ == "__main__":
             "n_quantiles": 100
         }),  # cents
     ]
-
-    dataset = Baseline_Dataset(list_transforms=list_transforms, n_sample=2048)
+    inst = "violin"  #"flute"  #
+    dataset = Baseline_Dataset(instrument=inst,
+                               data_augmentation=False,
+                               list_transforms=list_transforms,
+                               n_sample=2048)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
@@ -250,7 +253,7 @@ if __name__ == "__main__":
                   hidden_size=512,
                   out_size=221,
                   scalers=dataset.scalers)
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/baseline/')
     trainer = pl.Trainer(

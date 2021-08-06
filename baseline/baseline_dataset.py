@@ -11,10 +11,17 @@ from utils import *
 
 class Baseline_Dataset(Dataset):
     def __init__(self,
-                 list_transforms,
-                 path="dataset/dataset-article.pickle",
+                 instrument,
+                 data_augmentation=False,
                  n_sample=2048,
+                 list_transforms=None,
                  eval=False):
+
+        da = "-da" if data_augmentation else ""
+        type_set = "test" if eval else "train"
+        path = "dataset/{}-{}{}.pickle".format(instrument[0], type_set, da)
+
+        print("Loading Dataset...")
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
 
@@ -141,8 +148,10 @@ class Baseline_Dataset(Dataset):
         N = self.n_sample
         idx *= N
 
-        jitter = randint(0, N // 10)
-        idx += jitter
+        # add jitter during training only
+        if not self.eval:
+            idx += randint(0, N // 10)
+
         idx = max(idx, 0)
         idx = min(idx, len(self) * self.n_sample - self.n_sample)
 

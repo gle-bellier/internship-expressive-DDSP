@@ -232,7 +232,11 @@ if __name__ == "__main__":
         (QuantileTransformer, 30),
     ]
 
-    dataset = UNet_Dataset(list_transforms=list_transforms, n_sample=2048)
+    inst = "flute"
+    dataset = UNet_Dataset(instrument=inst,
+                           data_augmentation=False,
+                           list_transforms=list_transforms,
+                           n_sample=2048)
     val_len = len(dataset) // 20
     train_len = len(dataset) - val_len
 
@@ -241,7 +245,7 @@ if __name__ == "__main__":
     down_channels = [2, 16, 512, 1024]
 
     model = UNet(scalers=dataset.scalers, channels=down_channels)
-    model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/unet/')
     trainer = pl.Trainer(

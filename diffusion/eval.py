@@ -2,7 +2,7 @@ import torch
 from torch.utils import data
 
 torch.set_grad_enabled(False)
-from training import Network
+from training_mse import Network
 import soundfile as sf
 
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxSca
 from diffusion_dataset import DiffusionDataset
 from transforms import PitchTransformer, LoudnessTransformer
 import numpy as np
+from tqdm import tqdm
 
 import pickle
 
@@ -20,19 +21,27 @@ list_transforms = [
     (PitchTransformer, {}),
     (LoudnessTransformer, {}),
 ]
-PATH = "dataset/dataset-diffusion.pickle"
-dataset = DiffusionDataset(path=PATH,
+
+inst = "violin"
+dataset = DiffusionDataset(instrument=inst,
+                           data_augmentation=False,
+                           type_set="valid",
                            list_transforms=list_transforms,
                            eval=True)
 
 model = Network.load_from_checkpoint(
-    "logs/diffusion/quantile/default/version_8/checkpoints/epoch=64455-step=515647.ckpt",
+    "logs/diffusion/violin/default/version_10/checkpoints/epoch=20738-step=373301.ckpt",
     strict=False).eval()
 
 model.set_noise_schedule()
-model.ddsp = torch.jit.load("ddsp_debug_pretrained.ts").eval()
+model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
+
+sample = np.empty(0)
+time = np.empty(0)
+
+# samples data
 
 u_f0 = np.empty(0)
 u_lo = np.empty(0)
@@ -46,7 +55,7 @@ offsets = np.empty(0)
 # Prediction loops :
 
 N_EXAMPLE = 20
-for i in range(N_EXAMPLE):
+for i in tqdm(range(N_EXAMPLE)):
     target, midi, ons, offs = dataset[i]
 
     n_step = 10
@@ -55,6 +64,14 @@ for i in range(N_EXAMPLE):
     f0, lo = dataset.inverse_transform(out)
     midi_f0, midi_lo = dataset.inverse_transform(midi)
     target_f0, target_lo = dataset.inverse_transform(target)
+
+    # sample information
+
+    sample_idx = np.ones_like(f0) * i
+    t = np.arange(len(f0)) / 100  # sr = 100
+
+    sample = np.concatenate((sample, sample_idx))
+    time = np.concatenate((time, t))
 
     # add to results:
 
@@ -67,7 +84,12 @@ for i in range(N_EXAMPLE):
     pred_f0 = np.concatenate((pred_f0, f0.squeeze()))
     pred_lo = np.concatenate((pred_lo, lo.squeeze()))
 
+    onsets = np.concatenate((onsets, ons.squeeze()))
+    offsets = np.concatenate((offsets, offs.squeeze()))
+
 out = {
+    "sample": sample,
+    "time": time,
     "u_f0": u_f0,
     "u_lo": u_lo,
     "e_f0": e_f0,
@@ -78,5 +100,6 @@ out = {
     "offsets": offsets
 }
 
-with open("results/diffusion/data/results-normal.pickle", "wb") as file_out:
+with open("results/diffusion/data/{}-results.pickle".format(inst),
+          "wb") as file_out:
     pickle.dump(out, file_out)
