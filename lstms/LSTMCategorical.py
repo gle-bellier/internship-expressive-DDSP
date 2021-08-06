@@ -67,7 +67,7 @@ class ModelCategorical(pl.LightningModule):
         return torch.optim.Adam(
             self.parameters(),
             lr=1e-4,
-            weight_decay=.01,
+            weight_decay=1e-2,
         )
 
     def forward(self, x):
@@ -226,7 +226,7 @@ class ModelCategorical(pl.LightningModule):
 
 if __name__ == "__main__":
 
-    inst = "flute"
+    inst = "violin"  #"flute"
 
     tb_logger = pl_loggers.TensorBoardLogger(
         'logs/lstm/categorical/{}/'.format(inst))
