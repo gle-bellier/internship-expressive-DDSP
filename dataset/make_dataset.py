@@ -67,7 +67,7 @@ def onsets_offsets(events):
 
 if __name__ == "__main__":
 
-    ratio = 0.05  # ratio between train/validation and test dataset
+    ratio = 0.05  # ratio between train/test/validation and test dataset
 
     u_f0 = []
     u_loudness = []
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     f0_conf = []
     events = []
     print("Loading")
-    with open("dataset/all-violin-contours-updated.csv", "r") as contour:
+    with open("dataset/violin-contours-clean.csv", "r") as contour:
         contour = csv.DictReader(contour)
 
         for row in contour:
@@ -100,27 +100,40 @@ if __name__ == "__main__":
 
     cut_idx = int(len(u_f0) * ratio)
     test = {
-        "u_f0": u_f0[-cut_idx:],
-        "u_loudness": u_loudness[-cut_idx:],
-        "e_f0": e_f0[-cut_idx:],
-        "e_loudness": e_loudness[-cut_idx:],
-        "f0_conf": f0_conf[-cut_idx:],
-        "onsets": onsets[-cut_idx:],
-        "offsets": offsets[-cut_idx:]
+        "u_f0": u_f0[:cut_idx],
+        "u_loudness": u_loudness[:cut_idx],
+        "e_f0": e_f0[:cut_idx],
+        "e_loudness": e_loudness[:cut_idx],
+        "f0_conf": f0_conf[:cut_idx],
+        "onsets": onsets[:cut_idx],
+        "offsets": offsets[:cut_idx]
     }
 
     with open("dataset/v-test.pickle", "wb") as file_out:
         pickle.dump(test, file_out)
 
-    u_f0 = u_f0[cut_idx:]
-    u_loudness = u_loudness[cut_idx:]
-    e_f0 = e_f0[cut_idx:]
-    e_loudness = e_loudness[cut_idx:]
-    f0_conf = f0_conf[cut_idx:]
-    events = events[cut_idx:]
-    onsets, offsets = onsets[cut_idx:], offsets[cut_idx:]
+        test = {
+            "u_f0": u_f0[cut_idx:cut_idx * 2],
+            "u_loudness": u_loudness[cut_idx:cut_idx * 2],
+            "e_f0": e_f0[cut_idx:cut_idx * 2],
+            "e_loudness": e_loudness[cut_idx:cut_idx * 2],
+            "f0_conf": f0_conf[cut_idx:cut_idx * 2],
+            "onsets": onsets[cut_idx:cut_idx * 2],
+            "offsets": offsets[cut_idx:cut_idx * 2]
+        }
 
-    DATA_AUGMENTATION = True
+    with open("dataset/v-valid.pickle", "wb") as file_out:
+        pickle.dump(test, file_out)
+
+    u_f0 = u_f0[cut_idx * 2:]
+    u_loudness = u_loudness[cut_idx * 2:]
+    e_f0 = e_f0[cut_idx * 2:]
+    e_loudness = e_loudness[cut_idx * 2:]
+    f0_conf = f0_conf[cut_idx * 2:]
+    events = events[cut_idx * 2:]
+    onsets, offsets = onsets[cut_idx * 2:], offsets[cut_idx * 2:]
+
+    DATA_AUGMENTATION = False
 
     if DATA_AUGMENTATION:
         # # # data augmentation on train dataset :
