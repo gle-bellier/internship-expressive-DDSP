@@ -37,8 +37,8 @@ class ModelContinuousPitch(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.scalers = scalers
-        self.loudness_nbins = 100
         self.ddsp = None
+        self.val_idx = 0
 
         self.pre_lstm = nn.Sequential(
             LinearBlock(in_size, hidden_size),
@@ -192,6 +192,7 @@ class ModelContinuousPitch(pl.LightningModule):
         return y
 
     def validation_step(self, batch, batch_idx):
+        self.val_idx += 1
         model_input, target = batch
         prediction = self.forward(model_input.float())
 
@@ -210,11 +211,11 @@ class ModelContinuousPitch(pl.LightningModule):
         self.log("val_loss_f0", loss_f0)
         self.log("val_loss_cents", loss_cents)
         self.log("val_loss_loudness", loss_loudness)
-        self.log("val_total", loss_f0 + loss_cents + loss_loudness)
+        self.log("val_loss", loss_f0 + loss_cents + loss_loudness)
 
         ## Every 100 epochs : produce audio
 
-        if self.current_epoch % 20 == 0:
+        if self.val_idx % 20 == 0:
 
             audio = self.get_audio(model_input[0], target[0])
             # output audio in Tensorboard
@@ -228,7 +229,9 @@ class ModelContinuousPitch(pl.LightningModule):
 
 if __name__ == "__main__":
 
-    tb_logger = pl_loggers.TensorBoardLogger('logs/lstm/continuous')
+    inst = "violin"  #"flute"  #
+    tb_logger = pl_loggers.TensorBoardLogger(
+        'logs/lstm/continuous/{}/'.format(inst))
     trainer = pl.Trainer(
         gpus=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="val_loss")],
@@ -244,7 +247,7 @@ if __name__ == "__main__":
             "n_quantiles": 100
         }),  # cents
     ]
-    inst = "violin"  #"flute"  #
+
     train = ExpressiveDatasetPitchContinuous(instrument=inst,
                                              type_set="train",
                                              data_augmentation=True,
@@ -255,11 +258,11 @@ if __name__ == "__main__":
                                             data_augmentation=False,
                                             list_transforms=list_transforms)
 
-    model = ModelContinuousPitch(245, 1024, 124, scalers=dataset.scalers)
+    model = ModelContinuousPitch(245, 1024, 124, scalers=test.scalers)
     model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
     trainer.fit(
         model,
-        DataLoader(train, 64, True),
-        DataLoader(test, 64),
+        DataLoader(train, 16, True),
+        DataLoader(test, 16),
     )
