@@ -4,7 +4,7 @@ from utils import *
 from evaluation import Evaluator
 import matplotlib.pyplot as plt
 
-path = "dataset/dataset-article.pickle"
+path = "results/diffusion/data/violin-results.pickle"
 
 with open(path, "rb") as dataset:
     dataset = pickle.load(dataset)
@@ -45,6 +45,6 @@ print("Score frames = {}, score transitions = {}, score total = {}".format(
 accuracy = e.accuracy(u_f0, u_f0 + 2, frames)
 print("Accuracy = ", accuracy)
 
-plt.plot(trans.squeeze())
-plt.plot(frames.squeeze())
-plt.show()
+# plt.plot(trans.squeeze())
+# plt.plot(frames.squeeze())
+# plt.show()
