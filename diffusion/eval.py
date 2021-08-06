@@ -25,6 +25,7 @@ list_transforms = [
 inst = "violin"
 dataset = DiffusionDataset(instrument=inst,
                            data_augmentation=False,
+                           type_set="valid",
                            list_transforms=list_transforms,
                            eval=True)
 
@@ -99,5 +100,6 @@ out = {
     "offsets": offsets
 }
 
-with open("results/diffusion/data/results.pickle", "wb") as file_out:
+with open("results/diffusion/data/{}-results.pickle".format(inst),
+          "wb") as file_out:
     pickle.dump(out, file_out)
