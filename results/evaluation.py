@@ -143,25 +143,21 @@ class Evaluator:
                target_f0,
                target_loudness,
                ddsp,
-               saving_path=None,
                resynth=False):
 
         model_audio = ddsp(out_f0, out_loudness)
+
         target_audio = ddsp(target_f0, target_loudness)
 
-        if resynth is not None:
-            filename = saving_path[:-4] + "-resynth.wav"
-            write(filename, 16000, target_audio.reshape(-1).numpy())
+        if resynth:
             return model_audio, target_audio
-
-        if saving_path is not None:
-            write(saving_path, 16000, model_audio.reshape(-1).numpy())
+        else:
             return model_audio
 
     def plot_diff_spectrogram(self, out, resynth, scale="dB"):
 
-        out = out.squeeze().numpy()
-        resynth = resynth.squeeze().numpy()
+        out = out.squeeze().detach().numpy()
+        resynth = resynth.squeeze().detach().numpy()
 
         diff = out - resynth
 
