@@ -159,8 +159,7 @@ if __name__ == "__main__":
 
     inst = "violin"  #"flute"  #
 
-    tb_logger = pl_loggers.TensorBoardLogger(
-        'logs/diffusion/{}/no10/'.format(inst))
+    tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/{}/'.format(inst))
 
     trainer = pl.Trainer(
         gpus=1,
@@ -172,13 +171,14 @@ if __name__ == "__main__":
         (PitchTransformer, {}),
         (LoudnessTransformer, {}),
     ]
-    dataset = DiffusionDataset(instrument=inst,
-                               data_augmentation=False,
-                               list_transforms=list_transforms)
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
-
-    train, val = random_split(dataset, [train_len, val_len])
+    train = DiffusionDataset(instrument=inst,
+                             type_set="train",
+                             data_augmentation=True,
+                             list_transforms=list_transforms)
+    test = DiffusionDataset(instrument=inst,
+                            type_set="test",
+                            data_augmentation=False,
+                            list_transforms=list_transforms)
 
     down_channels = [2, 8, 64, 128, 256, 512]
     up_channels = [512, 256, 128, 64, 16, 8,
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     down_dilations = [1, 1, 2, 2, 4, 4]
     up_dilations = [1, 1, 3, 3, 3, 9, 9]
 
-    model = Network(scalers=dataset.scalers,
+    model = Network(scalers=test.scalers,
                     down_channels=down_channels,
                     up_channels=up_channels,
                     down_dilations=down_dilations,
@@ -203,5 +203,5 @@ if __name__ == "__main__":
     trainer.fit(
         model,
         DataLoader(train, 64, True),
-        DataLoader(val, 64),
+        DataLoader(test, 64),
     )
