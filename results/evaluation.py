@@ -178,3 +178,32 @@ class Evaluator:
 
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.show()
+
+    def multi_scale_loss(self, out, resynth, overlap=0.75, alpha=1):
+        loss = 0
+        out = out.squeeze()
+        resynth = resynth.squeeze()
+        fft_sizes = [2048, 1024, 512, 256, 128, 64]
+        for fft_size in fft_sizes:
+            hop = int(fft_size * (1 - overlap))
+            window = torch.hann_window(fft_size).to(out)
+            x = torch.abs(
+                torch.stft(input=out,
+                           n_fft=fft_size,
+                           hop_length=hop,
+                           window=window,
+                           normalized=True,
+                           return_complex=True))
+            y = torch.abs(
+                torch.stft(input=resynth,
+                           n_fft=fft_size,
+                           hop_length=hop,
+                           window=window,
+                           normalized=True,
+                           return_complex=True))
+
+            # Compute loss for each fft size
+            loss += (y - x).abs().mean()
+            loss += alpha * (torch.log(x + 1e-7) -
+                             torch.log(y + 1e-7)).abs().mean()
+        return loss

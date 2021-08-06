@@ -2,6 +2,9 @@ import torch
 import pickle
 from evaluation import Evaluator
 import matplotlib.pyplot as plt
+import warnings
+
+warnings.filterwarnings('ignore')
 
 path = "results/diffusion/data/violin-results.pickle"
 
@@ -61,6 +64,5 @@ model_audio, target_audio = e.listen(pred_f0,
                                      e_lo,
                                      ddsp=ddsp,
                                      resynth=True)
-
-print("22")
 e.plot_diff_spectrogram(model_audio, target_audio)
+print(e.multi_scale_loss(model_audio, target_audio))
