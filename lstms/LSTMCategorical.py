@@ -246,19 +246,20 @@ if __name__ == "__main__":
         }),  # cents
     ]
 
-    dataset = ExpressiveDataset(instrument=inst,
-                                data_augmentation=False,
-                                list_transforms=list_transforms,
-                                path="dataset/{}-train.pickle".format(inst[0]))
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
-    train, val = random_split(dataset, [train_len, val_len])
+    train = ExpressiveDataset(instrument=inst,
+                              type_set="train",
+                              data_augmentation=True,
+                              list_transforms=list_transforms)
+    test = ExpressiveDataset(instrument=inst,
+                             type_set="test",
+                             data_augmentation=False,
+                             list_transforms=list_transforms)
 
-    model = ModelCategorical(598, 1024, 349, scalers=dataset.scalers)
+    model = ModelCategorical(598, 1024, 349, scalers=test.scalers)
     model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
 
     trainer.fit(
         model,
         DataLoader(train, 16, True),
-        DataLoader(val, 16),
+        DataLoader(test, 16),
     )

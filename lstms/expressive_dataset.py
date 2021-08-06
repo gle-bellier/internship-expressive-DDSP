@@ -13,17 +13,18 @@ class ExpressiveDataset(Dataset):
     def __init__(self,
                  instrument,
                  data_augmentation=False,
+                 type_set="train",
                  n_sample=2048,
                  list_transforms=None,
                  eval=False):
 
         da = "-da" if data_augmentation else ""
-        type_set = "test" if eval else "train"
         path = "dataset/{}-{}{}.pickle".format(instrument[0], type_set, da)
-
+        print("{} dataset file used : {}".format(type_set, path))
         print("Loading Dataset...")
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
+
         self.dataset = dataset
         self.N = len(dataset["u_f0"])
         self.list_transforms = list_transforms
@@ -202,14 +203,14 @@ class ExpressiveDatasetPitchContinuous(Dataset):
     def __init__(self,
                  instrument,
                  data_augmentation=False,
+                 type_set="train",
                  n_sample=2048,
                  list_transforms=None,
                  eval=False):
 
         da = "-da" if data_augmentation else ""
-        type_set = "test" if eval else "train"
         path = "dataset/{}-{}{}.pickle".format(instrument[0], type_set, da)
-
+        print("{} dataset file used : {}".format(type_set, path))
         print("Loading Dataset...")
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
