@@ -44,11 +44,11 @@ class PitchTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         X = self.ftom(X)
         out = self.sc1.transform(X)
-        #out /= 10
+        out /= 10
         return out
 
     def inverse_transform(self, X, y=None):
-        #X *= 10
+        X *= 10
         X = self.sc1.inverse_transform(X)
         out = self.mtof(X)
         return out
@@ -69,10 +69,10 @@ class LoudnessTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         out = self.sc1.transform(X)
-        #out /= 10
+        out /= 10
         return out
 
     def inverse_transform(self, X, y=None):
-        #X = X * 10
+        X = X * 10
         out = self.sc1.inverse_transform(X)
         return out
