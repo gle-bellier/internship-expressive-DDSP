@@ -1,6 +1,5 @@
 import torch
 import pickle
-from utils import *
 from evaluation import Evaluator
 import matplotlib.pyplot as plt
 
@@ -12,9 +11,12 @@ n_sample = 500
 idx = 64
 
 u_f0 = dataset["u_f0"][idx:idx + n_sample]
-u_lo = dataset["u_loudness"][idx:idx + n_sample]
+u_lo = dataset["u_lo"][idx:idx + n_sample]
 e_f0 = dataset["e_f0"][idx:idx + n_sample]
-e_lo = dataset["e_loudness"][idx:idx + n_sample]
+e_lo = dataset["e_lo"][idx:idx + n_sample]
+
+pred_f0 = dataset["pred_f0"][idx:idx + n_sample]
+pred_lo = dataset["pred_lo"][idx:idx + n_sample]
 
 onsets = dataset["onsets"][idx:idx + n_sample]
 offsets = dataset["offsets"][idx:idx + n_sample]
