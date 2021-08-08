@@ -51,7 +51,7 @@ class Network(pl.LightningModule, DiffusionModel):
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(),
                                 lr=1e-4,
-                                weight_decay=1e-5)
+                                weight_decay=1e-3)
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
@@ -169,8 +169,12 @@ if __name__ == "__main__":
         logger=tb_logger)
 
     list_transforms = [
-        (PitchTransformer, {}),
-        (LoudnessTransformer, {}),
+        (PitchTransformer, {
+            "factor": 5
+        }),
+        (LoudnessTransformer, {
+            "factor": 5
+        }),
     ]
     train = DiffusionDataset(instrument=inst,
                              type_set="train",
