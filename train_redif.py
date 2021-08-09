@@ -9,7 +9,7 @@ dataset = Dataset(256)
 val_n = len(dataset) // 50
 train, val = random_split(dataset, [len(dataset) - val_n, val_n])
 
-model = Model(2, 128, [128, 256, 384, 512])
+model = Model(2, 128, [128, 256, 384])
 model.set_noise_schedule()
 model.transform.compute_stats(dataset.e_f0, dataset.e_lo)
 model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts")
