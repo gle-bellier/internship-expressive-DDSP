@@ -68,6 +68,7 @@ def onsets_offsets(events):
 if __name__ == "__main__":
 
     ratio = 0.05  # ratio between train/test/validation and test dataset
+    instrument = "flute"
 
     u_f0 = []
     u_loudness = []
@@ -75,8 +76,10 @@ if __name__ == "__main__":
     e_loudness = []
     f0_conf = []
     events = []
+
     print("Loading")
-    with open("dataset/violin-contours-clean.csv", "r") as contour:
+    with open("dataset/{}-contours-clean.csv".format(instrument),
+              "r") as contour:
         contour = csv.DictReader(contour)
 
         for row in contour:
@@ -109,87 +112,16 @@ if __name__ == "__main__":
         "offsets": offsets[:cut_idx]
     }
 
-    with open("dataset/v-test.pickle", "wb") as file_out:
+    with open("dataset/{}-test.pickle".format(instrument), "wb") as file_out:
         pickle.dump(test, file_out)
 
-        test = {
-            "u_f0": u_f0[cut_idx:cut_idx * 2],
-            "u_loudness": u_loudness[cut_idx:cut_idx * 2],
-            "e_f0": e_f0[cut_idx:cut_idx * 2],
-            "e_loudness": e_loudness[cut_idx:cut_idx * 2],
-            "f0_conf": f0_conf[cut_idx:cut_idx * 2],
-            "onsets": onsets[cut_idx:cut_idx * 2],
-            "offsets": offsets[cut_idx:cut_idx * 2]
-        }
-
-    with open("dataset/v-valid.pickle", "wb") as file_out:
-        pickle.dump(test, file_out)
-
-    u_f0 = u_f0[cut_idx * 2:]
-    u_loudness = u_loudness[cut_idx * 2:]
-    e_f0 = e_f0[cut_idx * 2:]
-    e_loudness = e_loudness[cut_idx * 2:]
-    f0_conf = f0_conf[cut_idx * 2:]
-    events = events[cut_idx * 2:]
-    onsets, offsets = onsets[cut_idx * 2:], offsets[cut_idx * 2:]
-
-    DATA_AUGMENTATION = False
-
-    if DATA_AUGMENTATION:
-        # # # data augmentation on train dataset :
-
-        e_f0_pitch, e_cents = ftopc(e_f0)
-        u_f0_pitch, u_cents = ftopc(u_f0)
-
-        # Replicate arrays that stay the same
-
-        u_loudness = np.tile(u_loudness, 5)
-        e_loudness = np.tile(e_loudness, 5)
-        f0_conf = np.tile(f0_conf, 5)
-        onsets = np.tile(onsets, 5)
-        offsets = np.tile(offsets, 5)
-
-        # 1 STEP ABOVE BELOW
-
-        # 1 step above
-        e_f0_1a = e_f0_pitch + 1
-        u_f0_1a = u_f0_pitch + 1
-
-        # 1 step below
-        e_f0_1b = e_f0_pitch - 1
-        u_f0_1b = u_f0_pitch - 1
-
-        # add cents to quantized contours :
-
-        e_f0_1a = pctof(e_f0_1a, e_cents)
-        e_f0_1b = pctof(e_f0_1b, e_cents)
-        u_f0_1a = pctof(u_f0_1a, u_cents)
-        u_f0_1b = pctof(u_f0_1b, u_cents)
-
-        # 2 STEP ABOVE BELOW
-
-        # 2 step above
-        e_f0_2a = e_f0_pitch + 2
-        u_f0_2a = u_f0_pitch + 2
-
-        # 2 step below
-        e_f0_2b = e_f0_pitch - 2
-        u_f0_2b = u_f0_pitch - 2
-
-        # add cents to quantized contours :
-        e_f0_2a = pctof(e_f0_2a, e_cents)
-        e_f0_2b = pctof(e_f0_2b, e_cents)
-        u_f0_2a = pctof(u_f0_2a, u_cents)
-        u_f0_2b = pctof(u_f0_2b, u_cents)
-
-        e_f0 = np.concatenate((e_f0, e_f0_1a))
-        u_f0 = np.concatenate((u_f0, u_f0_1a))
-        e_f0 = np.concatenate((e_f0, e_f0_1b))
-        u_f0 = np.concatenate((u_f0, u_f0_1b))
-        e_f0 = np.concatenate((e_f0, e_f0_2a))
-        u_f0 = np.concatenate((u_f0, u_f0_2a))
-        e_f0 = np.concatenate((e_f0, e_f0_2b))
-        u_f0 = np.concatenate((u_f0, u_f0_2b))
+    u_f0 = u_f0[cut_idx:]
+    u_loudness = u_loudness[cut_idx:]
+    e_f0 = e_f0[cut_idx:]
+    e_loudness = e_loudness[cut_idx:]
+    f0_conf = f0_conf[cut_idx:]
+    events = events[cut_idx:]
+    onsets, offsets = onsets[cut_idx:], offsets[cut_idx:]
 
     out = {
         "u_f0": u_f0,
@@ -200,8 +132,75 @@ if __name__ == "__main__":
         "onsets": onsets,
         "offsets": offsets
     }
-    ext = "-da" if DATA_AUGMENTATION else ""
-    name = "v-train{}.pickle".format(ext)
+    name = "{}-train.pickle".format(instrument)
+    with open("dataset/" + name, "wb") as file_out:
+        pickle.dump(out, file_out)
+
+    # # # data augmentation on train dataset :
+
+    e_f0_pitch, e_cents = ftopc(e_f0)
+    u_f0_pitch, u_cents = ftopc(u_f0)
+
+    # Replicate arrays that stay the same
+
+    u_loudness = np.tile(u_loudness, 5)
+    e_loudness = np.tile(e_loudness, 5)
+    f0_conf = np.tile(f0_conf, 5)
+    onsets = np.tile(onsets, 5)
+    offsets = np.tile(offsets, 5)
+
+    # 1 STEP ABOVE BELOW
+
+    # 1 step above
+    e_f0_1a = e_f0_pitch + 1
+    u_f0_1a = u_f0_pitch + 1
+
+    # 1 step below
+    e_f0_1b = e_f0_pitch - 1
+    u_f0_1b = u_f0_pitch - 1
+
+    # add cents to quantized contours :
+
+    e_f0_1a = pctof(e_f0_1a, e_cents)
+    e_f0_1b = pctof(e_f0_1b, e_cents)
+    u_f0_1a = pctof(u_f0_1a, u_cents)
+    u_f0_1b = pctof(u_f0_1b, u_cents)
+
+    # 2 STEP ABOVE BELOW
+
+    # 2 step above
+    e_f0_2a = e_f0_pitch + 2
+    u_f0_2a = u_f0_pitch + 2
+
+    # 2 step below
+    e_f0_2b = e_f0_pitch - 2
+    u_f0_2b = u_f0_pitch - 2
+
+    # add cents to quantized contours :
+    e_f0_2a = pctof(e_f0_2a, e_cents)
+    e_f0_2b = pctof(e_f0_2b, e_cents)
+    u_f0_2a = pctof(u_f0_2a, u_cents)
+    u_f0_2b = pctof(u_f0_2b, u_cents)
+
+    e_f0 = np.concatenate((e_f0, e_f0_1a))
+    u_f0 = np.concatenate((u_f0, u_f0_1a))
+    e_f0 = np.concatenate((e_f0, e_f0_1b))
+    u_f0 = np.concatenate((u_f0, u_f0_1b))
+    e_f0 = np.concatenate((e_f0, e_f0_2a))
+    u_f0 = np.concatenate((u_f0, u_f0_2a))
+    e_f0 = np.concatenate((e_f0, e_f0_2b))
+    u_f0 = np.concatenate((u_f0, u_f0_2b))
+
+    out = {
+        "u_f0": u_f0,
+        "u_loudness": u_loudness,
+        "e_f0": e_f0,
+        "e_loudness": e_loudness,
+        "f0_conf": f0_conf,
+        "onsets": onsets,
+        "offsets": offsets
+    }
+    name = "{}-train-da.pickle".format(instrument)
     with open("dataset/" + name, "wb") as file_out:
         pickle.dump(out, file_out)
 
