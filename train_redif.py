@@ -1,5 +1,6 @@
 from redif.model import Model
 from redif.dataset import Dataset
+from redif.ema import EMAModelCheckPoint
 import torch
 from torch.utils.data import DataLoader, random_split
 import pytorch_lightning as pl
@@ -13,10 +14,12 @@ model.set_noise_schedule()
 model.transform.compute_stats(dataset.e_f0, dataset.e_lo)
 model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts")
 
-trainer = pl.Trainer(
-    gpus=1,
-    check_val_every_n_epoch=10,
-)
+trainer = pl.Trainer(gpus=1,
+                     check_val_every_n_epoch=10,
+                     callbacks=[EMAModelCheckPoint(
+                         model,
+                         filename="ema",
+                     )])
 trainer.fit(
     model,
     DataLoader(train, 16, True, drop_last=True),
