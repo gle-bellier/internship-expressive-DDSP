@@ -27,14 +27,16 @@ class FLConv(nn.Module):
 
 
 class UpBlock(nn.Module):
-    def __init__(self, in_dim, film_dim, out_dim):
+    def __init__(self, in_dim, film_dim, out_dim, upsample):
         super().__init__()
+        self.upsample = upsample
+        self.first_conv = nn.Conv1d(in_dim, out_dim, 3, padding=1)
         self.envelop_flconvs = nn.ModuleList([
-            FLConv(in_dim, out_dim),
+            FLConv(out_dim, out_dim),
             FLConv(out_dim, out_dim),
         ])
         self.noise_flconvs = nn.ModuleList([
-            FLConv(in_dim, out_dim),
+            FLConv(out_dim, out_dim),
             FLConv(out_dim, out_dim),
         ])
         self.residual_convs = nn.ModuleList([
@@ -43,9 +45,12 @@ class UpBlock(nn.Module):
         ])
 
     def forward(self, x, envelop_modulation, noise_modulation):
-        x = nn.functional.interpolate(x, scale_factor=2, mode="nearest")
+        if self.upsample:
+            x = nn.functional.interpolate(x, scale_factor=2, mode="nearest")
+
         x_residual = self.residual_convs[0](x)
 
+        x = self.first_conv(x)
         for layer in self.envelop_flconvs:
             x = layer(x, *envelop_modulation)
 
