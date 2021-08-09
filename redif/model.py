@@ -59,6 +59,8 @@ class Model(pl.LightningModule, DiffusionModel):
         self.ddsp = None
         self.val_step = 0
         self.data_dim = data_dim
+        self.cdt_dim = cdt_dim
+
         # DOWN CHAIN
         ndc = [nn.Conv1d(data_dim, dims[0], 3, padding=1)]
         edc = [nn.Conv1d(cdt_dim, dims[0], 3, padding=1)]
@@ -123,12 +125,15 @@ class Model(pl.LightningModule, DiffusionModel):
 
         return self.post_process(x)
 
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=1e-4)
+
     def training_step(self, batch, batch_idx):
         u_f0, u_lo, e_f0, e_lo = batch
 
         x = self.transform(e_f0, e_lo)
 
-        u_f0 = nn.functional.one_hot(u_f0, 127).permute(0, 2, 1)
+        u_f0 = nn.functional.one_hot(u_f0, self.cdt_dim - 1).permute(0, 2, 1)
 
         env = torch.cat([u_f0, u_lo.unsqueeze(1)], 1)
 
