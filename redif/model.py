@@ -131,10 +131,11 @@ class Model(pl.LightningModule, DiffusionModel):
     def training_step(self, batch, batch_idx):
         u_f0, u_lo, e_f0, e_lo = batch
 
+        # APPLY TRANSFORM ON F0 AND LO
         x = self.transform(e_f0, e_lo)
 
+        # QUANTIZED PITCH -> ONE HOT AND CAT PITCH AND LOUDNESS
         u_f0 = nn.functional.one_hot(u_f0, self.cdt_dim - 1).permute(0, 2, 1)
-
         env = torch.cat([u_f0, u_lo.unsqueeze(1)], 1)
 
         loss = self.compute_loss(x, env)
@@ -144,10 +145,11 @@ class Model(pl.LightningModule, DiffusionModel):
     def validation_step(self, batch, batch_idx):
         u_f0, u_lo, e_f0, e_lo = batch
 
+        # APPLY TRANSFORM ON F0 AND LO
         x = self.transform(e_f0, e_lo)
 
+        # QUANTIZED PITCH -> ONE HOT AND CAT PITCH AND LOUDNESS
         u_f0 = nn.functional.one_hot(u_f0, 127).permute(0, 2, 1)
-
         env = torch.cat([u_f0, u_lo.unsqueeze(1)], 1)
 
         self.log("validation", self.compute_loss(x, env))
