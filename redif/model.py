@@ -137,7 +137,9 @@ class Model(pl.LightningModule, DiffusionModel):
 
         env = torch.cat([u_f0, u_lo.unsqueeze(1)], 1)
 
-        return self.compute_loss(x, env)
+        loss = self.compute_loss(x, env)
+        self.log("loss", loss)
+        return loss
 
     def validation_step(self, batch, batch_idx):
         u_f0, u_lo, e_f0, e_lo = batch

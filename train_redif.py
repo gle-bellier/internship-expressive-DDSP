@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 import pytorch_lightning as pl
 
-dataset = Dataset(2048)
+dataset = Dataset(256)
 val_n = len(dataset) // 50
 train, val = random_split(dataset, [len(dataset) - val_n, val_n])
 
