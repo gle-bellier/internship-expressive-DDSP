@@ -11,7 +11,7 @@ from bottleneck import Bottleneck
 
 class UNet_Diffusion(pl.LightningModule):
     def __init__(self, down_channels, up_channels, down_dilations,
-                 up_dilations, scalers):
+                 up_dilations, scalers, dropout):
         super().__init__()
         #self.save_hyperparameters()
         self.down_channels_in = down_channels[:-1]
@@ -26,6 +26,7 @@ class UNet_Diffusion(pl.LightningModule):
         self.top_channels_out = up_channels[-1]
         self.top_dilation = up_dilations[-1]
 
+        self.dropout = dropout
         self.scalers = scalers
         self.val_idx = 0
 
@@ -35,18 +36,22 @@ class UNet_Diffusion(pl.LightningModule):
             DBlock(in_channels=channels_in,
                    out_channels=channels_out,
                    dilation=dilation,
-                   first=f) for channels_in, channels_out, dilation, f in zip(
-                       self.down_channels_in, self.down_channels_out,
-                       self.down_dilations, first)
+                   first=f,
+                   dropout=self.dropout)
+            for channels_in, channels_out, dilation, f in zip(
+                self.down_channels_in, self.down_channels_out,
+                self.down_dilations, first)
         ])
 
         self.down_blocks_noisy = nn.ModuleList([
             DBlock(in_channels=channels_in,
                    out_channels=channels_out,
                    dilation=dilation,
-                   first=f) for channels_in, channels_out, dilation, f in zip(
-                       self.down_channels_in, self.down_channels_out,
-                       self.down_dilations, first)
+                   first=f,
+                   dropout=self.dropout)
+            for channels_in, channels_out, dilation, f in zip(
+                self.down_channels_in, self.down_channels_out,
+                self.down_dilations, first)
         ])
 
         self.films_pitch = nn.ModuleList([
@@ -64,7 +69,8 @@ class UNet_Diffusion(pl.LightningModule):
         self.up_blocks = nn.ModuleList([
             UBlock(in_channels=channels_in,
                    out_channels=channels_out,
-                   dilation=dilation)
+                   dilation=dilation,
+                   dropout=self.dropout)
             for channels_in, channels_out, dilation in zip(
                 self.up_channels_in, self.up_channels_out, self.up_dilations)
         ])

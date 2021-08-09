@@ -5,7 +5,12 @@ from utils import FeatureWiseAffine, FiLM, PositionalEncoding, ConvBlock
 
 
 class DBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, dilation, first=False):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 dilation,
+                 first=False,
+                 dropout=False):
         super().__init__()
         if first:
             self.b1 = nn.Sequential(
@@ -17,13 +22,16 @@ class DBlock(nn.Module):
             self.b2 = nn.Sequential(
                 ConvBlock(in_channels=in_channels,
                           out_channels=out_channels,
-                          dilation=1),
+                          dilation=1,
+                          dropout=dropout),
                 ConvBlock(in_channels=out_channels,
                           out_channels=out_channels,
-                          dilation=dilation),
+                          dilation=dilation,
+                          dropout=dropout),
                 ConvBlock(in_channels=out_channels,
                           out_channels=out_channels,
-                          dilation=1),
+                          dilation=1,
+                          dropout=dropout),
             )
 
         else:
@@ -37,13 +45,16 @@ class DBlock(nn.Module):
                 nn.AvgPool1d(kernel_size=2),
                 ConvBlock(in_channels=in_channels,
                           out_channels=out_channels,
-                          dilation=1),
+                          dilation=1,
+                          dropout=dropout),
                 ConvBlock(in_channels=out_channels,
                           out_channels=out_channels,
-                          dilation=dilation),
+                          dilation=dilation,
+                          dropout=dropout),
                 ConvBlock(in_channels=out_channels,
                           out_channels=out_channels,
-                          dilation=1),
+                          dilation=1,
+                          dropout=dropout),
             )
 
     def forward(self, x):

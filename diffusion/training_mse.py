@@ -1,3 +1,4 @@
+from pytorch_lightning.core.step_result import weighted_mean
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
@@ -22,8 +23,14 @@ warnings.filterwarnings('ignore')
 
 
 class Network(pl.LightningModule, DiffusionModel):
-    def __init__(self, down_channels, up_channels, down_dilations,
-                 up_dilations, scalers):
+    def __init__(self,
+                 down_channels,
+                 up_channels,
+                 down_dilations,
+                 up_dilations,
+                 scalers,
+                 weight_decay=1e-4,
+                 dropout=False):
         super().__init__()
         self.save_hyperparameters()
 
@@ -31,11 +38,13 @@ class Network(pl.LightningModule, DiffusionModel):
                                     down_channels=down_channels,
                                     up_channels=up_channels,
                                     down_dilations=down_dilations,
-                                    up_dilations=up_dilations)
+                                    up_dilations=up_dilations,
+                                    dropout=dropout)
 
         self.scalers = scalers
         self.ddsp = None
         self.val_idx = 0
+        self.weight_decay = weight_decay
 
     def neural_pass(self, x, cdt, noise_level):
 
@@ -51,7 +60,7 @@ class Network(pl.LightningModule, DiffusionModel):
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(),
                                 lr=1e-4,
-                                weight_decay=1e-3)
+                                weight_decay=self.weight_decay)
 
     def training_step(self, batch, batch_idx):
         model_input, cdt = batch
@@ -158,7 +167,7 @@ class Network(pl.LightningModule, DiffusionModel):
 
 if __name__ == "__main__":
 
-    inst = "violin"  #"flute"  #
+    inst = "flute"
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/diffusion/{}/'.format(inst))
 
@@ -169,8 +178,12 @@ if __name__ == "__main__":
         logger=tb_logger)
 
     list_transforms = [
-        (PitchTransformer, {}),
-        (LoudnessTransformer, {}),
+        (PitchTransformer, {
+            "factor": 10
+        }),
+        (LoudnessTransformer, {
+            "factor": 10
+        }),
     ]
     train = DiffusionDataset(instrument=inst,
                              type_set="train",
@@ -191,7 +204,9 @@ if __name__ == "__main__":
                     down_channels=down_channels,
                     up_channels=up_channels,
                     down_dilations=down_dilations,
-                    up_dilations=up_dilations)
+                    up_dilations=up_dilations,
+                    weight_decay=1e-3,
+                    dropout=0.2)
 
     model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
     model.set_noise_schedule(init=torch.linspace,
