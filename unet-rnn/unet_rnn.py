@@ -198,11 +198,11 @@ class UNet_RNN(pl.LightningModule):
         target = target[0:1]
         self.val_idx += 1
 
-        if self.val_idx % 20:
+        if self.val_idx % 50:
             return
 
         device = next(iter(self.parameters())).device
-        out = self.neural_pass(model_input)
+        out = self(model_input)
 
         f0, lo = self.post_process(out)
         midi_f0, midi_lo = self.post_process(model_input)
@@ -234,26 +234,28 @@ class UNet_RNN(pl.LightningModule):
 if __name__ == "__main__":
 
     list_transforms = [
-        (MinMaxScaler, ),
-        (QuantileTransformer, 30),
+        (MinMaxScaler, {}),
+        (QuantileTransformer, {
+            "n_quantiles": 30
+        }),
     ]
 
     inst = "flute"
-    dataset = UNet_Dataset(instrument=inst,
-                           data_augmentation=False,
-                           list_transforms=list_transforms,
-                           n_sample=2048)
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
-
-    train, val = random_split(dataset, [train_len, val_len])
+    train = UNet_Dataset(instrument=inst,
+                         type_set="train",
+                         data_augmentation=True,
+                         list_transforms=list_transforms)
+    test = UNet_Dataset(instrument=inst,
+                        type_set="test",
+                        data_augmentation=False,
+                        list_transforms=list_transforms)
 
     down_channels = [2, 16, 512, 1024]
 
-    model = UNet_RNN(scalers=dataset.scalers, channels=down_channels)
+    model = UNet_RNN(scalers=test.scalers, channels=down_channels)
 
-    model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
-    tb_logger = pl_loggers.TensorBoardLogger('logs/unet-rnn/')
+    model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
+    tb_logger = pl_loggers.TensorBoardLogger('logs/unet-rnn/{}'.format(inst))
 
     trainer = pl.Trainer(
         gpus=1,
@@ -264,5 +266,5 @@ if __name__ == "__main__":
     trainer.fit(
         model,
         DataLoader(train, 32, True),
-        DataLoader(val, 32),
+        DataLoader(test, 32),
     )

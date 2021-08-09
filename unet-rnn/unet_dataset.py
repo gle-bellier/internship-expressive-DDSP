@@ -12,15 +12,14 @@ class UNet_Dataset(Dataset):
     def __init__(self,
                  instrument,
                  data_augmentation=False,
+                 type_set="train",
                  n_sample=2048,
                  list_transforms=None,
                  eval=False):
 
         da = "-da" if data_augmentation else ""
-        type_set = "test" if eval else "train"
-        path = "dataset/{}-{}{}.pickle".format(instrument[0], type_set, da)
-
-        print("Loading Dataset...")
+        path = "dataset/{}-{}{}.pickle".format(instrument, type_set, da)
+        print("{} dataset file used : {}".format(type_set, path))
         with open(path, "rb") as dataset:
             dataset = pickle.load(dataset)
 
