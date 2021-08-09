@@ -23,15 +23,18 @@ list_transforms = [
     }),  # cents
 ]
 
-PATH = "dataset/dataset-diffusion.pickle"
-dataset = ExpressiveDataset(list_transforms=list_transforms, eval=True)
+instrument = "violin"
+dataset = ExpressiveDataset(list_transforms=list_transforms,
+                            type_set="test",
+                            instrument=instrument,
+                            eval=True)
 
 model = ModelCategorical.load_from_checkpoint(
-    "logs/lstm/categorical/default/version_0/checkpoints/epoch=547-step=2739.ckpt",
+    "logs/lstm/categorical/violin/default/version_2/checkpoints/epoch=37-step=2051.ckpt",
     scalers=dataset.scalers,
     strict=False).eval()
 
-model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
+model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(instrument)).eval()
 
 # Initialize data :
 
@@ -50,20 +53,17 @@ N_EXAMPLE = 5
 for i in range(N_EXAMPLE):
     model_input, target, ons, offs = dataset[i]
 
-    n_step = 10
-    out = model.generation_loop(model_input.unsqueeze(0))
-    s_pred_cents, s_pred_lo = model.split_predictions(out)
+    _, s_pred_cents, s_pred_lo = model.generation_loop(
+        model_input.unsqueeze(0).float())
 
-    s_u_p = model_input[1:, :128]
+    s_u_p = model_input[:, :128]
     s_u_cents = torch.zeros_like(s_u_p)
-    s_u_lo = model_input[1:, 128:249]
+    s_u_lo = model_input[:, 128:249]
 
-    s_e_pitch = model_input[1:, 249:377]
-    s_e_cents = model_input[1:, 377:477]
+    s_e_pitch = model_input[:, 249:377]
+    s_e_cents = model_input[:, 377:477]
 
-    print(s_e_cents.shape)
-    print(s_e_cents == np.zeros_like(s_e_cents))
-    s_e_lo = model_input[1:, 477:598]
+    s_e_lo = model_input[:, 477:598]
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
                                                    s_pred_lo)
@@ -90,5 +90,6 @@ out = {
     "offsets": offsets
 }
 
-# with open("results/lstm/categorical/data/results.pickle", "wb") as file_out:
-#     pickle.dump(out, file_out)
+with open("results/lstms/categorical/data/results-flute.pickle",
+          "wb") as file_out:
+    pickle.dump(out, file_out)

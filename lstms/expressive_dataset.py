@@ -19,7 +19,7 @@ class ExpressiveDataset(Dataset):
                  eval=False):
 
         da = "-da" if data_augmentation else ""
-        path = "dataset/{}-{}{}.pickle".format(instrument[0], type_set, da)
+        path = "dataset/{}-{}{}.pickle".format(instrument, type_set, da)
         print("{} dataset file used : {}".format(type_set, path))
         print("Loading Dataset...")
         with open(path, "rb") as dataset:
