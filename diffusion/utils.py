@@ -13,7 +13,7 @@ class ConvBlock(nn.Module):
                  out_channels,
                  dilation,
                  norm=False,
-                 dropout=0.7):
+                 dropout=False):
         super().__init__()
         self.norm = norm
         self.conv = nn.Conv1d(in_channels=in_channels,
@@ -25,14 +25,17 @@ class ConvBlock(nn.Module):
 
         self.lr = nn.LeakyReLU(.2)
         self.bn = nn.BatchNorm1d(out_channels)
-        self.dp = nn.Dropout(dropout)
+        self.dropout = dropout
+        if self.dropout:
+            self.dp = nn.Dropout(dropout)
 
     def forward(self, x):
         x = self.conv(x)
         if self.norm:
             x = self.bn(x)
         out = self.lr(x)
-        out = self.dp(out)
+        if self.dropout:
+            out = self.dp(out)
         return out
 
 

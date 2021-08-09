@@ -5,17 +5,19 @@ from utils import FeatureWiseAffine, FiLM, PositionalEncoding, ConvBlock, get_pa
 
 
 class Residual(nn.Module):
-    def __init__(self, in_channels, out_channels, dilation):
+    def __init__(self, in_channels, out_channels, dilation, dropout):
         super().__init__()
         self.lr = nn.LeakyReLU(.2)
         self.up = nn.Upsample(scale_factor=2)
         self.conv1 = ConvBlock(in_channels=in_channels,
                                out_channels=in_channels,
-                               dilation=dilation)
+                               dilation=dilation,
+                               dropout=dropout)
 
         self.conv2 = ConvBlock(in_channels=in_channels,
                                out_channels=out_channels,
-                               dilation=dilation)
+                               dilation=dilation,
+                               dropout=dropout)
 
         self.fwa1 = FeatureWiseAffine()
         self.fwa2 = FeatureWiseAffine()
@@ -54,7 +56,12 @@ class UBlock_Mid(nn.Module):
 
 
 class UBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, dilation, last=False):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 dilation,
+                 last=False,
+                 dropout=False):
         super().__init__()
         self.last = last
         self.main = UBlock_Mid(in_channels=in_channels,
@@ -64,7 +71,8 @@ class UBlock(nn.Module):
 
         self.residual = Residual(in_channels=in_channels,
                                  out_channels=out_channels,
-                                 dilation=dilation)
+                                 dilation=dilation,
+                                 dropout=dropout)
 
     def forward(self, x, film_out_pitch, film_out_noisy):
         out = self.main(x)
