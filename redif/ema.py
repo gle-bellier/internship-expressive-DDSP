@@ -3,13 +3,18 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 
 class EMAModelCheckPoint(ModelCheckpoint):
+    """
+    PytorchLightning callback inherited from ModelCheckpoint
+    Tracks an EMA version of the weight of a model.
+    Substitute the weights with its shadow during the validation pass.
+    """
     def __init__(self, model: torch.nn.Module, alpha=.999, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.shadow = {}
         for n, p in model.named_parameters():
             if p.requires_grad:
-                self.shadow[n] = p
+                self.shadow[n] = p.data.clone()
         self.model = model
         self.alpha = alpha
 
