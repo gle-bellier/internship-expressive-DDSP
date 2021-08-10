@@ -18,6 +18,35 @@ list_transforms = [
     }),
 ]
 
+
+def fit_transforms(u_f0, u_lo, list_transforms):
+    scalers = []
+
+    # pitch :
+
+    contour = u_f0.reshape(-1, 1)
+    transform = list_transforms[0]
+    sc = transform[0]
+    sc = sc(**transform[1]).fit(contour)
+    scalers.append(sc)
+
+    # loudness
+
+    contour = self.dataset["e_loudness"]
+    contour = contour.reshape(-1, 1)
+    transform = self.list_transforms[1]
+    sc = transform[0]
+    sc = sc(**transform[1]).fit(contour)
+    scalers.append(sc)
+
+    return scalers
+
+
+path = "dataset/test-set.pickle"
+print("Loading Dataset...")
+with open(path, "rb") as set:
+    set = pickle.load(set)
+
 PATH = "dataset/dataset-diffusion.pickle"
 dataset = UNet_Dataset(PATH, list_transforms=list_transforms, eval=True)
 
