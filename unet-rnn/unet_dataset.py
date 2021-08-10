@@ -58,7 +58,7 @@ class UNet_Dataset(Dataset):
 
         # loudness
         if self.eval:
-            contour = self.dataset["u_f0"]
+            contour = self.dataset["u_loudness"]
         else:
             contour = self.dataset["e_loudness"]
         contour = contour.reshape(-1, 1)
