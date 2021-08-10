@@ -1,8 +1,5 @@
 from midiConverter import Converter
 
-import csv
-from tqdm import tqdm
-import os
 import numpy as np
 from sklearn.preprocessing import QuantileTransformer
 # import sounddevice as sd
@@ -17,6 +14,27 @@ import note_seq
 from note_seq.protobuf import music_pb2
 import matplotlib.pyplot as plt
 from extract_f0_confidence_loudness import Extractor
+import pickle
+
+
+def onsets_offsets(events):
+    note_on = False
+    onsets, offsets = np.zeros_like(events), np.zeros_like(events)
+    for i in range(len(events)):
+        if events[i] == -1:
+            note_on = False
+            offsets[i] = 1
+
+        elif events[i] == 1:
+            if note_on:
+                offsets[i - 1] = 1
+                onsets[i] = 1
+                note_on = True
+            else:
+                onsets[i] = 1
+                note_on = True
+
+    return onsets, offsets
 
 
 def get_onsets(midi_file, frame_rate):
@@ -69,16 +87,24 @@ def get_midi_lo(path):
 
     midi_onsets = get_onsets(path, sampling_rate // block_size)
     events = get_events(midi_onsets, f0_wav.shape)
+    onsets, offsets = onsets_offsets(events)
 
-    return f0, lo_rescale, events
+    return f0, lo_rescale, onsets, offsets
 
 
 files = ["dmitry-sinkovsky-plays-jsbachs-partita-in-e-major_1.mid"]
 path = "violin/"
-f0, lo, events = get_midi_lo(path + files[1])
-plt.plot(lo)
-plt.show()
+for file in files:
+    f0, lo, onsets, offsets = get_midi_lo(path + file)
+    # plt.plot(lo)
+    # plt.show()
 
-plt.plot(events * 1000)
-plt.plot(f0)
-plt.show()
+    # plt.plot(onsets * 1000)
+    # plt.plot(-offsets * 1000)
+    # plt.plot(f0)
+    # plt.show()
+
+    out = {"u_f0": f0, "u_loudness": lo, "onsets": onsets, "offsets": offsets}
+    name = "test-set.pickle"
+    with open("dataset/" + name, "wb") as file_out:
+        pickle.dump(out, file_out)
