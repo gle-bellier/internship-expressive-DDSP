@@ -20,7 +20,7 @@ train, val = random_split(dataset, [len(dataset) - val_n, val_n])
 if args.CKPT is not None:
     model = Model.load_from_checkpoint(args.CKPT, strict=False)
 else:
-    model = Model(2, 128, [128, 192, 256, 384, 512])
+    model = Model(2, 128, [128, 192, 256])
 
 model.set_noise_schedule()
 model.transform.compute_stats(dataset.e_f0, dataset.e_lo)
