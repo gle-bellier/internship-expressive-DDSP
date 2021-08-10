@@ -26,6 +26,7 @@ plt.plot(e_f0[:5000])
 plt.show()
 
 assert all(u_f0 >= 0) and all(u_f0 < 128)
+assert any(np.isnan(e_f0))
 
 np.save("u_f0.npy", u_f0)
 np.save("u_lo.npy", u_lo)
