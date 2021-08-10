@@ -104,7 +104,15 @@ for file in files:
     # plt.plot(f0)
     # plt.show()
 
-    out = {"u_f0": f0, "u_loudness": lo, "onsets": onsets, "offsets": offsets}
+    out = {
+        "u_f0": f0,
+        "u_loudness": lo,
+        "e_f0": np.zeros_like(f0),
+        "e_loudness": np.zeros_like(lo),
+        "f0_conf": np.zeros_like(f0),
+        "onsets": onsets,
+        "offsets": offsets
+    }
     name = "test-set.pickle"
     with open("dataset/" + name, "wb") as file_out:
         pickle.dump(out, file_out)
