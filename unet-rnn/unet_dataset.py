@@ -16,12 +16,18 @@ class UNet_Dataset(Dataset):
                  n_sample=2048,
                  list_transforms=None,
                  eval=False):
+        if eval:
+            path = "dataset/test-set.pickle"
+            print("Eval dataset file used : {}".format(path))
+            with open(path, "rb") as dataset:
+                dataset = pickle.load(dataset)
 
-        da = "-da" if data_augmentation else ""
-        path = "dataset/{}-{}{}.pickle".format(instrument, type_set, da)
-        print("{} dataset file used : {}".format(type_set, path))
-        with open(path, "rb") as dataset:
-            dataset = pickle.load(dataset)
+        else:
+            da = "-da" if data_augmentation else ""
+            path = "dataset/{}-{}{}.pickle".format(instrument, type_set, da)
+            print("{} dataset file used : {}".format(type_set, path))
+            with open(path, "rb") as dataset:
+                dataset = pickle.load(dataset)
 
         self.dataset = dataset
         self.N = len(dataset["u_f0"])
@@ -37,8 +43,10 @@ class UNet_Dataset(Dataset):
         scalers = []
 
         # pitch :
-
-        cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
+        if self.eval:
+            cat = self.dataset["u_f0"]
+        else:
+            cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
         contour = cat.reshape(-1, 1)
 
         transform = self.list_transforms[0]
@@ -47,8 +55,10 @@ class UNet_Dataset(Dataset):
         scalers.append(sc)
 
         # loudness
-
-        contour = self.dataset["e_loudness"]
+        if self.eval:
+            contour = self.dataset["u_f0"]
+        else:
+            contour = self.dataset["e_loudness"]
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[1]
         sc = transform[0]
@@ -59,8 +69,11 @@ class UNet_Dataset(Dataset):
 
     def transform(self):
         self.u_f0 = self.dataset["u_f0"]
+        self.u_lo = self.dataset["u_loudness"]
+
         self.e_f0 = self.dataset["e_f0"]
         self.e_lo = self.dataset["e_loudness"]
+
         self.onsets = self.dataset["onsets"]
         self.offsets = self.dataset["offsets"]
 
@@ -71,13 +84,18 @@ class UNet_Dataset(Dataset):
 
         self.u_f0 = self.apply_transform(self.u_f0, self.scalers[0])
         self.e_f0 = self.apply_transform(self.e_f0, self.scalers[0])
+        self.u_lo = self.apply_transform(self.u_lo, self.scalers[1])
         self.e_lo = self.apply_transform(self.e_lo, self.scalers[1])
 
         self.u_f0 = torch.from_numpy(self.u_f0).float()
         self.e_f0 = torch.from_numpy(self.e_f0).float()
         self.e_lo = torch.from_numpy(self.e_lo).float()
-        self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
-                                                self.offsets)
+
+        if self.eval:
+            self.u_lo = torch.from_numpy(self.u_lo).float()
+        else:
+            self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
+                                                    self.offsets)
 
     def apply_transform(self, x, scaler):
         out = scaler.transform(x.reshape(-1, 1)).squeeze(-1)
