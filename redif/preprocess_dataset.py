@@ -20,13 +20,14 @@ e_f0 = np.asarray(dataset["e_f0"])
 e_lo = np.asarray(dataset["e_loudness"])
 
 u_f0 = np.round(ftom(u_f0)).astype(int).clip(0, 127)
+e_f0 = np.clip(e_f0, 1e-4, None)
 
 plt.plot(u_f0[:5000])
 plt.plot(e_f0[:5000])
 plt.show()
 
 assert all(u_f0 >= 0) and all(u_f0 < 128)
-assert any(np.isnan(e_f0))
+assert all(e_f0 > 0)
 
 np.save("u_f0.npy", u_f0)
 np.save("u_lo.npy", u_lo)

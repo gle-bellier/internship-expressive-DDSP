@@ -3,6 +3,8 @@ from redif.dataset import Dataset
 from redif.ema import EMAModelCheckPoint
 import torch
 from torch.utils.data import DataLoader, random_split
+from pytorch_lightning import loggers as pl_loggers
+
 import pytorch_lightning as pl
 from effortless_config import Config
 
@@ -25,7 +27,7 @@ else:
 model.set_noise_schedule()
 model.transform.compute_stats(dataset.e_f0, dataset.e_lo)
 model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts")
-
+tb_logger = pl_loggers.TensorBoardLogger('logs/rediff/violin/')
 trainer = pl.Trainer(gpus=1,
                      check_val_every_n_epoch=10,
                      callbacks=[EMAModelCheckPoint(
@@ -33,6 +35,7 @@ trainer = pl.Trainer(gpus=1,
                          filename="ema",
                      )],
                      max_epochs=100000,
+                     logger=tb_logger,
                      resume_from_checkpoint=args.CKPT)
 trainer.fit(
     model,
