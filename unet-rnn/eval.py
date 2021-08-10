@@ -18,17 +18,17 @@ list_transforms = [
     }),
 ]
 
-PATH = "dataset/dataset-diffusion.pickle"
-dataset = UNet_Dataset(PATH, list_transforms=list_transforms, eval=True)
+instrument = "violin"
+
+dataset = UNet_Dataset(instrument=instrument,
+                       list_transforms=list_transforms,
+                       eval=True)
 
 down_channels = [2, 16, 512, 1024]
-ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
+ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(instrument)).eval()
 
 model = UNet.load_from_checkpoint(
-    "logs/unet/default/version_1/checkpoints/epoch=9074-step=136124.ckpt",
-    scalers=dataset.scalers,
-    channels=down_channels,
-    ddsp=ddsp,
+    "logs/unet-rnn/flute/default/version_0/checkpoints/epoch=4167-step=208399.ckpt",
     strict=False).eval()
 
 #model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()

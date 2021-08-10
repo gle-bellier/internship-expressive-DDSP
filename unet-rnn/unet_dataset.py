@@ -16,6 +16,8 @@ class UNet_Dataset(Dataset):
                  n_sample=2048,
                  list_transforms=None,
                  eval=False):
+
+        self.eval = eval
         if eval:
             path = "dataset/test-set.pickle"
             print("Eval dataset file used : {}".format(path))
