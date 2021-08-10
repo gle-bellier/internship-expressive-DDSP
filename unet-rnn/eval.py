@@ -29,6 +29,7 @@ ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(instrument)).eval()
 
 model = UNet.load_from_checkpoint(
     "logs/unet-rnn/flute/default/version_0/checkpoints/epoch=4167-step=208399.ckpt",
+    scalers=dataset.scalers,
     strict=False).eval()
 
 #model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
@@ -58,10 +59,6 @@ for i in range(N_EXAMPLE):
     target_f0, target_lo = dataset.inverse_transform(target)
 
     # # add to results:
-
-    # f0, lo = out.split(1, -1)
-    # midi_f0, midi_lo = midi.split(1, -1)
-    # target_f0, target_lo = target.split(1, -1)
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
     u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
