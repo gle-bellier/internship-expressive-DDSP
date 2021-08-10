@@ -240,7 +240,7 @@ if __name__ == "__main__":
         }),
     ]
 
-    inst = "flute"
+    inst = "violin"
     train = UNet_Dataset(instrument=inst,
                          type_set="train",
                          data_augmentation=True,

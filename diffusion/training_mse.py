@@ -188,11 +188,13 @@ if __name__ == "__main__":
     train = DiffusionDataset(instrument=inst,
                              type_set="train",
                              data_augmentation=True,
-                             list_transforms=list_transforms)
+                             list_transforms=list_transforms,
+                             n_sample=512)
     test = DiffusionDataset(instrument=inst,
                             type_set="test",
                             data_augmentation=False,
-                            list_transforms=list_transforms)
+                            list_transforms=list_transforms,
+                            n_sample=512)
 
     down_channels = [2, 8, 64, 128, 256, 512]
     up_channels = [512, 256, 128, 64, 16, 8,
@@ -206,7 +208,7 @@ if __name__ == "__main__":
                     down_dilations=down_dilations,
                     up_dilations=up_dilations,
                     weight_decay=1e-3,
-                    dropout=0.2)
+                    dropout=False)
 
     model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
     model.set_noise_schedule(init=torch.linspace,
@@ -218,6 +220,6 @@ if __name__ == "__main__":
 
     trainer.fit(
         model,
-        DataLoader(train, 64, True),
-        DataLoader(test, 64),
+        DataLoader(train, 32, True),
+        DataLoader(test, 32),
     )
