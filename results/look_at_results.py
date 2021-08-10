@@ -16,46 +16,46 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-path = "results/diffusion/data/results.pickle"
+path = "results/unet-rnn/data/violin/results.pickle"
 number_of_examples = 5
 # get data
 
 dataset = pd.read_pickle(path, compression=None)
 
-df = pd.DataFrame(dataset)
-print(df)
+# df = pd.DataFrame(dataset)
+# print(df)
 
-# sns.set_theme(style="darkgrid")
-for i in range(number_of_examples):
-    sns.lineplot(x="time", y="u_f0", hue="sample", data=df[df["sample"] == i])
+# # sns.set_theme(style="darkgrid")
+# for i in range(number_of_examples):
+#     sns.lineplot(x="time", y="u_f0", hue="sample", data=df[df["sample"] == i])
 
-    sns.lineplot(x="time", y="e_f0", hue="sample", data=df[df["sample"] == i])
-    plt.show()
+#     sns.lineplot(x="time", y="e_f0", hue="sample", data=df[df["sample"] == i])
+#     plt.show()
 
 # ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
-# # Initialize data :
+# Initialize data :
 
-# n_sample = 2048
+n_sample = 2048
 
-# for i in range(number_of_examples):
-#     i *= n_sample
-#     u_f0 = dataset["u_f0"][i:i + n_sample]
-#     e_f0 = dataset["e_f0"][i:i + n_sample]
-#     pred_f0 = dataset["pred_f0"][i:i + n_sample]
+for i in range(number_of_examples):
+    i *= n_sample
+    u_f0 = dataset["u_f0"][i:i + n_sample]
+    e_f0 = dataset["e_f0"][i:i + n_sample]
+    pred_f0 = dataset["pred_f0"][i:i + n_sample]
 
-#     u_lo = dataset["u_lo"][i:i + n_sample]
-#     e_lo = dataset["e_lo"][i:i + n_sample]
-#     pred_lo = dataset["pred_lo"][i:i + n_sample]
+    u_lo = dataset["u_lo"][i:i + n_sample]
+    e_lo = dataset["e_lo"][i:i + n_sample]
+    pred_lo = dataset["pred_lo"][i:i + n_sample]
 
-#     plt.plot(u_f0, label="midi")
-#     plt.plot(e_f0, label="target")
-#     plt.plot(pred_f0, label="model")
-#     plt.legend()
-#     plt.show()
+    plt.plot(u_f0, label="midi")
+    plt.plot(e_f0, label="target")
+    plt.plot(pred_f0, label="model")
+    plt.legend()
+    plt.show()
 
-#     plt.plot(u_lo, label="Midi")
-#     plt.plot(e_lo, label="Target")
-#     plt.plot(pred_lo, label="Model")
-#     plt.legend()
-#     plt.show()
+    plt.plot(u_lo, label="Midi")
+    plt.plot(e_lo, label="Target")
+    plt.plot(pred_lo, label="Model")
+    plt.legend()
+    plt.show()
