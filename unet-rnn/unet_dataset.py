@@ -45,10 +45,8 @@ class UNet_Dataset(Dataset):
         scalers = []
 
         # pitch :
-        if self.eval:
-            cat = self.dataset["u_f0"]
-        else:
-            cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
+
+        cat = self.dataset["u_f0"]
         contour = cat.reshape(-1, 1)
 
         transform = self.list_transforms[0]
