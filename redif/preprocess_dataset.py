@@ -1,38 +1,29 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 
 def ftom(f):
     return 12 * (np.log(f) - np.log(440)) / np.log(2) + 69
 
 
-with open("dataset/contours.csv", "r") as contours:
-    contours = contours.read()
+instrument = "violin"
+path = "dataset/{}-train-da.pickle".format(instrument)
+print("dataset file used : {}".format(path))
+print("Loading Dataset...")
+with open(path, "rb") as dataset:
+    dataset = pickle.load(dataset)
 
-contours = contours.split("\n")
-contours.pop(0)
-contours.pop(-1)
+u_f0 = np.asarray(dataset["u_f0"])
+u_lo = np.asarray(dataset["u_loudness"])
+e_f0 = np.asarray(dataset["e_f0"])
+e_lo = np.asarray(dataset["e_loudness"])
 
-data = {
-    "u_f0": [],
-    "u_lo": [],
-    "e_f0": [],
-    "e_lo": [],
-}
+u_f0 = np.round(ftom(u_f0)).astype(int).clip(0, 127)
 
-for t in contours:
-    u_f0, u_loudness, e_f0, e_loudness, _, _, _, _ = t.split(",")
-    data["u_f0"].append(float(u_f0))
-    data["u_lo"].append(float(u_loudness))
-    data["e_f0"].append(float(e_f0))
-    data["e_lo"].append(float(e_loudness))
-
-u_f0 = np.asarray(data["u_f0"])
-u_lo = np.asarray(data["u_lo"])
-e_f0 = np.asarray(data["e_f0"])
-e_lo = np.asarray(data["e_lo"])
-
-u_f0 = np.round(ftom(u_f0)).astype(int)
+plt.plot(u_f0[:5000])
+plt.plot(e_f0[:5000])
+plt.show()
 
 assert all(u_f0 >= 0) and all(u_f0 < 128)
 
