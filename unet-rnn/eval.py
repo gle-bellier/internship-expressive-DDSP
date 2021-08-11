@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxSca
 import numpy as np
 
 torch.set_grad_enabled(False)
-from unet import UNet
+from unet_rnn import UNet_RNN
 from unet_dataset import UNet_Dataset
 
 from random import randint
@@ -31,7 +31,7 @@ dataset = UNet_Dataset(instrument=instrument,
                        scalers=train.scalers,
                        eval=True)
 
-model = UNet.load_from_checkpoint(
+model = UNet_RNN.load_from_checkpoint(
     "logs/unet-rnn/violin/default/version_0/checkpoints/epoch=3400-step=98628.ckpt",
     scalers=train.scalers,
     strict=False).eval()
@@ -49,24 +49,23 @@ offsets = np.empty(0)
 
 # Prediction loops :
 
-N_EXAMPLE = 5
+N_EXAMPLE = 20
 for i in range(N_EXAMPLE):
     midi, target, ons, offs = dataset[i]
 
-    n_step = 10
     out = model(midi.unsqueeze(0))
 
-    # f0, lo = dataset.inverse_transform(out)
-    # midi_f0, midi_lo = dataset.inverse_transform(midi)
-    # target_f0, target_lo = dataset.inverse_transform(target)
+    f0, lo = dataset.inverse_transform(out)
+    midi_f0, midi_lo = dataset.inverse_transform(midi)
+    target_f0, target_lo = dataset.inverse_transform(target)
 
     # # add to results:
 
     # for raw results :
 
-    f0, lo = out.split(1, -1)
-    midi_f0, midi_lo = midi.split(1, -1)
-    target_f0, target_lo = target.split(1, -1)
+    # f0, lo = out.split(1, -1)
+    # midi_f0, midi_lo = midi.split(1, -1)
+    # target_f0, target_lo = target.split(1, -1)
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
     u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
@@ -88,7 +87,7 @@ out = {
     "offsets": offsets
 }
 
-path = "results/unet-rnn/data/results-{}-on-train.pickle".format(instrument)
+path = "results/unet-rnn/data/results-{}-testset.pickle".format(instrument)
 print("Output file : ", path)
 
 with open(path, "wb") as file_out:
