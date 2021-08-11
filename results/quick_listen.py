@@ -14,7 +14,7 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-path = "results/unet-rnn/data/results-violin-midi-test.pickle"
+path = "results/unet-rnn/data/results-violin-midi.pickle"
 number_of_examples = 5
 # get data
 
@@ -25,7 +25,7 @@ ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 
-n_sample = 2048
+n_sample = 500
 
 for i in range(number_of_examples):
     idx = i * n_sample
@@ -61,6 +61,6 @@ for i in range(number_of_examples):
     name = l[-1].split(".")[0] + str(i)
 
     sf.write("{}/samples/{}-pred.wav".format(save_path, name), pred, 16000)
-    sf.write("{}/samples/{}-midi.wav".format(save_path, name), midi, 16000)
-    sf.write("{}/samples/{}-resynth.wav".format(save_path, name), target,
-             16000)
+    #sf.write("{}/samples/{}-midi.wav".format(save_path, name), midi, 16000)
+    #sf.write("{}/samples/{}-resynth.wav".format(save_path, name), target,
+    #         16000)
