@@ -19,7 +19,7 @@ class UNet_Dataset(Dataset):
 
         self.eval = eval
         if eval:
-            path = "dataset/violin-test.pickle"
+            path = "dataset/test-set.pickle"
             print("Eval dataset file used : {}".format(path))
             with open(path, "rb") as dataset:
                 dataset = pickle.load(dataset)
@@ -45,8 +45,10 @@ class UNet_Dataset(Dataset):
         scalers = []
 
         # pitch :
-
-        cat = self.dataset["u_f0"]
+        if self.eval:
+            cat = self.dataset["u_f0"]
+        else:
+            cat = np.concatenate((self.dataset["u_f0"], self.dataset["e_f0"]))
         contour = cat.reshape(-1, 1)
 
         transform = self.list_transforms[0]

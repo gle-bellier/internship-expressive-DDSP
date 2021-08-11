@@ -198,7 +198,7 @@ class UNet_RNN(pl.LightningModule):
         target = target[0:1]
         self.val_idx += 1
 
-        if self.val_idx % 50:
+        if self.val_idx % 2:
             return
 
         device = next(iter(self.parameters())).device

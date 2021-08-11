@@ -25,14 +25,11 @@ dataset = UNet_Dataset(instrument=instrument,
                        eval=True)
 
 down_channels = [2, 16, 512, 1024]
-ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(instrument)).eval()
 
 model = UNet.load_from_checkpoint(
-    "logs/unet-rnn/flute/default/version_0/checkpoints/epoch=4167-step=208399.ckpt",
+    "logs/unet-rnn/violin/default/version_0/checkpoints/epoch=3400-step=98628.ckpt",
     scalers=dataset.scalers,
     strict=False).eval()
-
-#model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 
@@ -80,5 +77,6 @@ out = {
     "offsets": offsets
 }
 
-with open("results/unet-rnn/data/results.pickle", "wb") as file_out:
+with open("results/unet-rnn/data/results-{}.pickle".format(instrument),
+          "wb") as file_out:
     pickle.dump(out, file_out)
