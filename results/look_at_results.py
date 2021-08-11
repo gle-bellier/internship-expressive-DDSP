@@ -16,7 +16,7 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-path = "results/unet-rnn/data/violin/results.pickle"
+path = "results/unet-rnn/data/results-violin.pickle"
 number_of_examples = 5
 # get data
 
