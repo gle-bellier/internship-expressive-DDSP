@@ -15,6 +15,7 @@ class ExpressiveDataset(Dataset):
                  data_augmentation=False,
                  type_set="train",
                  n_sample=2048,
+                 scalers=None,
                  list_transforms=None,
                  eval=False):
 
@@ -30,7 +31,10 @@ class ExpressiveDataset(Dataset):
         self.list_transforms = list_transforms
         self.n_sample = n_sample
         self.load()
-        self.scalers = self.fit_transforms()
+        if scalers is not None:
+            self.scalers = scalers
+        else:
+            self.scalers = self.fit_transforms()
         self.transform()
         self.eval = eval
         print("Dataset loaded. Length : {}min".format(self.N // 6000))

@@ -24,9 +24,15 @@ list_transforms = [
 ]
 
 instrument = "violin"
+
+train = ExpressiveDataset(list_transforms=list_transforms,
+                          type_set="train",
+                          instrument=instrument,
+                          eval=True)
 dataset = ExpressiveDataset(list_transforms=list_transforms,
                             type_set="test",
                             instrument=instrument,
+                            scalers=train.scalers,
                             eval=True)
 
 model = ModelCategorical.load_from_checkpoint(
