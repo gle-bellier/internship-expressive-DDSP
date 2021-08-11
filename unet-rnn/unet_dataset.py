@@ -45,7 +45,6 @@ class UNet_Dataset(Dataset):
             print("Using scalers : ", self.scalers)
 
         self.transform()
-        self.eval = eval
         print("Dataset loaded. Length : {}min".format(self.N // 6000))
 
     def fit_transforms(self):
