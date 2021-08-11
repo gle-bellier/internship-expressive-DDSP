@@ -58,17 +58,29 @@ for i in range(N_EXAMPLE):
 
     n_step = 10
     out = model.generation_loop(model_input.unsqueeze(0))
+
+    print("OUT")
+    print(out.shape)
     s_pred_cents, s_pred_lo = model.split_predictions(out)
+    print(s_pred_cents.shape)
+    print(s_pred_lo.shape)
 
     s_u_p = model_input[1:, :128]
-    s_u_cents = torch.zeros_like(s_u_p)
+    s_u_cents = torch.zeros_like(s_pred_cents)
     s_u_lo = model_input[1:, 128:249]
 
-    s_e_cents = model_input[1:, 249:349]
+    print("Quantized")
+    print(s_u_p.shape)
+    print(s_u_cents.shape)
+    print(s_u_lo.shape)
 
-    # print(s_e_cents.shape)
-    # print(s_e_cents == np.zeros_like(s_e_cents))
+    print("Expressive")
+    s_e_cents = model_input[1:, 249:349]
     s_e_lo = model_input[1:, 349:470]
+
+    print(s_u_p.shape)
+    print(s_e_cents.shape)
+    print(s_e_lo.shape)
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
                                                    s_pred_lo)

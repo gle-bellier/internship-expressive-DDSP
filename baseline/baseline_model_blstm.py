@@ -132,6 +132,7 @@ class Model(pl.LightningModule):
             x_out = self.pre_gru(x_in)
             x_out, context = self.gru(x_out, context)
             x_out = self.post_gru(x_out)
+
             pred_cents, pred_lo = self.split_predictions(x_out)
 
             cents = self.sample_one_hot(pred_cents)
@@ -139,10 +140,9 @@ class Model(pl.LightningModule):
 
             cat = torch.cat([cents, lo], -1)
             ndim = cat.shape[-1]
+            x[:, i + 1:i + 2, -ndim - 2:-2] = cat
 
-            x[:, i + 1:i + 2, -ndim:] = cat
-
-        pred = x[..., -ndim:]
+        pred = x[..., -ndim - 2:-2]
         pred_cents, pred_lo = self.split_predictions(pred)
 
         pred_lo = pred_lo[:, 1:]
@@ -223,7 +223,7 @@ class Model(pl.LightningModule):
 
         ## Every 100 epochs : produce audio
 
-        if self.val_idx % 10 == 0:
+        if self.val_idx % 1 == 0:
             self.get_audio(model_input[0], target[0])
 
 
@@ -268,6 +268,6 @@ if __name__ == "__main__":
 
     trainer.fit(
         model,
-        DataLoader(train, 32, True),
-        DataLoader(test, 32),
+        DataLoader(train, 16, True),
+        DataLoader(test, 16),
     )
