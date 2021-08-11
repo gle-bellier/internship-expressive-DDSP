@@ -15,11 +15,13 @@ class UNet_Dataset(Dataset):
                  type_set="train",
                  n_sample=2048,
                  list_transforms=None,
-                 eval=False):
+                 eval=False,
+                 scalers=None):
 
         self.eval = eval
         if eval:
             path = "dataset/test-set.pickle"
+            path = "dataset/violin-train-da.pickle"
             print("Eval dataset file used : {}".format(path))
             with open(path, "rb") as dataset:
                 dataset = pickle.load(dataset)
@@ -36,7 +38,12 @@ class UNet_Dataset(Dataset):
         self.n_sample = n_sample
         self.list_transforms = list_transforms
 
-        self.scalers = self.fit_transforms()
+        if scalers is None:
+            self.scalers = self.fit_transforms()
+        else:
+            self.scalers = scalers
+            print("Using scalers : ", self.scalers)
+
         self.transform()
         self.eval = eval
         print("Dataset loaded. Length : {}min".format(self.N // 6000))

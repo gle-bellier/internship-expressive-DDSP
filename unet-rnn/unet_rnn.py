@@ -248,7 +248,8 @@ if __name__ == "__main__":
     test = UNet_Dataset(instrument=inst,
                         type_set="test",
                         data_augmentation=False,
-                        list_transforms=list_transforms)
+                        list_transforms=list_transforms,
+                        scalers=train.scalers)
 
     down_channels = [2, 16, 512, 1024]
 

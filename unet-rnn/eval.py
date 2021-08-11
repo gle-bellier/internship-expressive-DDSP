@@ -20,16 +20,20 @@ list_transforms = [
 
 instrument = "violin"
 
+train = UNet_Dataset(instrument=instrument,
+                     type_set="train",
+                     data_augmentation=True,
+                     list_transforms=list_transforms)
+
 dataset = UNet_Dataset(instrument=instrument,
                        list_transforms=list_transforms,
                        n_sample=1000,
+                       scalers=train.scalers,
                        eval=True)
-
-down_channels = [2, 16, 512, 1024]
 
 model = UNet.load_from_checkpoint(
     "logs/unet-rnn/violin/default/version_0/checkpoints/epoch=3400-step=98628.ckpt",
-    scalers=dataset.scalers,
+    scalers=train.scalers,
     strict=False).eval()
 
 # Initialize data :
@@ -52,17 +56,17 @@ for i in range(N_EXAMPLE):
     n_step = 10
     out = model(midi.unsqueeze(0))
 
-    f0, lo = dataset.inverse_transform(out)
-    midi_f0, midi_lo = dataset.inverse_transform(midi)
-    target_f0, target_lo = dataset.inverse_transform(target)
+    # f0, lo = dataset.inverse_transform(out)
+    # midi_f0, midi_lo = dataset.inverse_transform(midi)
+    # target_f0, target_lo = dataset.inverse_transform(target)
 
     # # add to results:
 
     # for raw results :
 
-    # f0, lo = out.split(1, -1)
-    # midi_f0, midi_lo = midi.split(1, -1)
-    # target_f0, target_lo = target.split(1, -1)
+    f0, lo = out.split(1, -1)
+    midi_f0, midi_lo = midi.split(1, -1)
+    target_f0, target_lo = target.split(1, -1)
 
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
     u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
@@ -84,6 +88,8 @@ out = {
     "offsets": offsets
 }
 
-with open("results/unet-rnn/data/results-{}-raw.pickle".format(instrument),
-          "wb") as file_out:
+path = "results/unet-rnn/data/results-{}-on-train.pickle".format(instrument)
+print("Output file : ", path)
+
+with open(path, "wb") as file_out:
     pickle.dump(out, file_out)
