@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxSca
 import numpy as np
 
 torch.set_grad_enabled(False)
-from baseline_model import Model
+from baseline_model_blstm import Model
 from baseline_dataset import Baseline_Dataset
 
 from random import randint
@@ -22,20 +22,22 @@ list_transforms = [
     }),  # cents
 ]
 
-PATH = "dataset/dataset-diffusion.pickle"
-dataset = Baseline_Dataset(list_transforms=list_transforms, eval=True)
+instrument = "flute"
 
-down_channels = [2, 16, 512, 1024]
-ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
+train = Baseline_Dataset(instrument=instrument,
+                         type_set="train",
+                         data_augmentation=True,
+                         list_transforms=list_transforms)
+
+dataset = Baseline_Dataset(instrument=instrument,
+                           list_transforms=list_transforms,
+                           scalers=train.scalers,
+                           eval=True)
 
 model = Model.load_from_checkpoint(
-    "logs/baseline/default/version_0/checkpoints/epoch=547-step=2739.ckpt",
+    "logs/baseline/blstm/flute/default/version_0/checkpoints/epoch=1223-step=61199.ckpt",
     scalers=dataset.scalers,
-    channels=down_channels,
-    ddsp=ddsp,
     strict=False).eval()
-
-#model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
 # Initialize data :
 
@@ -64,8 +66,8 @@ for i in range(N_EXAMPLE):
 
     s_e_cents = model_input[1:, 249:349]
 
-    print(s_e_cents.shape)
-    print(s_e_cents == np.zeros_like(s_e_cents))
+    # print(s_e_cents.shape)
+    # print(s_e_cents == np.zeros_like(s_e_cents))
     s_e_lo = model_input[1:, 349:470]
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
@@ -93,5 +95,6 @@ out = {
     "offsets": offsets
 }
 
-# with open("results/baseline/data/results.pickle", "wb") as file_out:
-#     pickle.dump(out, file_out)
+with open("results/baseline/data/results-{}.pickle".format(instrument),
+          "wb") as file_out:
+    pickle.dump(out, file_out)
