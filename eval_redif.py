@@ -4,14 +4,23 @@ import torch.nn as nn
 torch.set_grad_enabled(False)
 from redif.model import Model, ftom
 from effortless_config import Config
+from os import path, makedirs
+from glob import glob
+import soundfile as sf
+
+import numpy as np
 
 
 class args(Config):
     CKPT = None
     DDSP = None
+    OUT = "redif_samples/"
 
 
 args.parse_args()
+
+makedirs(args.OUT, exist_ok=True)
+n_sample = len(glob(path.join(args.OUT, "*.wav")))
 
 # INSTANCIATE MODELS
 model = Model.load_from_checkpoint(args.CKPT, strict=False).eval()
@@ -20,12 +29,11 @@ ddsp = torch.jit.load(args.DDSP).eval()
 
 ################################################
 # TODO: replace dummy input with actual contours
-pitch = torch.rand(1, 128) * 900 + 100
-loudness = torch.randn(1, 128)
+pitch = torch.from_numpy(np.load("u_f0.npy")[:1024]).reshape(1, -1).long()
+loudness = torch.from_numpy(np.load("u_lo.npy")[:1024]).reshape(1, -1).float()
 ################################################
 
 # FORMAT INPUT CONTOURS
-pitch = torch.round(ftom(pitch)).long()
 pitch = nn.functional.one_hot(pitch, 127).permute(0, 2, 1)
 loudness = loudness.unsqueeze(1)
 
@@ -40,3 +48,5 @@ f0, lo = model.transform.inverse(y)
 
 # SYNTHESIS
 sound = ddsp(f0.permute(0, 2, 1), lo.permute(0, 2, 1))
+name = f"sample_{n_sample:03d}.wav"
+sf.write(path.join(args.OUT, name), sound.reshape(-1).numpy(), 16000)
