@@ -18,6 +18,7 @@ model = Model.load_from_checkpoint(args.CKPT, strict=False).eval()
 model.set_noise_schedule()
 ddsp = torch.jit.load(args.DDSP).eval()
 
+################################################
 # TODO: replace dummy input with actual contours
 pitch = torch.rand(1, 128) * 900 + 100
 loudness = torch.randn(1, 128)
