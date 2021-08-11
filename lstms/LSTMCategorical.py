@@ -226,7 +226,7 @@ class ModelCategorical(pl.LightningModule):
 
 if __name__ == "__main__":
 
-    inst = "violin"  #"flute"
+    inst = "flute"
 
     tb_logger = pl_loggers.TensorBoardLogger(
         'logs/lstm/categorical/{}/'.format(inst))
