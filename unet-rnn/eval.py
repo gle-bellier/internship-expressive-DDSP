@@ -2,6 +2,8 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from unet_dataset import UNet_Dataset
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
+from transforms import PitchTransformer, LoudnessTransformer
+
 import numpy as np
 
 torch.set_grad_enabled(False)
@@ -12,13 +14,13 @@ from random import randint
 import pickle
 
 list_transforms = [
-    (MinMaxScaler, {}),
-    (QuantileTransformer, {
+    (PitchTransformer, {}),
+    (LoudnessTransformer, {
         "n_quantiles": 30
     }),
 ]
 
-instrument = "violin"
+instrument = "flute"
 
 train = UNet_Dataset(instrument=instrument,
                      type_set="train",
@@ -27,12 +29,12 @@ train = UNet_Dataset(instrument=instrument,
 
 dataset = UNet_Dataset(instrument=instrument,
                        list_transforms=list_transforms,
-                       n_sample=1000,
+                       n_sample=2048,
                        scalers=train.scalers,
                        eval=True)
 
 model = UNet_RNN.load_from_checkpoint(
-    "logs/unet-rnn/violin/default/version_0/checkpoints/epoch=3400-step=98628.ckpt",
+    "logs/unet-rnn/flute/default/version_0/checkpoints/epoch=4167-step=208399.ckpt",
     scalers=train.scalers,
     strict=False).eval()
 
@@ -49,7 +51,7 @@ offsets = np.empty(0)
 
 # Prediction loops :
 
-N_EXAMPLE = 20
+N_EXAMPLE = 10
 for i in range(N_EXAMPLE):
     midi, target, ons, offs = dataset[i]
 
@@ -87,7 +89,7 @@ out = {
     "offsets": offsets
 }
 
-path = "results/unet-rnn/data/results-{}-testset.pickle".format(instrument)
+path = "results/unet-rnn/data/results-{}-midi.pickle".format(instrument)
 print("Output file : ", path)
 
 with open(path, "wb") as file_out:

@@ -21,7 +21,7 @@ class UNet_Dataset(Dataset):
         self.eval = eval
         if eval:
             path = "dataset/test-set.pickle"
-            path = "dataset/violin-test.pickle"
+            #path = "dataset/flute-test.pickle"
             print("Eval dataset file used : {}".format(path))
             with open(path, "rb") as dataset:
                 dataset = pickle.load(dataset)
