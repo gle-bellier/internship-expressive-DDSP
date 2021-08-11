@@ -22,6 +22,7 @@ instrument = "violin"
 
 dataset = UNet_Dataset(instrument=instrument,
                        list_transforms=list_transforms,
+                       n_sample=1000,
                        eval=True)
 
 down_channels = [2, 16, 512, 1024]
@@ -57,6 +58,12 @@ for i in range(N_EXAMPLE):
 
     # # add to results:
 
+    # for raw results :
+
+    # f0, lo = out.split(1, -1)
+    # midi_f0, midi_lo = midi.split(1, -1)
+    # target_f0, target_lo = target.split(1, -1)
+
     u_f0 = np.concatenate((u_f0, midi_f0.squeeze()))
     u_lo = np.concatenate((u_lo, midi_lo.squeeze()))
 
@@ -77,6 +84,6 @@ out = {
     "offsets": offsets
 }
 
-with open("results/unet-rnn/data/results-{}.pickle".format(instrument),
+with open("results/unet-rnn/data/results-{}-raw.pickle".format(instrument),
           "wb") as file_out:
     pickle.dump(out, file_out)
