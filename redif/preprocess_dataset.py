@@ -57,9 +57,9 @@ else:
     raise Exception(f"data type {ext} not understood")
 
 u_f0 = np.round(ftom(u_f0)).astype(int)
+e_f0 = np.clip(e_f0, 1e-5, None)
 
 assert all(u_f0 >= 0) and all(u_f0 < 128)
-assert all(e_f0 > 0)
 
 np.save("u_f0.npy", u_f0)
 np.save("u_lo.npy", u_lo)
