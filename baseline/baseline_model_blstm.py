@@ -239,21 +239,22 @@ if __name__ == "__main__":
         }),  # cents
     ]
 
-    inst = "flute"
-    dataset = Baseline_Dataset(instrument=inst,
-                               data_augmentation=False,
-                               list_transforms=list_transforms,
-                               n_sample=2048)
-
-    val_len = len(dataset) // 20
-    train_len = len(dataset) - val_len
-
-    train, val = random_split(dataset, [train_len, val_len])
+    inst = "violin"
+    train = Baseline_Dataset(instrument=inst,
+                             data_augmentation=True,
+                             type_set="train",
+                             list_transforms=list_transforms,
+                             n_sample=2048)
+    test = Baseline_Dataset(instrument=inst,
+                            type_set="test",
+                            data_augmentation=False,
+                            list_transforms=list_transforms,
+                            n_sample=2048)
 
     model = Model(in_size=472,
                   hidden_size=1024,
                   out_size=221,
-                  scalers=dataset.scalers)
+                  scalers=test.scalers)
 
     model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(inst)).eval()
 
@@ -268,5 +269,5 @@ if __name__ == "__main__":
     trainer.fit(
         model,
         DataLoader(train, 32, True),
-        DataLoader(val, 32),
+        DataLoader(test, 32),
     )
