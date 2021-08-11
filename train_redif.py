@@ -11,6 +11,7 @@ from effortless_config import Config
 
 class args(Config):
     CKPT = None
+    DDSP = "ddsp_violin_pretrained.ts"
 
 
 args.parse_args()
@@ -26,8 +27,8 @@ else:
 
 model.set_noise_schedule()
 model.transform.compute_stats(dataset.e_f0, dataset.e_lo)
-model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts")
-tb_logger = pl_loggers.TensorBoardLogger('logs/rediff/violin/')
+model.ddsp = torch.jit.load(args.DDSP)
+tb_logger = pl_loggers.TensorBoardLogger('logs/rediff')
 trainer = pl.Trainer(gpus=1,
                      check_val_every_n_epoch=10,
                      callbacks=[EMAModelCheckPoint(
