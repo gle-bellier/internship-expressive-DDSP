@@ -11,23 +11,27 @@ from effortless_config import Config
 
 class args(Config):
     CKPT = None
+    DDSP = "ddsp_violin_pretrained.ts"
 
 
 args.parse_args()
 
+# CREATE AND SPLIT DATASET
 dataset = Dataset(256)
 val_n = len(dataset) // 50
 train, val = random_split(dataset, [len(dataset) - val_n, val_n])
 
+# INSTANCIATE MODEL
 if args.CKPT is not None:
     model = Model.load_from_checkpoint(args.CKPT, strict=False)
 else:
-    model = Model(2, 128, [128, 192, 256, 384])
-
+    model = Model(2, 128, [128, 256, 384])
 model.set_noise_schedule()
 model.transform.compute_stats(dataset.e_f0, dataset.e_lo)
-model.ddsp = torch.jit.load("ddsp_violin_pretrained.ts")
-tb_logger = pl_loggers.TensorBoardLogger('logs/rediff/violin/')
+model.ddsp = torch.jit.load(args.DDSP)
+
+# INSTANCIATE TRAINER
+tb_logger = pl_loggers.TensorBoardLogger('logs/rediff')
 trainer = pl.Trainer(gpus=1,
                      check_val_every_n_epoch=10,
                      callbacks=[EMAModelCheckPoint(
@@ -37,6 +41,8 @@ trainer = pl.Trainer(gpus=1,
                      max_epochs=100000,
                      logger=tb_logger,
                      resume_from_checkpoint=args.CKPT)
+
+# FIT
 trainer.fit(
     model,
     DataLoader(train, 16, True, drop_last=True),

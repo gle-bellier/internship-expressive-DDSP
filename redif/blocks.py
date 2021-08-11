@@ -98,7 +98,9 @@ class FilmBlock(nn.Module):
         )
 
     def forward(self, x, noise_level):
-        x = self.pre_projection(x) + self.pe(noise_level)
+        x = self.pre_projection(x)
+        if noise_level is not None:
+            x = x + self.pe(noise_level)
         x = self.projection(x)
         return torch.split(x, x.shape[1] // 2, 1)
 
