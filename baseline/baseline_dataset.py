@@ -16,30 +16,44 @@ class Baseline_Dataset(Dataset):
                  type_set="train",
                  n_sample=2048,
                  list_transforms=None,
-                 eval=False):
+                 eval=False,
+                 scalers=None):
 
-        da = "-da" if data_augmentation else ""
-        path = "dataset/{}-{}{}.pickle".format(instrument, type_set, da)
-        print("{} dataset file used : {}".format(type_set, path))
-        print("Loading Dataset...")
-        with open(path, "rb") as dataset:
-            dataset = pickle.load(dataset)
+        self.eval = eval
+        if eval:
+            path = "dataset/test-set.pickle"
+            path = "dataset/violin-test.pickle"
+            print("Eval dataset file used : {}".format(path))
+            with open(path, "rb") as dataset:
+                dataset = pickle.load(dataset)
+
+        else:
+            da = "-da" if data_augmentation else ""
+            path = "dataset/{}-{}{}.pickle".format(instrument, type_set, da)
+            print("{} dataset file used : {}".format(type_set, path))
+            with open(path, "rb") as dataset:
+                dataset = pickle.load(dataset)
 
         self.dataset = dataset
         self.N = len(dataset["u_f0"])
         self.list_transforms = list_transforms
         self.n_sample = n_sample
         self.load()
-        self.scalers = self.fit_transforms()
+        if scalers is None:
+            self.scalers = self.fit_transforms()
+        else:
+            self.scalers = scalers
+            print("Using scalers : ", self.scalers)
         self.transform()
-        self.eval = eval
         print("Dataset loaded. Length : {}min".format(self.N // 6000))
 
     def fit_transforms(self):
         scalers = []
         # pitch :
-
-        cat = np.concatenate((self.u_f0, self.e_f0))
+        if self.eval:
+            cat = self.u_f0
+        else:
+            cat = np.concatenate((self.u_f0, self.e_f0))
         contour = cat.reshape(-1, 1)
         transform = self.list_transforms[0]
         sc = transform[0]
@@ -47,8 +61,10 @@ class Baseline_Dataset(Dataset):
         scalers.append(sc)
 
         # loudness
-
-        contour = self.e_lo
+        if self.eval:
+            contour = self.u_lo
+        else:
+            contour = self.e_lo
         contour = contour.reshape(-1, 1)
         transform = self.list_transforms[1]
         sc = transform[0]
@@ -74,6 +90,7 @@ class Baseline_Dataset(Dataset):
         self.u_f0 = self.dataset["u_f0"]
         self.e_f0 = self.dataset["e_f0"]
         self.e_lo = self.dataset["e_loudness"]
+        self.u_lo = self.dataset["u_loudness"]
         self.onsets = self.dataset["onsets"]
         self.offsets = self.dataset["offsets"]
 
@@ -96,6 +113,7 @@ class Baseline_Dataset(Dataset):
         self.u_f0 = self.apply_transform(self.u_f0, self.scalers[0])
         self.e_f0 = self.apply_transform(self.e_f0, self.scalers[0])
         self.e_lo = self.apply_transform(self.e_lo, self.scalers[1])
+        self.u_lo = self.apply_transform(self.u_lo, self.scalers[1])
         self.e_cents = self.apply_transform(self.e_cents, self.scalers[2])
 
         self.u_f0 = torch.from_numpy(self.u_f0).float()
@@ -105,9 +123,11 @@ class Baseline_Dataset(Dataset):
         self.onsets = torch.from_numpy(self.onsets).float()
         self.offsets = torch.from_numpy(self.offsets).float()
 
-        # compute u_lo
-        self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
-                                                self.offsets)
+        if self.eval:
+            self.u_lo = torch.from_numpy(self.u_lo).float()
+        else:
+            self.u_lo = self.get_quantized_loudness(self.e_lo, self.onsets,
+                                                    self.offsets)
 
     def post_processing(self, p, c, lo):
 

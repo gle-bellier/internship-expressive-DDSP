@@ -3,9 +3,12 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 
 from torch import nn
+from torch.nn.modules.activation import LeakyReLU
 from utils import Identity, ConvBlock
 from torch.utils.data import DataLoader, Dataset, random_split
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
+from transforms import PitchTransformer, LoudnessTransformer
+
 from unet_dataset import UNet_Dataset
 import matplotlib.pyplot as plt
 import os, sys
@@ -27,8 +30,10 @@ class DBlock(nn.Module):
     def forward(self, x):
         x = self.conv1(x)
         ctx = torch.clone(x)
+        x = self.lr(x)
         x = self.conv2(x)
         out = self.mp(x)
+        out = self.lr(out)
         return out, ctx
 
 
@@ -56,8 +61,9 @@ class Bottleneck(nn.Module):
 
 
 class UBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, last=False):
         super().__init__()
+        self.last = last
         self.conv1 = ConvBlock(2 * out_channels, out_channels)
         self.conv2 = ConvBlock(out_channels, out_channels)
         self.up_conv = nn.Sequential(
@@ -85,10 +91,14 @@ class UBlock(nn.Module):
 
     def forward(self, x, ctx):
         x = self.up_conv(x)
+        x = self.lr(x)
         ctx = self.conv_ctx(ctx)
         x = self.add_ctx(x, ctx)
         x = self.conv1(x)
         out = self.conv2(x)
+        if self.last:
+            out = torch.sigmoid(out)
+
         return out
 
 
@@ -124,6 +134,8 @@ class UNet_RNN(pl.LightningModule):
             for channels_in, channels_out in zip(self.up_channels_in,
                                                  self.up_channels_out)
         ])
+
+        self.up_blocks[-1].last = True
 
     def down_sampling(self, x):
         l_ctx = []
@@ -234,8 +246,8 @@ class UNet_RNN(pl.LightningModule):
 if __name__ == "__main__":
 
     list_transforms = [
-        (MinMaxScaler, {}),
-        (QuantileTransformer, {
+        (PitchTransformer, {}),
+        (LoudnessTransformer, {
             "n_quantiles": 30
         }),
     ]
