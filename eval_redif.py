@@ -22,6 +22,7 @@ class args(Config):
     DATA = None
     SAMPLE_LENGTH = 512
     N_SAMPLE = 10
+    OFFSET = 0
 
 
 args.parse_args()
@@ -42,7 +43,7 @@ data = Dataset(args.SAMPLE_LENGTH, args.DATA)
 
 for i in tqdm(range(args.N_SAMPLE), desc="sampling"):
     # LOAD DATA
-    pitch, loudness, _, _ = data[i]
+    pitch, loudness, _, _ = data[i + args.OFFSET]
     pitch = pitch.unsqueeze(0)
     loudness = loudness.unsqueeze(0)
 

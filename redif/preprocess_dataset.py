@@ -57,14 +57,15 @@ elif ext == ".pickle":
 else:
     raise Exception(f"data type {ext} not understood")
 
+u_f0 = np.round(ftom(u_f0)).astype(int)
+u_lo = np.clip(u_lo, -6, None)
+e_f0 = np.clip(e_f0, 1e-5, None)
+
 print(f"loaded 4 arrays from {ext} file")
-print(f"u_f0: {u_f0.shape}, mean: {np.mean(u_f0)}, std: {np.std(u_f0)}")
+print(f"u_f0: {u_f0.shape}, mean: {np.mean(u_f0)}, std: {n  p.std(u_f0)}")
 print(f"u_lo: {u_lo.shape}, mean: {np.mean(u_lo)}, std: {np.std(u_lo)}")
 print(f"e_f0: {e_f0.shape}, mean: {np.mean(e_f0)}, std: {np.std(e_f0)}")
 print(f"e_lo: {e_lo.shape}, mean: {np.mean(e_lo)}, std: {np.std(e_lo)}")
-
-u_f0 = np.round(ftom(u_f0)).astype(int)
-e_f0 = np.clip(e_f0, 1e-5, None)
 
 assert all(u_f0 >= 0) and all(u_f0 < 128)
 
