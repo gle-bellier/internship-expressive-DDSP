@@ -140,9 +140,9 @@ class Model(pl.LightningModule):
 
             cat = torch.cat([cents, lo], -1)
             ndim = cat.shape[-1]
-            x[:, i + 1:i + 2, -ndim - 2:-2] = cat
+            x[:, i + 1:i + 2, 249:470] = cat
 
-        pred = x[..., -ndim - 2:-2]
+        pred = x[..., 249:470]
         pred_cents, pred_lo = self.split_predictions(pred)
 
         pred_lo = pred_lo[:, 1:]
