@@ -118,7 +118,7 @@ class Model(pl.LightningModule, DiffusionModel):
 
         for noise_layer, envelop_layer in zip(self.nfc, self.efc):
             nfc.append(noise_layer(ndc.pop(0), noise_level))
-            efc.append(envelop_layer(edc.pop(0), None))
+            efc.append(envelop_layer(edc.pop(0), noise_level))
 
         for layer in self.uc:
             x = layer(x, efc.pop(-1), nfc.pop(-1))

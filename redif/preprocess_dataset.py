@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from effortless_config import Config
 import pickle as pk
-from os import path
+from os import path, makedirs
 
 
 class args(Config):
@@ -63,7 +63,7 @@ e_f0 = np.clip(e_f0, 1e-5, None)
 
 assert all(u_f0 >= 0) and all(u_f0 < 128)
 
-np.save("redifcontours/u_f0-{}.npy".format(name), u_f0)
-np.save("redifcontours/u_lo-{}.npy".format(name), u_lo)
-np.save("redifcontours/e_f0-{}.npy".format(name), e_f0)
-np.save("redifcontours/e_lo-{}.npy".format(name), e_lo)
+np.save("u_f0.npy", u_f0)
+np.save("u_lo.npy", u_lo)
+np.save("e_f0.npy", e_f0)
+np.save("e_lo.npy", e_lo)
