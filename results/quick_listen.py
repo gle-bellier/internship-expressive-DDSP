@@ -14,8 +14,8 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-instrument = "violin"
-path = "results/unet-rnn/data/results-{}-test.pickle".format(instrument)
+instrument = "flute"
+path = "results/unet-rnn/data/results-{}-midi.pickle".format(instrument)
 number_of_examples = 5
 # get data
 
