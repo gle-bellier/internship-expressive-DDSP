@@ -63,7 +63,7 @@ for i in range(N_EXAMPLE):
         model_input.unsqueeze(0).float())
 
     s_u_p = model_input[:, :128]
-    s_u_cents = torch.zeros_like(s_u_p)
+    s_u_cents = torch.ones_like(s_u_p) * 0.5
     s_u_lo = model_input[:, 128:249]
 
     s_e_pitch = model_input[:, 249:377]
