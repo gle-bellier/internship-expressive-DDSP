@@ -28,7 +28,7 @@ instrument = "violin"
 train = ExpressiveDataset(list_transforms=list_transforms,
                           type_set="train",
                           instrument=instrument,
-                          eval=True)
+                          eval=False)
 dataset = ExpressiveDataset(list_transforms=list_transforms,
                             type_set="test",
                             instrument=instrument,
@@ -96,6 +96,7 @@ out = {
     "offsets": offsets
 }
 
-with open("results/lstms/categorical/data/results-flute.pickle",
-          "wb") as file_out:
+with open(
+        "results/lstms/categorical/data/results-{}-midi.pickle".format(
+            instrument), "wb") as file_out:
     pickle.dump(out, file_out)
