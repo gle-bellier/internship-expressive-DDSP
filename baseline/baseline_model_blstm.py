@@ -79,7 +79,7 @@ class Model(pl.LightningModule):
 
     def split_predictions(self, prediction):
         pred_cents = prediction[..., :100]
-        pred_lo = prediction[..., 100:]
+        pred_lo = prediction[..., 100:221]
         return pred_cents, pred_lo
 
     def cross_entropy(self, pred_cents, pred_lo, target_cents, target_lo):
