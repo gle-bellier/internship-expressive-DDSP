@@ -49,13 +49,19 @@ if ext == ".csv":
 elif ext == ".pickle":
     with open(args.DATA, "rb") as contours:
         contours = pk.load(contours)
-    u_f0 = np.asarray(contours["u_f0"])
-    u_lo = np.asarray(contours["u_loudness"])
-    e_f0 = np.asarray(contours["e_f0"])
-    e_lo = np.asarray(contours["e_loudness"])
+    u_f0 = np.asarray(contours["u_f0"]).reshape(-1)
+    u_lo = np.asarray(contours["u_loudness"]).reshape(-1)
+    e_f0 = np.asarray(contours["e_f0"]).reshape(-1)
+    e_lo = np.asarray(contours["e_loudness"]).reshape(-1)
 
 else:
     raise Exception(f"data type {ext} not understood")
+
+print(f"loaded 4 arrays from {ext} file")
+print(f"u_f0: {u_f0.shape}, mean: {np.mean(u_f0)}, std: {np.std(u_f0)}")
+print(f"u_lo: {u_lo.shape}, mean: {np.mean(u_lo)}, std: {np.std(u_lo)}")
+print(f"e_f0: {e_f0.shape}, mean: {np.mean(e_f0)}, std: {np.std(e_f0)}")
+print(f"e_lo: {e_lo.shape}, mean: {np.mean(e_lo)}, std: {np.std(e_lo)}")
 
 u_f0 = np.round(ftom(u_f0)).astype(int)
 e_f0 = np.clip(e_f0, 1e-5, None)
