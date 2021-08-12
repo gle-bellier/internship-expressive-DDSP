@@ -23,7 +23,9 @@ list_transforms = [
     }),  # cents
 ]
 
-instrument = "flute"
+instrument = "violin"
+CKPT = "logs/lstm/categorical/violin/default/version_2/checkpoints/epoch=37-step=2051.ckpt"
+print("Checkpoint path : ", CKPT)
 
 train = ExpressiveDataset(list_transforms=list_transforms,
                           type_set="train",
@@ -35,10 +37,9 @@ dataset = ExpressiveDataset(list_transforms=list_transforms,
                             scalers=train.scalers,
                             eval=True)
 
-model = ModelCategorical.load_from_checkpoint(
-    "logs/lstm/categorical/violin/default/version_2/checkpoints/epoch=37-step=2051.ckpt",
-    scalers=dataset.scalers,
-    strict=False).eval()
+model = ModelCategorical.load_from_checkpoint(CKPT,
+                                              scalers=dataset.scalers,
+                                              strict=False).eval()
 
 model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(instrument)).eval()
 
@@ -68,7 +69,6 @@ for i in range(N_EXAMPLE):
 
     s_e_pitch = model_input[:, 249:377]
     s_e_cents = model_input[:, 377:477]
-
     s_e_lo = model_input[:, 477:598]
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
@@ -95,8 +95,8 @@ out = {
     "onsets": onsets,
     "offsets": offsets
 }
-
-with open(
-        "results/lstms/categorical/data/results-{}-midi.pickle".format(
-            instrument), "wb") as file_out:
+out_file = "results/lstms/categorical/data/results-{}-test.pickle".format(
+    instrument)
+print("Output file : ", out_file)
+with open(out_file, "wb") as file_out:
     pickle.dump(out, file_out)

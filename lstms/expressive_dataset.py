@@ -21,8 +21,9 @@ class ExpressiveDataset(Dataset):
 
         self.eval = eval
         if eval:
-            path = "dataset/test-set.pickle"
-            #path = "dataset/flute-test.pickle"
+            #path = "dataset/test-set_shuffled_cropped.pickle"
+            #path = "dataset/flute-test_shuffled_cropped.pickle"
+            path = "dataset/violin-test_shuffled_cropped.pickle"
             print("Eval dataset file used : {}".format(path))
             with open(path, "rb") as dataset:
                 dataset = pickle.load(dataset)
