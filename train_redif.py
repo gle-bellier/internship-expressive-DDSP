@@ -12,12 +12,13 @@ from effortless_config import Config
 class args(Config):
     CKPT = None
     DDSP = "ddsp_violin_pretrained.ts"
+    DATA = None
 
 
 args.parse_args()
 
 # CREATE AND SPLIT DATASET
-dataset = Dataset(256)
+dataset = Dataset(256, args.DATA)
 val_n = len(dataset) // 50
 train, val = random_split(dataset, [len(dataset) - val_n, val_n])
 
