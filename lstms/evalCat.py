@@ -23,7 +23,7 @@ list_transforms = [
     }),  # cents
 ]
 
-instrument = "violin"
+instrument = "flute"
 
 train = ExpressiveDataset(list_transforms=list_transforms,
                           type_set="train",
