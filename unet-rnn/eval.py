@@ -20,7 +20,7 @@ list_transforms = [
     }),
 ]
 
-instrument = "violin"
+instrument = "flute"
 
 train = UNet_Dataset(instrument=instrument,
                      type_set="train",
@@ -33,10 +33,11 @@ dataset = UNet_Dataset(instrument=instrument,
                        scalers=train.scalers,
                        eval=True)
 
-model = UNet_RNN.load_from_checkpoint(
-    "logs/unet-rnn/violin/default/version_6/checkpoints/epoch=1001-step=29057.ckpt",
-    scalers=train.scalers,
-    strict=False).eval()
+CKPT = "logs/unet-rnn/flute/default/version_1/checkpoints/epoch=7331-step=366599.ckpt"
+print(CKPT)
+model = UNet_RNN.load_from_checkpoint(CKPT,
+                                      scalers=train.scalers,
+                                      strict=False).eval()
 
 # Initialize data :
 
