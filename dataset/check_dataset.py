@@ -35,7 +35,7 @@ import pickle
 # f0_conf = np.array(f0_conf)
 # events = np.array(events)
 
-path = "dataset/flute-test.pickle"
+path = "dataset/test-set_shuffled_cropped.pickle"
 print("Eval dataset file used : {}".format(path))
 with open(path, "rb") as dataset:
     dataset = pickle.load(dataset)
@@ -46,7 +46,7 @@ e_f0 = dataset["e_f0"]
 e_loudness = dataset["e_loudness"]
 
 print(len(u_f0.squeeze()))
-fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1)
+fig, (ax1, ax2) = plt.subplots(2, 1)
 ax1.plot(u_f0.squeeze()[:100000], label="u_f0")
 ax1.plot(e_f0.squeeze()[:100000], label="e_f0")
 ax1.legend()

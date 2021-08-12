@@ -92,17 +92,21 @@ def get_midi_lo(path):
     return f0, lo_rescale, onsets, offsets
 
 
-files = ["dmitry-sinkovsky-plays-jsbachs-partita-in-e-major_1.mid"]
-path = "violin/"
+files = ["test-midi-3.mid"]
+path = "dataset/"
 for file in files:
     f0, lo, onsets, offsets = get_midi_lo(path + file)
-    # plt.plot(lo)
-    # plt.show()
+    f0 = f0[:6400]
+    lo = lo[:6400]
+    onsets = onsets[:6400]
+    offsets = offsets[:6400]
+    plt.plot(lo)
+    plt.show()
 
-    # plt.plot(onsets * 1000)
-    # plt.plot(-offsets * 1000)
-    # plt.plot(f0)
-    # plt.show()
+    plt.plot(onsets * 1000)
+    plt.plot(-offsets * 1000)
+    plt.plot(f0)
+    plt.show()
 
     out = {
         "u_f0": f0,
