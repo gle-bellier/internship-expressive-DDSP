@@ -20,7 +20,7 @@ list_transforms = [
     }),
 ]
 
-instrument = "flute"
+instrument = "violin"
 
 train = UNet_Dataset(instrument=instrument,
                      type_set="train",
@@ -34,7 +34,7 @@ dataset = UNet_Dataset(instrument=instrument,
                        eval=True)
 
 model = UNet_RNN.load_from_checkpoint(
-    "logs/unet-rnn/flute/default/version_0/checkpoints/epoch=4167-step=208399.ckpt",
+    "logs/unet-rnn/violin/default/version_6/checkpoints/epoch=1001-step=29057.ckpt",
     scalers=train.scalers,
     strict=False).eval()
 
@@ -89,7 +89,7 @@ out = {
     "offsets": offsets
 }
 
-path = "results/unet-rnn/data/results-{}-midi.pickle".format(instrument)
+path = "results/unet-rnn/data/results-{}-test.pickle".format(instrument)
 print("Output file : ", path)
 
 with open(path, "wb") as file_out:
