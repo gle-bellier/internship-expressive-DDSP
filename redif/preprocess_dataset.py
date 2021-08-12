@@ -17,8 +17,7 @@ def ftom(f):
 
 
 ext = path.splitext(args.DATA)[-1]
-name = path.splitext(args.DATA)[0].split("/")[1]
-print(name)
+name = path.splitext(path.basename(args.DATA))[0]
 
 if ext == ".csv":
     with open(args.DATA, "r") as contours:
@@ -63,7 +62,10 @@ e_f0 = np.clip(e_f0, 1e-5, None)
 
 assert all(u_f0 >= 0) and all(u_f0 < 128)
 
-np.save("u_f0.npy", u_f0)
-np.save("u_lo.npy", u_lo)
-np.save("e_f0.npy", e_f0)
-np.save("e_lo.npy", e_lo)
+out_dir = path.join("redif_contours", name)
+makedirs(out_dir, exist_ok=True)
+
+np.save(path.join(out_dir, "u_f0.npy"), u_f0)
+np.save(path.join(out_dir, "u_lo.npy"), u_lo)
+np.save(path.join(out_dir, "e_f0.npy"), e_f0)
+np.save(path.join(out_dir, "e_lo.npy"), e_lo)

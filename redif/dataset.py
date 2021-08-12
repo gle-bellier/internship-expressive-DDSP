@@ -1,14 +1,26 @@
 import torch
 import numpy as np
+from os import path
+
+
+def load(path, name, dtype=torch.long):
+    """
+    loads a numpy array located in path/name and convert it
+    to a torch.Tensor with dtype 
+    """
+    array = np.load(path.join(path, name))
+    tensor = torch.from_numpy(array)
+    tensor = tensor.to(torch.long)
+    return tensor
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, n_step):
+    def __init__(self, n_step, data_path):
         super().__init__()
-        self.u_f0 = torch.from_numpy(np.load("u_f0.npy")).long()
-        self.u_lo = torch.from_numpy(np.load("u_lo.npy")).float()
-        self.e_f0 = torch.from_numpy(np.load("e_f0.npy")).float()
-        self.e_lo = torch.from_numpy(np.load("e_lo.npy")).float()
+        self.u_f0 = load(data_path, "u_f0", torch.long)
+        self.u_lo = load(data_path, "u_lo", torch.float)
+        self.e_f0 = load(data_path, "e_f0", torch.float)
+        self.e_lo = load(data_path, "e_lo", torch.float)
 
         self.n_step = n_step
 
