@@ -2,50 +2,50 @@ import torch
 import torch.nn as nn
 
 torch.set_grad_enabled(False)
+
 from redif.model import Model, ftom
+from redif.dataset import Dataset
+
 from effortless_config import Config
 from os import path, makedirs
 from glob import glob
 import soundfile as sf
 
 import numpy as np
+from tqdm import tqdm
 
 
 class args(Config):
     CKPT = None
     DDSP = None
     OUT = "redif_samples/"
+    DATA = None
+    SAMPLE_LENGTH = 512
+    N_SAMPLE = 10
 
 
 args.parse_args()
 
-makedirs(args.OUT, exist_ok=True)
-n_sample = len(glob(path.join(args.OUT, "*.wav")))
-sample_len = 500
-nb_samples = 10
+out_dir = path.join(args.OUT, path.basename(path.normpath(args.DATA)))
+
+makedirs(out_dir, exist_ok=True)
+
+n_sample = len(glob(path.join(out_dir, "*.wav")))
 
 # INSTANCIATE MODELS
 model = Model.load_from_checkpoint(args.CKPT, strict=False).eval()
 model.set_noise_schedule()
 ddsp = torch.jit.load(args.DDSP).eval()
 
-################################################
-# TODO: replace dummy input with actual contours
+# CREATE DATASET
+data = Dataset(args.SAMPLE_LENGTH, args.DATA)
 
-patch = "redifcontours/"
-name = "flute-test"
+for i in tqdm(range(args.N_SAMPLE), desc="sampling"):
+    # LOAD DATA
+    pitch, loudness, _, _ = data[i]
+    pitch = pitch.unsqueeze(0)
+    loudness = loudness.unsqueeze(0)
 
-pitch_all = torch.from_numpy(np.load("{}u_f0{}.npy".format(path,
-                                                           name))).reshape(
-                                                               1, -1).long()
-loudness_all = torch.from_numpy(np.load("{}u_lo{}.npy".format(
-    path, name))).reshape(1, -1).float()
-################################################
-
-for i in range(nb_samples):
-
-    pitch = pitch_all[sample_len * i:sample_len * (i + 1)]
-    loudness = loudness_all[sample_len * i:sample_len * (i + 1)]
     # FORMAT INPUT CONTOURS
     pitch = nn.functional.one_hot(pitch, 127).permute(0, 2, 1)
     loudness = loudness.unsqueeze(1)
@@ -61,5 +61,5 @@ for i in range(nb_samples):
 
     # SYNTHESIS
     sound = ddsp(f0.permute(0, 2, 1), lo.permute(0, 2, 1))
-    name = f"{name}_{i + n_sample:03d}.wav"
-    sf.write(path.join(args.OUT, name), sound.reshape(-1).numpy(), 16000)
+    name = f"sample_{i + n_sample:03d}.wav"
+    sf.write(path.join(out_dir, name), sound.reshape(-1).numpy(), 16000)
