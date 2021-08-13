@@ -14,14 +14,15 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-path = "results/unet-rnn/data/results-violin-midi.pickle"
+instrument = "flute"
+path = "results/unet-rnn/data/results-{}-midi.pickle".format(instrument)
 number_of_examples = 5
 # get data
 
 with open(path, "rb") as dataset:
     dataset = pickle.load(dataset)
 
-ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
+ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(instrument)).eval()
 
 # Initialize data :
 
@@ -60,7 +61,8 @@ for i in range(number_of_examples):
     save_path = "/".join(l[:2])
     name = l[-1].split(".")[0] + str(i)
 
-    sf.write("{}/samples/{}-pred.wav".format(save_path, name), pred, 16000)
+    sf.write("{}/samples/unet-{}-pred.wav".format(save_path, name), pred,
+             16000)
     #sf.write("{}/samples/{}-midi.wav".format(save_path, name), midi, 16000)
     #sf.write("{}/samples/{}-resynth.wav".format(save_path, name), target,
     #         16000)

@@ -6,9 +6,8 @@ from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxSca
 import numpy as np
 
 torch.set_grad_enabled(False)
-from LSTMCategorical import ModelCategorical
-from LSTMContinuous import ModelContinuousPitch
-from expressive_dataset import ExpressiveDataset, ExpressiveDatasetPitchContinuous
+from base import Baseline
+from base_dataset import BaseDataset
 
 from random import randint
 import pickle
@@ -24,22 +23,22 @@ list_transforms = [
 ]
 
 instrument = "violin"
-CKPT = "logs/lstm/categorical/violin/default/version_2/checkpoints/epoch=37-step=2051.ckpt"
+CKPT = "logs/baseline2/violin/default/version_0/checkpoints/epoch=38-step=2222.ckpt"
 print("Checkpoint path : ", CKPT)
 
-train = ExpressiveDataset(list_transforms=list_transforms,
-                          type_set="train",
-                          instrument=instrument,
-                          eval=False)
-dataset = ExpressiveDataset(list_transforms=list_transforms,
-                            type_set="test",
-                            instrument=instrument,
-                            scalers=train.scalers,
-                            eval=True)
+train = BaseDataset(list_transforms=list_transforms,
+                    type_set="train",
+                    instrument=instrument,
+                    eval=False)
+dataset = BaseDataset(list_transforms=list_transforms,
+                      type_set="test",
+                      instrument=instrument,
+                      scalers=train.scalers,
+                      eval=True)
 
-model = ModelCategorical.load_from_checkpoint(CKPT,
-                                              scalers=dataset.scalers,
-                                              strict=False).eval()
+model = Baseline.load_from_checkpoint(CKPT,
+                                      scalers=dataset.scalers,
+                                      strict=False).eval()
 
 model.ddsp = torch.jit.load("ddsp_{}_pretrained.ts".format(instrument)).eval()
 
@@ -61,15 +60,15 @@ for i in range(N_EXAMPLE):
     model_input, target, ons, offs = dataset[i]
 
     _, s_pred_cents, s_pred_lo = model.generation_loop(
-        model_input.unsqueeze(0).float())
+        model_input.unsqueeze(0).float(), infer_pitch=True)
 
     s_u_p = model_input[:, :128]
-    s_u_cents = torch.ones_like(s_u_p) * 0.5
+    s_u_cents = torch.ones_like(model_input[:, :100]) * 0.5
     s_u_lo = model_input[:, 128:249]
 
-    s_e_pitch = model_input[:, 249:377]
-    s_e_cents = model_input[:, 377:477]
-    s_e_lo = model_input[:, 477:598]
+    s_e_pitch = model_input[:, 251:379]
+    s_e_cents = model_input[:, 379:479]
+    s_e_lo = model_input[:, 479:600]
 
     s_pred_f0, s_pred_lo = dataset.post_processing(s_u_p, s_pred_cents,
                                                    s_pred_lo)
@@ -95,8 +94,7 @@ out = {
     "onsets": onsets,
     "offsets": offsets
 }
-out_file = "results/lstms/categorical/data/results-{}-test.pickle".format(
-    instrument)
+out_file = "results/baseline/data/results-{}-midi.pickle".format(instrument)
 print("Output file : ", out_file)
 with open(out_file, "wb") as file_out:
     pickle.dump(out, file_out)

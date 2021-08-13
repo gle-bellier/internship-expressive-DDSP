@@ -33,10 +33,11 @@ dataset = UNet_Dataset(instrument=instrument,
                        scalers=train.scalers,
                        eval=True)
 
-model = UNet_RNN.load_from_checkpoint(
-    "logs/unet-rnn/flute/default/version_0/checkpoints/epoch=4167-step=208399.ckpt",
-    scalers=train.scalers,
-    strict=False).eval()
+CKPT = "logs/unet-rnn/flute/default/version_1/checkpoints/epoch=7331-step=366599.ckpt"
+print(CKPT)
+model = UNet_RNN.load_from_checkpoint(CKPT,
+                                      scalers=train.scalers,
+                                      strict=False).eval()
 
 # Initialize data :
 
@@ -89,7 +90,7 @@ out = {
     "offsets": offsets
 }
 
-path = "results/unet-rnn/data/results-{}-midi.pickle".format(instrument)
+path = "results/unet-rnn/data/results-{}-test.pickle".format(instrument)
 print("Output file : ", path)
 
 with open(path, "wb") as file_out:
