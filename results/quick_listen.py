@@ -14,8 +14,8 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-instrument = "flute"
-path = "results/unet-rnn/data/results-{}-midi.pickle".format(instrument)
+instrument = "violin"
+path = "results/baseline/data/results-{}-test.pickle".format(instrument)
 number_of_examples = 5
 # get data
 
@@ -61,7 +61,7 @@ for i in range(number_of_examples):
     save_path = "/".join(l[:2])
     name = l[-1].split(".")[0] + str(i)
 
-    sf.write("{}/samples/unet-{}-pred.wav".format(save_path, name), pred,
+    sf.write("{}/samples/baseline-{}-pred.wav".format(save_path, name), pred,
              16000)
     #sf.write("{}/samples/{}-midi.wav".format(save_path, name), midi, 16000)
     #sf.write("{}/samples/{}-resynth.wav".format(save_path, name), target,
