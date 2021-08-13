@@ -1,3 +1,5 @@
+from llvmlite.ir import instructions
+from pretty_midi import instrument
 from midiConverter import Converter
 
 import numpy as np
@@ -8,7 +10,7 @@ import matplotlib.pyplot as plt
 import librosa as li
 #import seaborn as sns
 
-import pandas as pd
+#import pandas as pd
 import pretty_midi as pm
 import note_seq
 from note_seq.protobuf import music_pb2
@@ -76,6 +78,15 @@ def get_midi_lo(path):
     time_gen, p, lo = c.midi2time_f0_loudness(midi_data, times_needed=time_wav)
     f0 = li.core.midi_to_hz(p)
 
+    instrument = "flute"
+
+    path = f"dataset/{instrument}-set_shuffled_cropped.pickle"
+    print("Eval dataset file used : {}".format(path))
+    with open(path, "rb") as dataset:
+        dataset = pickle.load(dataset)
+
+    lo_wav = dataset["e_loudness"]
+
     lo = lo.reshape(-1, 1)
     lo_wav = lo_wav.reshape(-1, 1)
 
@@ -117,6 +128,6 @@ for file in files:
         "onsets": onsets,
         "offsets": offsets
     }
-    name = "test-set.pickle"
+    name = f"{instrument}-midi.pickle"
     with open("dataset/" + name, "wb") as file_out:
         pickle.dump(out, file_out)
