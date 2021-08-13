@@ -21,7 +21,7 @@ args.parse_args()
 # CREATE AND SPLIT DATASET
 train = Dataset(256, args.DATA)
 val = ConcatDataset(
-    [Dataset(256, path) for path in args.VALIDATION.split(",")])
+    [Dataset(512, path) for path in args.VALIDATION.split(",")])
 
 # INSTANCIATE MODEL
 if args.CKPT is not None:
