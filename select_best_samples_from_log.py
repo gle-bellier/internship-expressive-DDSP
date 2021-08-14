@@ -43,7 +43,6 @@ for step in tqdm(audios, desc="parsing logs"):
     else:
         for i in range(selected_x.shape[0]):
             if np.mean(selected_x[i]) == 0:
-                n_zeros += 1
                 selected_x[i] = x[i]
 
         if all_valid(selected_x):
