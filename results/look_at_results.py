@@ -1,32 +1,61 @@
+import io as io
+import scipy.io.wavfile as wav
+import torch
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 
-number_samples = 20
+import pickle
+import soundfile as sf
 
-with open("results.npy", "rb") as f:
-    for i in range(number_samples):
-        try:
-            t = np.load(f)
-            u_f0 = np.load(f)
-            e_f0 = np.load(f)
-            out_f0 = np.load(f)
-            u_loudness = np.load(f)
-            e_loudness = np.load(f)
-            out_loudness = np.load(f)
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
+print('using', device)
 
-            fig, (ax1, ax2) = plt.subplots(2, 1)
+path = "results/diffusion/data/results.pickle"
+number_of_examples = 5
+# get data
 
-            ax1.plot(t, out_f0, label="Model")
-            ax1.plot(t, u_f0, label="Midi")
-            ax1.plot(t, e_f0, label="Performance")
-            ax1.legend()
+dataset = pd.read_pickle(path, compression=None)
 
-            # ax2.plot(t, out_loudness, label = "Model")
-            # ax2.plot(t, u_loudness, label = "Midi")
-            # ax2.plot(t, e_loudness, label = "Performance")
-            # ax2.legend()
+df = pd.DataFrame(dataset)
+print(df)
 
-            plt.legend()
-            plt.show()
-        except:
-            break
+# sns.set_theme(style="darkgrid")
+for i in range(number_of_examples):
+    sns.lineplot(x="time", y="u_f0", hue="sample", data=df[df["sample"] == i])
+
+    sns.lineplot(x="time", y="e_f0", hue="sample", data=df[df["sample"] == i])
+    plt.show()
+
+# ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
+
+# # Initialize data :
+
+# n_sample = 2048
+
+# for i in range(number_of_examples):
+#     i *= n_sample
+#     u_f0 = dataset["u_f0"][i:i + n_sample]
+#     e_f0 = dataset["e_f0"][i:i + n_sample]
+#     pred_f0 = dataset["pred_f0"][i:i + n_sample]
+
+#     u_lo = dataset["u_lo"][i:i + n_sample]
+#     e_lo = dataset["e_lo"][i:i + n_sample]
+#     pred_lo = dataset["pred_lo"][i:i + n_sample]
+
+#     plt.plot(u_f0, label="midi")
+#     plt.plot(e_f0, label="target")
+#     plt.plot(pred_f0, label="model")
+#     plt.legend()
+#     plt.show()
+
+#     plt.plot(u_lo, label="Midi")
+#     plt.plot(e_lo, label="Target")
+#     plt.plot(pred_lo, label="Model")
+#     plt.legend()
+#     plt.show()

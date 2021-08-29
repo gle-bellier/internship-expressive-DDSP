@@ -1,4 +1,3 @@
-from numba.cuda.api import event
 from extract_f0_confidence_loudness import Extractor
 
 import glob
@@ -13,7 +12,7 @@ import numpy as np
 import soundfile as sf
 import matplotlib.pyplot as plt
 import librosa as li
-import seaborn as sns
+#import seaborn as sns
 
 import pandas as pd
 import pretty_midi as pm
@@ -72,7 +71,7 @@ class ContoursGetter:
                 notes_loudness[previous_i] = loudness[previous_i]
 
             if a != b:
-                notes_loudness[a:b] = np.max(loudness[a:b])
+                notes_loudness[a:b] = np.mean(loudness[a:b])
             else:
                 notes_loudness[a] = loudness[a]
 
@@ -240,8 +239,7 @@ class ContoursGetter:
 
 
 if __name__ == '__main__':
-
-    dataset_path = "dataset-article/dataset-midi-wav/"
+    dataset_path = "violin/"
     filenames = [
         file[len(dataset_path):-4]
         for file in glob.glob(dataset_path + "*.mid")
@@ -270,7 +268,7 @@ if __name__ == '__main__':
                 sampling_rate=16000,
                 block_size=160,
                 max_silence_duration=3,
-                verbose=False)
+                verbose=True)
 
             u_f0 = np.concatenate((u_f0, u_f0_track))
             u_loudness = np.concatenate((u_loudness, u_loudness_track))
@@ -285,7 +283,7 @@ if __name__ == '__main__':
 
         print("Writing : \n")
 
-        with open("dataset/contours-article.csv", 'w') as csvfile:
+        with open("dataset/contours-violin-update.csv", 'w') as csvfile:
             fieldnames = [
                 "u_f0", "u_loudness", "e_f0", "e_loudness", "e_f0_mean",
                 "e_f0_stddev", "f0_conf", "events"

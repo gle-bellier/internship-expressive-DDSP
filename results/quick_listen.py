@@ -1,17 +1,10 @@
 import io as io
 import scipy.io.wavfile as wav
-
 import torch
-import torch.utils.data
-from torch import nn, optim
-from torch.nn import functional as F
-from torch.autograd import Variable
-from torchvision import datasets, transforms
-
 import numpy as np
 import matplotlib.pyplot as plt
-
-from sklearn.preprocessing import StandardScaler
+import pickle
+import soundfile as sf
 
 #from get_datasets import get_datasets
 
@@ -21,32 +14,53 @@ else:
     device = torch.device("cpu")
 print('using', device)
 
-import argparse
-import os
+path = "results/diffusion/data/violin-results.pickle"
+number_of_examples = 5
+# get data
 
-path = os.path.abspath('../dataset/contours.csv')
+with open(path, "rb") as dataset:
+    dataset = pickle.load(dataset)
 
-parser = argparse.ArgumentParser(
-    description="Create wav file from dataset according to a given model")
-parser.add_argument("Path", metavar="PATH", type=str, help="path to the model")
-parser.add_argument("Number",
-                    metavar="Number of examples whished",
-                    type=int,
-                    help="Number of examples to compute")
+ddsp = torch.jit.load("ddsp_violin_pretrained.ts").eval()
 
-args = parser.parse_args()
+# Initialize data :
 
-model_path = args.Path
-number_of_examples = args.Number
-print(model_path)
-print(number_of_examples)
+n_sample = 2048
 
-if not os.path.isfile(model_path):
-    print('The file specified does not exist')
+for i in range(number_of_examples):
+    idx = i * n_sample
+    u_f0 = dataset["u_f0"][idx:idx + n_sample]
+    e_f0 = dataset["e_f0"][idx:idx + n_sample]
+    pred_f0 = dataset["pred_f0"][idx:idx + n_sample]
 
-save_path = "models/saved_models/"
-model_name = "LSTM_towards_realistic_midi.pth"
+    u_lo = dataset["u_lo"][idx:idx + n_sample]
+    e_lo = dataset["e_lo"][idx:idx + n_sample]
+    pred_lo = dataset["pred_lo"][idx:idx + n_sample]
 
-PATH = save_path + model_name
-model = torch.load(PATH, map_location=device)
-print(model.parameters)
+    onsets = dataset["onsets"][idx:idx + n_sample]
+    offsets = dataset["offsets"][idx:idx + n_sample]
+
+    u_f0 = torch.from_numpy(u_f0).reshape(1, -1, 1).float()
+    u_lo = torch.from_numpy(u_lo).reshape(1, -1, 1).float()
+
+    e_f0 = torch.from_numpy(e_f0).reshape(1, -1, 1).float()
+    e_lo = torch.from_numpy(e_lo).reshape(1, -1, 1).float()
+
+    pred_f0 = torch.from_numpy(pred_f0).reshape(1, -1, 1).float()
+    pred_lo = torch.from_numpy(pred_lo).reshape(1, -1, 1).float()
+
+    onsets = torch.from_numpy(onsets).reshape(1, -1, 1).float()
+    offsets = torch.from_numpy(offsets).reshape(1, -1, 1).float()
+
+    midi = ddsp(u_f0, u_lo).reshape(-1).detach().numpy()
+    target = ddsp(e_f0, e_lo).reshape(-1).detach().numpy()
+    pred = ddsp(pred_f0, pred_lo).reshape(-1).detach().numpy()
+
+    l = path.split("/")
+    save_path = "/".join(l[:2])
+    name = l[-1].split(".")[0] + str(i)
+
+    sf.write("{}/samples/{}-pred.wav".format(save_path, name), pred, 16000)
+    sf.write("{}/samples/{}-midi.wav".format(save_path, name), midi, 16000)
+    sf.write("{}/samples/{}-resynth.wav".format(save_path, name), target,
+             16000)
