@@ -22,8 +22,6 @@ pip install -r requirements.txt
 Diffusion model samples:
 
 <audio controls="controls">
-<source>
-<script src="http://gist-it.appspot.com/github/gle-bellier/internship-expressive-DDSP/audio-samples/baseline-results-flute-midi1-pred.wav"></script>
-</source>
+<source src="http://gist-it.appspot.com/github/gle-bellier/internship-expressive-DDSP/audio-samples/baseline-results-flute-midi1-pred.wav"/>
 <p>Your browser does not support the audio element.</p>
 </audio>
