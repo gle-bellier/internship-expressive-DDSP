@@ -2,6 +2,8 @@
 
 Implementations of machine learning models converting midi files into expressive contours of fundamental frequency and loudness for [DDSP](https://magenta.tensorflow.org/ddsp)(Google Magenta).
 
+Audio samples : https://gle-bellier.github.io/internship-expressive-DDSP/
+
 ## Installation
 
 1. Clone this repo:
